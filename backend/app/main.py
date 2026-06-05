@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import init_db
+from app.routers import checkin
 
 app = FastAPI(
     title="CornellPulse API",
@@ -20,6 +21,8 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     await init_db()
+
+app.include_router(checkin.router, prefix="/api/v1")
 
 @app.get("/api/v1/health")
 async def health_check():
