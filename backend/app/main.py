@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import init_db
-from app.routers import checkin
+from app.routers import checkin, heatmap
 
 app = FastAPI(
     title="CornellPulse API",
@@ -23,6 +23,7 @@ async def startup():
     await init_db()
 
 app.include_router(checkin.router, prefix="/api/v1")
+app.include_router(heatmap.router, prefix="/api/v1")
 
 @app.get("/api/v1/health")
 async def health_check():

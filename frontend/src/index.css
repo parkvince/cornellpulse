@@ -2,6 +2,13 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -10,6 +17,7 @@ body {
   line-height: 1.5;
   color: #1a1a1a;
   background-color: #f9f9f9;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -20,8 +28,16 @@ a {
 button {
   cursor: pointer;
   font-family: inherit;
+  border: none;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 input, textarea, select {
   font-family: inherit;
+  font-size: 16px;
+}
+
+::-webkit-scrollbar {
+  display: none;
 }
