@@ -1,24 +1,70 @@
-import { Routes, Route } from "react-router-dom"
+import { Routes, Route, useLocation, Link } from "react-router-dom"
 import HomePage from "./pages/HomePage"
 import CheckInPage from "./pages/CheckInPage"
-import HeatmapPage from "./pages/HeatmapPage"
 import ResourcesPage from "./pages/ResourcesPage"
-import Navbar from "./components/shared/Navbar"
 import DisclaimerBanner from "./components/shared/DisclaimerBanner"
+
+function BottomNav() {
+  const location = useLocation()
+  const tabs = [
+    { path: "/", label: "Home", icon: "⌂" },
+    { path: "/checkin", label: "Check In", icon: "+" },
+    { path: "/resources", label: "Resources", icon: "≡" },
+  ]
+
+  return (
+    <div style={{
+      position: "fixed",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: "#ffffff",
+      borderTop: "1px solid #e5e5e5",
+      display: "flex",
+      zIndex: 100,
+      paddingBottom: "env(safe-area-inset-bottom)",
+    }}>
+      {tabs.map(tab => {
+        const active = location.pathname === tab.path
+        return (
+          <Link
+            key={tab.path}
+            to={tab.path}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "10px 0",
+              color: active ? "#1a1a1a" : "#aaa",
+              fontSize: "10px",
+              fontWeight: active ? 600 : 400,
+              gap: "3px",
+            }}
+          >
+            <span style={{ fontSize: "20px", lineHeight: 1 }}>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function App() {
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <Navbar />
-      <main style={{ flex: 1 }}>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", maxWidth: "480px", margin: "0 auto", position: "relative" }}>
+      <div style={{ flex: 1, overflowY: "auto", paddingBottom: "80px" }}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/checkin" element={<CheckInPage />} />
-          <Route path="/heatmap" element={<HeatmapPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/admin" element={<div style={{ padding: "24px" }}><p>Admin access only.</p></div>} />
         </Routes>
-      </main>
-      <DisclaimerBanner />
+        <DisclaimerBanner />
+      </div>
+      <BottomNav />
     </div>
   )
 }
