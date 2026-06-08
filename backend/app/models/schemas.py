@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 
 class CollegeEnum(str, Enum):
@@ -26,10 +26,27 @@ class WorkloadCategory(str, Enum):
     heavy = "heavy"
     unbearable = "unbearable"
 
+class StressTrigger(str, Enum):
+    academics = "academics"
+    social = "social"
+    financial = "financial"
+    family = "family"
+    identity = "identity"
+    health = "health"
+    future = "future"
+    housing = "housing"
+    sleep = "sleep"
+    loneliness = "loneliness"
+    grief = "grief"
+    discrimination = "discrimination"
+    nothing_specific = "nothing_specific"
+
 class CheckInRequest(BaseModel):
     mood_score: int
     sleep_category: SleepCategory
     workload_category: WorkloadCategory
+    stress_triggers: Optional[List[StressTrigger]] = None
+    wants_to_talk: Optional[bool] = None
     free_text: Optional[str] = None
     college: CollegeEnum
     session_token: str
@@ -45,9 +62,11 @@ class ResourceResult(BaseModel):
 
 class TriageResult(BaseModel):
     primary: ResourceResult
-    secondary: list[ResourceResult]
+    secondary: List[ResourceResult]
     crisis_flag: bool
     distress_level: str
+    why: str
+    show_peer_connect: bool
 
 class CheckInResponse(BaseModel):
     triage_result: TriageResult

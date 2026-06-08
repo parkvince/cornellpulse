@@ -1,70 +1,72 @@
-interface ResourceResult {
-  resource_id: string
-  name: string
-  tagline: string
-  phone: string | null
-  url: string | null
-  hours: string | null
-  how_to_access: string | null
-}
-
-interface TriageResult {
-  primary: ResourceResult
-  secondary: ResourceResult[]
-  crisis_flag: boolean
-  distress_level: string
-}
-
-interface CheckInResponse {
-  triage_result: TriageResult
-  aggregate_updated: boolean
-}
-
-interface Props {
-  result: CheckInResponse
-  onRestart: () => void
-}
-
-interface ItemProps {
-  resource: ResourceResult
-  primary?: boolean
-}
-
-function ResourceItem(props: ItemProps) {
+function ResourceItem(props) {
   const resource = props.resource
   const primary = props.primary
   return (
-    <div style={{ border: primary ? "2px solid #1a1a1a" : "1px solid #e5e5e5", borderRadius: "8px", padding: "20px", backgroundColor: primary ? "#fff" : "#fafafa", marginBottom: "12px" }}>
-      {primary && <div style={{ fontSize: "11px", fontWeight: 600, color: "#888", marginBottom: "8px" }}>Recommended for you</div>}
-      <div style={{ fontWeight: 600, fontSize: "17px", marginBottom: "6px" }}>{resource.name}</div>
-      <div style={{ fontSize: "14px", color: "#555", marginBottom: "12px" }}>{resource.tagline}</div>
-      {resource.phone && <div style={{ fontSize: "14px", marginBottom: "4px" }}><span style={{ color: "#888" }}>Phone: </span>{resource.phone}</div>}
-      {resource.hours && <div style={{ fontSize: "14px", marginBottom: "4px" }}><span style={{ color: "#888" }}>Hours: </span>{resource.hours}</div>}
-      {resource.how_to_access && <div style={{ fontSize: "14px", marginBottom: "4px" }}><span style={{ color: "#888" }}>Access: </span>{resource.how_to_access}</div>}
-      {resource.url && <div style={{ marginTop: "8px" }}><a href={resource.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "14px", color: "#1a1a1a", textDecoration: "underline" }}>Visit website</a></div>}
+    <div style={{ border: primary ? "2px solid #1a1a1a" : "1px solid #e5e5e5", borderRadius: "12px", padding: "20px", backgroundColor: primary ? "#fff" : "#fafafa", marginBottom: "12px" }}>
+      {primary && <div style={{ fontSize: "11px", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "8px" }}>Best match for you</div>}
+      <div style={{ fontWeight: 700, fontSize: "17px", marginBottom: "6px", color: "#1a1a1a" }}>{resource.name}</div>
+      <div style={{ fontSize: "14px", color: "#555", marginBottom: "14px", lineHeight: 1.5 }}>{resource.tagline}</div>
+      {resource.phone && (
+        <div style={{ marginBottom: "8px" }}>
+          <div style={{ fontSize: "11px", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "3px" }}>Phone</div>
+          <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>{resource.phone}</div>
+        </div>
+      )}
+      {resource.hours && (
+        <div style={{ marginBottom: "8px" }}>
+          <div style={{ fontSize: "11px", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "3px" }}>Hours</div>
+          <div style={{ fontSize: "14px", color: "#444" }}>{resource.hours}</div>
+        </div>
+      )}
+      {resource.how_to_access && (
+        <div style={{ marginBottom: "8px", backgroundColor: "#f9f9f9", borderRadius: "8px", padding: "12px" }}>
+          <div style={{ fontSize: "11px", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>How to access</div>
+          <div style={{ fontSize: "14px", color: "#333", lineHeight: 1.5 }}>{resource.how_to_access}</div>
+        </div>
+      )}
+      {resource.url && (
+        <div style={{ marginTop: "12px" }}>
+          <a href={resource.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "14px", color: "#1a1a1a", textDecoration: "underline" }}>Visit website</a>
+        </div>
+      )}
     </div>
   )
 }
 
-export default function ResultCard(props: Props) {
+export default function ResultCard(props) {
   const tr = props.result.triage_result
   return (
-    <div>
+    <div style={{ padding: "24px 20px" }}>
       {tr.crisis_flag && (
-        <div style={{ backgroundColor: "#fff3f3", border: "1px solid #fcc", borderRadius: "8px", padding: "16px", marginBottom: "24px", fontSize: "14px", color: "#900" }}>
-          If you are in crisis right now, please call or text 988, or call Cornell Police at 607-255-1111.
+        <div style={{ backgroundColor: "#fff0f0", border: "1px solid #ffcccc", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+          <div style={{ fontSize: "16px", fontWeight: 700, color: "#c00", marginBottom: "8px" }}>Please reach out right now</div>
+          <div style={{ fontSize: "14px", color: "#900", lineHeight: 1.6, marginBottom: "16px" }}>Based on what you shared, we want to make sure you get support immediately. You do not have to feel this way alone.</div>
+          <a href="tel:988" style={{ display: "block", backgroundColor: "#c00", color: "#fff", padding: "14px", borderRadius: "8px", textAlign: "center", fontWeight: 700, fontSize: "16px", marginBottom: "8px" }}>Call 988 now</a>
+          <a href="sms:741741" style={{ display: "block", border: "1px solid #c00", color: "#c00", padding: "14px", borderRadius: "8px", textAlign: "center", fontWeight: 600, fontSize: "15px" }}>Text HOME to 741741</a>
         </div>
       )}
-      <h2 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "6px" }}>Here is what we recommend</h2>
-      <p style={{ fontSize: "14px", color: "#666", marginBottom: "28px" }}>Based on what you shared, these resources are the best fit for you right now.</p>
+      <h2 style={{ fontSize: "22px", fontWeight: 700, color: "#1a1a1a", marginBottom: "12px" }}>Here is what we recommend</h2>
+      {tr.why && (
+        <div style={{ fontSize: "14px", color: "#555", marginBottom: "24px", lineHeight: 1.6, backgroundColor: "#f9f9f9", padding: "14px", borderRadius: "10px", borderLeft: "3px solid #1a1a1a" }}>
+          {tr.why}
+        </div>
+      )}
       <ResourceItem resource={tr.primary} primary={true} />
+      {tr.show_peer_connect && (
+        <div style={{ border: "1px solid #e5e5e5", borderRadius: "12px", padding: "20px", marginBottom: "12px", backgroundColor: "#fff" }}>
+          <div style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a", marginBottom: "6px" }}>Want to talk to another student?</div>
+          <div style={{ fontSize: "14px", color: "#666", marginBottom: "16px", lineHeight: 1.5 }}>Sometimes the best thing is sitting with someone who gets it. We can connect you with a Cornell student who wants to grab food or coffee and listen.</div>
+          <a href="mailto:cornellpulse@gmail.com?subject=Peer Connect Request" style={{ display: "block", border: "1px solid #1a1a1a", color: "#1a1a1a", padding: "12px", borderRadius: "8px", textAlign: "center", fontWeight: 600, fontSize: "14px" }}>Connect me with someone</a>
+          <div style={{ fontSize: "12px", color: "#aaa", textAlign: "center", marginTop: "8px" }}>Completely optional. No pressure at all.</div>
+        </div>
+      )}
       {tr.secondary.length > 0 && (
         <div>
           <div style={{ fontSize: "13px", color: "#888", marginBottom: "12px", marginTop: "8px" }}>Other options that may help</div>
           {tr.secondary.map(function(r) { return <ResourceItem key={r.resource_id} resource={r} /> })}
         </div>
       )}
-      <button onClick={props.onRestart} style={{ marginTop: "16px", width: "100%", padding: "14px", backgroundColor: "#fff", color: "#1a1a1a", border: "1px solid #e5e5e5", borderRadius: "8px", fontSize: "15px" }}>Start over</button>
+      <button onClick={props.onRestart} style={{ marginTop: "16px", width: "100%", padding: "14px", backgroundColor: "#fff", color: "#1a1a1a", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "15px", cursor: "pointer" }}>Check in again</button>
       <p style={{ fontSize: "12px", color: "#aaa", textAlign: "center", marginTop: "16px" }}>Your responses were not saved. Nothing about you was recorded.</p>
     </div>
   )
