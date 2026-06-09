@@ -2,7 +2,7 @@ import { Routes, Route, useLocation, Link } from "react-router-dom"
 import HomePage from "./pages/HomePage"
 import CheckInPage from "./pages/CheckInPage"
 import ResourcesPage from "./pages/ResourcesPage"
-import PeerSignupPage from "./pages/PeerSignupPage"
+import PeerPage from "./pages/PeerPage"
 import AdminPage from "./pages/AdminPage"
 import DisclaimerBanner from "./components/shared/DisclaimerBanner"
 
@@ -43,22 +43,7 @@ function BottomNav() {
       {tabs.map(tab => {
         const active = location.pathname === tab.path
         return (
-          <Link
-            key={tab.path}
-            to={tab.path}
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "3px",
-              color: active ? "#1a1a1a" : "#c0c0c0",
-              fontSize: "10px",
-              fontWeight: active ? 600 : 400,
-              textDecoration: "none",
-            }}
-          >
+          <Link key={tab.path} to={tab.path} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", color: active ? "#1a1a1a" : "#c0c0c0", fontSize: "10px", fontWeight: active ? 600 : 400, textDecoration: "none" }}>
             {tab.icon}
             <span>{tab.label}</span>
           </Link>
@@ -76,7 +61,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/checkin" element={<CheckInPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
-          <Route path="/peer" element={<PeerSignupPage />} />
+          <Route path="/peer" element={<PeerPage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
         <DisclaimerBanner />
