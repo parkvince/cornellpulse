@@ -118,7 +118,7 @@ export default function AdminPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                 <div>
                   <div style={{ fontSize: "16px", fontWeight: 600, marginBottom: "2px" }}>{s.name}</div>
-                  <div style={{ fontSize: "13px", color: "#888" }}>{s.email} · {s.year}</div>
+                  <div style={{ fontSize: "13px", color: "#888" }}>{s.email} Â· {s.year}</div>
                 </div>
                 <span style={{ fontSize: "11px", fontWeight: 600, padding: "3px 8px", borderRadius: "10px", backgroundColor: s.approved ? "#e8f5e9" : "#f5f5f5", color: s.approved ? "#2e7d32" : "#888" }}>
                   {s.approved ? "Approved" : "Pending"}
@@ -141,7 +141,7 @@ export default function AdminPage() {
         <div>
           <button onClick={() => setSelectedSignup(null)} style={{ fontSize: "14px", color: "#888", marginBottom: "20px", cursor: "pointer", backgroundColor: "transparent", border: "none" }}>Back to list</button>
           <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "4px" }}>{selectedSignup.name}</h2>
-          <p style={{ fontSize: "14px", color: "#888", marginBottom: "20px" }}>{selectedSignup.year}{selectedSignup.major ? ` · ${selectedSignup.major}` : ""}</p>
+          <p style={{ fontSize: "14px", color: "#888", marginBottom: "20px" }}>{selectedSignup.year}{selectedSignup.major ? ` Â· ${selectedSignup.major}` : ""}</p>
           {[
             { label: "Email", value: selectedSignup.email },
             { label: "Phone", value: selectedSignup.phone },
