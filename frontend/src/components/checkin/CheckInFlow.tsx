@@ -72,7 +72,7 @@ export default function CheckInFlow() {
   }
 
   if (result) {
-    return <ResultCard result={result} onRestart={restart} />
+    return <ResultCard result={result} moodScore={mood} onRestart={restart} />
   }
 
   return (

@@ -3,6 +3,7 @@ import HomePage from "./pages/HomePage"
 import CheckInPage from "./pages/CheckInPage"
 import ResourcesPage from "./pages/ResourcesPage"
 import PeerSignupPage from "./pages/PeerSignupPage"
+import AdminPage from "./pages/AdminPage"
 import DisclaimerBanner from "./components/shared/DisclaimerBanner"
 
 function BottomNav() {
@@ -21,6 +22,8 @@ function BottomNav() {
       <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
     )},
   ]
+
+  if (location.pathname === "/admin") return null
 
   return (
     <div style={{
@@ -74,7 +77,7 @@ export default function App() {
           <Route path="/checkin" element={<CheckInPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/peer" element={<PeerSignupPage />} />
-          <Route path="/admin" element={<div style={{ padding: "24px" }}>Admin access only.</div>} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
         <DisclaimerBanner />
       </div>
