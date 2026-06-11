@@ -1,9 +1,11 @@
-import { Routes, Route, useLocation, Link } from "react-router-dom"
+import { Routes, Route, useLocation, Link, Navigate } from "react-router-dom"
+import { useEffect, useState } from "react"
 import HomePage from "./pages/HomePage"
 import CheckInPage from "./pages/CheckInPage"
 import ResourcesPage from "./pages/ResourcesPage"
 import PeerPage from "./pages/PeerPage"
 import AdminPage from "./pages/AdminPage"
+import OnboardingPage from "./pages/OnboardingPage"
 import DisclaimerBanner from "./components/shared/DisclaimerBanner"
 
 function BottomNav() {
@@ -23,7 +25,8 @@ function BottomNav() {
     )},
   ]
 
-  if (location.pathname === "/admin") return null
+  const hideNav = location.pathname === "/admin" || location.pathname === "/onboarding"
+  if (hideNav) return null
 
   return (
     <div style={{
@@ -54,11 +57,21 @@ function BottomNav() {
 }
 
 export default function App() {
+  const [onboarded, setOnboarded] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    const done = localStorage.getItem("cornellpulse_onboarded")
+    setOnboarded(!!done)
+  }, [])
+
+  if (onboarded === null) return null
+
   return (
     <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "430px", height: "100%", display: "flex", flexDirection: "column", backgroundColor: "#f9f9f9" }}>
       <div style={{ flex: 1, overflowY: "auto", paddingBottom: "80px" }}>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/" element={onboarded ? <HomePage /> : <Navigate to="/onboarding" />} />
           <Route path="/checkin" element={<CheckInPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/peer" element={<PeerPage />} />

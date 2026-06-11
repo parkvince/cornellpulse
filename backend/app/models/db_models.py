@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ARRAY
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ARRAY, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
@@ -56,3 +56,39 @@ class AcademicCalendarEvent(Base):
     end_date = Column(Date)
     colleges = Column(ARRAY(Text))
     fetched_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class PeerSignup(Base):
+    __tablename__ = "peer_signups"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(200), nullable=False)
+    email = Column(String(200), nullable=False)
+    phone = Column(String(50), nullable=False)
+    year = Column(String(50), nullable=False)
+    major = Column(String(200))
+    locations = Column(JSONB, default=list)
+    availability = Column(JSONB, default=list)
+    interests = Column(JSONB, default=list)
+    about = Column(Text)
+    ref_name = Column(String(200), nullable=False)
+    ref_phone = Column(String(50), nullable=False)
+    ref_email = Column(String(200), nullable=False)
+    ref_relationship = Column(String(200))
+    approved = Column(Boolean, default=False)
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class PeerConnectRequest(Base):
+    __tablename__ = "peer_connect_requests"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    supporter_name = Column(String(200), nullable=False)
+    requester_name = Column(String(200), nullable=False)
+    requester_email = Column(String(200), nullable=False)
+    requester_phone = Column(String(50))
+    preferred_location = Column(String(200), nullable=False)
+    preferred_time = Column(String(100), nullable=False)
+    message = Column(Text)
+    status = Column(String(50), default="pending")
+    requested_at = Column(DateTime(timezone=True), server_default=func.now())

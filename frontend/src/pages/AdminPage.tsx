@@ -41,10 +41,10 @@ export default function AdminPage() {
     loadData()
   }, [authed])
 
-  async function approveSignup(index: number) {
-    setApproving(index)
+  async function approveSignup(id: number) {
+    setApproving(id)
     try {
-      await fetch(`${API_URL}/peer-signups/${index}/approve`, { method: "POST" })
+      await fetch(`${API_URL}/peer-signups/${id}/approve`, { method: "POST" })
       await loadData()
     } catch {}
     setApproving(null)
@@ -127,7 +127,7 @@ export default function AdminPage() {
               <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
                 <button onClick={() => setSelectedSignup({ ...s, index: i })} style={{ flex: 1, padding: "10px", border: "1px solid #e5e5e5", borderRadius: "8px", backgroundColor: "#fff", fontSize: "13px", cursor: "pointer" }}>View</button>
                 {!s.approved && (
-                  <button onClick={() => approveSignup(i)} disabled={approving === i} style={{ flex: 2, padding: "10px", backgroundColor: approving === i ? "#ccc" : "#1a1a1a", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: approving === i ? "default" : "pointer" }}>
+                  <button onClick={() => approveSignup(s.id)} disabled={approving === i} style={{ flex: 2, padding: "10px", backgroundColor: approving === i ? "#ccc" : "#1a1a1a", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: approving === i ? "default" : "pointer" }}>
                     {approving === i ? "Approving..." : "Approve"}
                   </button>
                 )}
