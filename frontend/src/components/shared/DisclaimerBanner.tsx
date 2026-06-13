@@ -1,15 +1,14 @@
 export default function DisclaimerBanner() {
   return (
     <div style={{
-      borderTop: "1px solid #e5e5e5",
-      backgroundColor: "#fafafa",
-      padding: "12px 24px",
+      borderTop: "1px solid #282828",
+      padding: "12px 20px",
       textAlign: "center",
-      fontSize: "13px",
-      color: "#666",
+      fontSize: "11px",
+      color: "#535353",
+      lineHeight: 1.5,
     }}>
-      CornellPulse is a resource navigation tool and is not a substitute for professional mental health care.
-      If you are in immediate danger, call 911 or Cornell Police at 607-255-1111.
+      Not a clinical service. If you are in immediate danger call 911 or Cornell Police at 607-255-1111.
     </div>
   )
 }

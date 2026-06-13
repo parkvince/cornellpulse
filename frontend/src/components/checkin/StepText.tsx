@@ -18,11 +18,12 @@ interface Props {
 export default function StepText({ value, onChange, college, onCollegeChange, colleges, onSubmit, onBack, loading, error }: Props) {
   return (
     <div>
-      <h2 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "8px" }}>
+      <p style={{ fontSize: "11px", fontWeight: 700, color: "#1db954", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>Step 5</p>
+      <h2 style={{ fontSize: "26px", fontWeight: 700, color: "#ffffff", marginBottom: "8px", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
         Anything else on your mind?
       </h2>
-      <p style={{ color: "#666", fontSize: "14px", marginBottom: "24px" }}>
-        Optional. This is completely anonymous and is never saved anywhere.
+      <p style={{ color: "#b3b3b3", fontSize: "14px", marginBottom: "24px" }}>
+        Optional. Never saved or stored anywhere.
       </p>
       <textarea
         value={value}
@@ -30,74 +31,31 @@ export default function StepText({ value, onChange, college, onCollegeChange, co
         maxLength={500}
         placeholder="You can write anything here..."
         rows={4}
-        style={{
-          width: "100%",
-          padding: "12px",
-          border: "1px solid #e5e5e5",
-          borderRadius: "8px",
-          fontSize: "15px",
-          resize: "none",
-          marginBottom: "8px",
-          outline: "none",
-        }}
+        style={{ width: "100%", padding: "14px", border: "1px solid #282828", borderRadius: "4px", fontSize: "15px", resize: "none", marginBottom: "8px", backgroundColor: "#181818", color: "#ffffff", outline: "none" }}
       />
-      <div style={{ fontSize: "12px", color: "#999", textAlign: "right", marginBottom: "24px" }}>
+      <div style={{ fontSize: "12px", color: "#535353", textAlign: "right", marginBottom: "24px" }}>
         {value.length}/500
       </div>
-      <label style={{ fontSize: "14px", fontWeight: 500, display: "block", marginBottom: "8px" }}>
-        Your college (optional)
+      <label style={{ fontSize: "11px", fontWeight: 700, color: "#b3b3b3", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: "10px" }}>
+        Your college
       </label>
       <select
         value={college}
         onChange={e => onCollegeChange(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "12px",
-          border: "1px solid #e5e5e5",
-          borderRadius: "8px",
-          fontSize: "15px",
-          marginBottom: "32px",
-          backgroundColor: "#fff",
-        }}
+        style={{ width: "100%", padding: "14px", border: "1px solid #282828", borderRadius: "4px", fontSize: "15px", marginBottom: "32px", backgroundColor: "#181818", color: college ? "#ffffff" : "#535353", outline: "none" }}
       >
-        <option value="">Select your college</option>
+        <option value="">Select your college (optional)</option>
         {colleges.map(c => (
           <option key={c.value} value={c.value}>{c.label}</option>
         ))}
       </select>
       {error && (
-        <div style={{ color: "#c00", fontSize: "14px", marginBottom: "16px" }}>{error}</div>
+        <div style={{ color: "#e63946", fontSize: "14px", marginBottom: "16px" }}>{error}</div>
       )}
-      <div style={{ display: "flex", gap: "12px" }}>
-        <button
-          onClick={onBack}
-          style={{
-            flex: 1,
-            padding: "14px",
-            backgroundColor: "#fff",
-            color: "#1a1a1a",
-            border: "1px solid #e5e5e5",
-            borderRadius: "8px",
-            fontSize: "15px",
-          }}
-        >
-          Back
-        </button>
-        <button
-          onClick={onSubmit}
-          disabled={loading}
-          style={{
-            flex: 2,
-            padding: "14px",
-            backgroundColor: loading ? "#ccc" : "#1a1a1a",
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "15px",
-            fontWeight: 600,
-          }}
-        >
-          {loading ? "Finding resources..." : "Find my resources"}
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button onClick={onBack} style={{ flex: 1, padding: "16px", backgroundColor: "transparent", color: "#b3b3b3", border: "1px solid #282828", borderRadius: "4px", fontSize: "14px", cursor: "pointer" }}>Back</button>
+        <button onClick={onSubmit} disabled={loading} style={{ flex: 2, padding: "16px", backgroundColor: loading ? "#282828" : "#1db954", color: loading ? "#535353" : "#000000", border: "none", borderRadius: "4px", fontSize: "15px", fontWeight: 700, cursor: loading ? "default" : "pointer", letterSpacing: "0.04em" }}>
+          {loading ? "FINDING..." : "FIND RESOURCES"}
         </button>
       </div>
     </div>

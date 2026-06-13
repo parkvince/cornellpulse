@@ -41,27 +41,15 @@ export default function StepTrigger(props: Props) {
 
   return (
     <div>
-      <h2 style={{ fontSize: "22px", fontWeight: 600, color: "#1a1a1a", marginBottom: "8px" }}>What is weighing on you?</h2>
-      <p style={{ color: "#666", fontSize: "14px", marginBottom: "24px" }}>Select everything that applies.</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "32px" }}>
+      <p style={{ fontSize: "11px", fontWeight: 700, color: "#1db954", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>Step 4</p>
+      <h2 style={{ fontSize: "26px", fontWeight: 700, color: "#ffffff", marginBottom: "8px", letterSpacing: "-0.02em", lineHeight: 1.2 }}>What is weighing on you?</h2>
+      <p style={{ color: "#b3b3b3", fontSize: "14px", marginBottom: "24px" }}>Select everything that applies.</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "32px" }}>
         {triggers.map(function(opt) {
           const selected = values.includes(opt.value)
           return (
-            <button
-              key={opt.value}
-              onClick={function() { toggle(opt.value) }}
-              style={{
-                padding: "12px 8px",
-                border: "1.5px solid",
-                borderColor: selected ? "#1a1a1a" : "#e5e5e5",
-                borderRadius: "10px",
-                backgroundColor: selected ? "#1a1a1a" : "#fff",
-                cursor: "pointer",
-                textAlign: "center",
-                width: "100%",
-              }}
-            >
-              <span style={{ fontSize: "14px", fontWeight: 500, color: selected ? "#fff" : "#1a1a1a", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <button key={opt.value} onClick={function() { toggle(opt.value) }} style={{ padding: "14px 10px", border: "none", borderRadius: "4px", backgroundColor: selected ? "#1db954" : "#181818", cursor: "pointer", textAlign: "center" }}>
+              <span style={{ fontSize: "13px", fontWeight: selected ? 700 : 400, color: selected ? "#000000" : "#ffffff", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {opt.label}
               </span>
             </button>
@@ -69,16 +57,16 @@ export default function StepTrigger(props: Props) {
         })}
       </div>
       <div style={{ marginBottom: "32px" }}>
-        <p style={{ fontSize: "15px", fontWeight: 600, color: "#1a1a1a", marginBottom: "6px" }}>Want to talk to another Cornell student?</p>
-        <p style={{ fontSize: "13px", color: "#888", marginBottom: "16px" }}>We can connect you with someone who wants to grab food or coffee and just listen.</p>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={function() { onWantsToTalkChange(true) }} style={{ flex: 1, padding: "14px", border: wantsToTalk === true ? "2px solid #1a1a1a" : "1px solid #e5e5e5", borderRadius: "10px", backgroundColor: wantsToTalk === true ? "#f0f0f0" : "#fff", fontSize: "15px", fontWeight: wantsToTalk === true ? 600 : 400, cursor: "pointer" }}>Yes please</button>
-          <button onClick={function() { onWantsToTalkChange(false) }} style={{ flex: 1, padding: "14px", border: wantsToTalk === false ? "2px solid #1a1a1a" : "1px solid #e5e5e5", borderRadius: "10px", backgroundColor: wantsToTalk === false ? "#f0f0f0" : "#fff", fontSize: "15px", fontWeight: wantsToTalk === false ? 600 : 400, cursor: "pointer" }}>Not right now</button>
+        <p style={{ fontSize: "14px", fontWeight: 700, color: "#ffffff", marginBottom: "6px" }}>Want to talk to another Cornell student?</p>
+        <p style={{ fontSize: "13px", color: "#b3b3b3", marginBottom: "16px" }}>We can connect you with someone who wants to grab food or coffee and just listen.</p>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={function() { onWantsToTalkChange(true) }} style={{ flex: 1, padding: "14px", border: "none", borderRadius: "4px", backgroundColor: wantsToTalk === true ? "#1db954" : "#181818", fontSize: "14px", fontWeight: wantsToTalk === true ? 700 : 400, color: wantsToTalk === true ? "#000000" : "#ffffff", cursor: "pointer" }}>Yes please</button>
+          <button onClick={function() { onWantsToTalkChange(false) }} style={{ flex: 1, padding: "14px", border: "none", borderRadius: "4px", backgroundColor: wantsToTalk === false ? "#1db954" : "#181818", fontSize: "14px", fontWeight: wantsToTalk === false ? 700 : 400, color: wantsToTalk === false ? "#000000" : "#ffffff", cursor: "pointer" }}>Not right now</button>
         </div>
       </div>
-      <div style={{ display: "flex", gap: "12px" }}>
-        <button onClick={onBack} style={{ flex: 1, padding: "14px", backgroundColor: "#fff", color: "#1a1a1a", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "15px", cursor: "pointer" }}>Back</button>
-        <button onClick={onNext} disabled={values.length === 0} style={{ flex: 2, padding: "14px", backgroundColor: values.length > 0 ? "#1a1a1a" : "#ccc", color: "#fff", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: 600, cursor: values.length > 0 ? "pointer" : "default" }}>Next</button>
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button onClick={onBack} style={{ flex: 1, padding: "16px", backgroundColor: "transparent", color: "#b3b3b3", border: "1px solid #282828", borderRadius: "4px", fontSize: "14px", cursor: "pointer" }}>Back</button>
+        <button onClick={onNext} disabled={values.length === 0} style={{ flex: 2, padding: "16px", backgroundColor: values.length > 0 ? "#1db954" : "#282828", color: values.length > 0 ? "#000000" : "#535353", border: "none", borderRadius: "4px", fontSize: "15px", fontWeight: 700, cursor: values.length > 0 ? "pointer" : "default", letterSpacing: "0.04em" }}>NEXT</button>
       </div>
     </div>
   )
