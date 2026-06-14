@@ -5,51 +5,31 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html {
+html, body, #root {
   height: 100%;
-  background: #121212;
+  background: #0f0f0f;
 }
 
 body {
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 16px;
   line-height: 1.5;
   color: #ffffff;
-  background: #121212;
+  background: #0f0f0f;
   -webkit-font-smoothing: antialiased;
   max-width: 430px;
   margin: 0 auto;
 }
 
 #root {
-  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; font-family: inherit; border: none; background: none; }
+input, textarea, select { font-family: inherit; font-size: 16px; }
+::-webkit-scrollbar { display: none; }
+::placeholder { color: #4a4a4a; }
 
-button {
-  cursor: pointer;
-  font-family: inherit;
-  border: none;
-  background: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-input, textarea, select {
-  font-family: inherit;
-  font-size: 16px;
-}
-
-::-webkit-scrollbar {
-  display: none;
-}
-
-::placeholder {
-  color: #535353;
-}
+input:focus, textarea:focus, select:focus { outline: none; }

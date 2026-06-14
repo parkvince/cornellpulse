@@ -76,11 +76,16 @@ export default function CheckInFlow() {
   }
 
   return (
-    <div style={{ padding: "24px 20px" }}>
-      <div style={{ marginBottom: "28px" }}>
-        <div style={{ fontSize: "13px", color: "#999", marginBottom: "8px" }}>Step {step} of {TOTAL_STEPS}</div>
-        <div style={{ height: "3px", backgroundColor: "#e5e5e5", borderRadius: "2px" }}>
-          <div style={{ height: "3px", backgroundColor: "#1a1a1a", borderRadius: "2px", width: ((step / TOTAL_STEPS) * 100) + "%", transition: "width 0.3s ease" }} />
+    <div>
+      <div style={{ marginBottom: "36px" }}>
+        <div style={{ height: "2px", backgroundColor: "#1a1a1a", borderRadius: "2px" }}>
+          <div style={{
+            height: "2px",
+            backgroundColor: "#e8a0b4",
+            borderRadius: "2px",
+            width: ((step / TOTAL_STEPS) * 100) + "%",
+            transition: "width 0.4s ease",
+          }} />
         </div>
       </div>
       {step === 1 && <StepMood value={mood} onChange={setMood} onNext={function() { setStep(2) }} />}
