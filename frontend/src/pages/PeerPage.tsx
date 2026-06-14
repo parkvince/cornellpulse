@@ -32,32 +32,27 @@ const MAJORS = [
 ]
 
 const LOCATIONS = [
-  "Olin Library Main Level", "Olin Library Lower Level Commons", "Olin Library 301 Reading Room",
-  "Olin Library 305 Reading Room", "Olin Library 401 Reading Room", "Olin Library 405 Reading Room",
-  "Olin Library 601 Reading Room", "Uris Library Cocktail Lounge", "Uris Library Tower Lounge",
-  "Uris Library A.D. White Library", "Uris Library Dean Room", "Uris Library Willis Room",
-  "Uris Library Austen Room", "Uris Library Kinkeldey Room", "Mann Library Main Floors",
-  "Mann Library Quiet Area", "Mann Library Study Areas", "Mann Library Reservable Rooms",
-  "Engineering Library Reading Room", "Engineering Library Group Study Rooms",
-  "Clark Physical Sciences Library", "Math Library Malott Hall", "Management Library Sage Hall",
-  "Kroch Library Asian Collections", "Law Library", "Catherwood Library ILR", "Fine Arts Library",
-  "Music Library Lincoln Hall", "Veterinary Library", "Nestle Library Hotel School",
-  "Goldwin Smith Hall", "Klarman Hall Atrium", "Klarman Hall Classrooms", "Gates Hall",
-  "Physical Sciences Building", "Baker Lab Lounges", "Rockefeller Hall", "White Hall",
-  "Morrill Hall", "Stimson Hall Lounges", "Ives Hall Study Rooms", "Statler Hall Seating",
-  "Sibley Hall Studio Spaces", "Milstein Hall", "Duffield Hall Atrium", "Upson Hall Common Areas",
-  "Phillips Hall Lounges", "Hollister Hall", "Rhodes Hall Open Seating", "Libe Cafe", "Mann Cafe",
-  "Cafe Jennie", "Temple of Zeus", "Green Dragon Cafe", "Atrium Cafe Sage Hall", "Goldies Cafe",
-  "Mattins Cafe", "Dairy Bar", "Appel Commons Seating", "RPCC Dining Area", "Okenshields",
-  "Trillium", "Willard Straight Hall Lounges", "Willard Straight Music Room",
-  "Willard Straight Memorial Room", "Noyes Community Center", "Big Red Barn", "Barnes Hall Lounges",
-  "Anabel Taylor Hall", "Libe Slope", "Arts Quad", "Engineering Quad", "Ag Quad", "Ho Plaza",
+  "Olin Library", "Uris Library", "Mann Library", "Engineering Library",
+  "Clark Physical Sciences Library", "Math Library", "Management Library",
+  "Kroch Library", "Law Library", "Catherwood Library", "Fine Arts Library",
+  "Music Library", "Veterinary Library", "Hotel School Library",
+  "Goldwin Smith Hall", "Klarman Hall", "Gates Hall", "Physical Sciences Building",
+  "Baker Lab", "Rockefeller Hall", "White Hall", "Morrill Hall", "Stimson Hall",
+  "Ives Hall", "Statler Hall", "Sibley Hall", "Milstein Hall", "Duffield Hall",
+  "Upson Hall", "Phillips Hall", "Hollister Hall", "Rhodes Hall",
+  "Libe Cafe", "Mann Cafe", "Cafe Jennie", "Temple of Zeus", "Green Dragon Cafe",
+  "Atrium Cafe", "Goldies Cafe", "Mattins Cafe", "Dairy Bar", "Appel Commons",
+  "RPCC", "Okenshields", "Trillium",
+  "Willard Straight Hall", "Noyes Community Center", "Big Red Barn",
+  "Barnes Hall", "Anabel Taylor Hall",
+  "Libe Slope", "Arts Quad", "Engineering Quad", "Ag Quad", "Ho Plaza",
   "Snee Hall Terrace", "Botanic Gardens", "Beebe Lake", "Suspension Bridge",
-  "Cascadilla Gorge Trail", "Donlon Hall Study Room", "Risley Hall Library", "Balch Hall Lounges",
-  "Dickson Hall Study Rooms", "Court Kay Bauer Lounges", "Morrison Hall Study Areas",
-  "West Campus House Libraries", "Gimme Coffee", "Ithaca Bakery", "Press Cafe",
-  "Collegetown Bagels", "Starbucks College Ave", "Odyssey Bookstore",
-  "Tompkins County Public Library", "Other (anywhere works for me)",
+  "Cascadilla Gorge",
+  "Donlon Hall", "Risley Hall", "Balch Hall", "Dickson Hall",
+  "Court Kay Bauer", "Morrison Hall", "West Campus",
+  "Gimme Coffee", "Ithaca Bakery", "Press Cafe", "Collegetown Bagels",
+  "Starbucks", "Odyssey Bookstore", "Tompkins County Public Library",
+  "Other (anywhere works for me)",
 ]
 
 const INTERESTS = [
@@ -68,10 +63,9 @@ const INTERESTS = [
 
 const YEARS = ["Freshman", "Sophomore", "Junior", "Senior", "Masters", "PhD", "Other"]
 
-const AVAILABILITY = [
-  "Weekday mornings", "Weekday afternoons", "Weekday evenings",
-  "Weekend mornings", "Weekend afternoons", "Weekend evenings",
-]
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+const TIME_BLOCKS = ["Mornings", "Afternoons", "Evenings", "Late nights"]
 
 interface Supporter {
   name: string
@@ -135,7 +129,7 @@ function SupporterCard({ supporter, onRequest }: { supporter: Supporter, onReque
       )}
       {supporter.availability && supporter.availability.length > 0 && (
         <p style={{ fontSize: "11px", color: "#4a4a4a", marginBottom: "14px" }}>
-          Available: {supporter.availability.slice(0, 2).join(", ")}{supporter.availability.length > 2 ? ` +${supporter.availability.length - 2} more` : ""}
+          Available: {supporter.availability.slice(0, 3).join(", ")}{supporter.availability.length > 3 ? ` +${supporter.availability.length - 3} more` : ""}
         </p>
       )}
       <button onClick={() => onRequest(supporter)} style={{ width: "100%", padding: "13px", backgroundColor: PINK, color: "#0f0f0f", border: "none", borderRadius: "6px", fontSize: "14px", fontWeight: 800, letterSpacing: "0.03em" }}>
@@ -233,7 +227,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         <div style={{ marginBottom: "24px" }}>
           <label style={{ fontSize: "13px", fontWeight: 700, color: "#a0a0a0", display: "block", marginBottom: "8px" }}>When works for you <span style={{ color: "#e63946" }}>*</span></label>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-            {AVAILABILITY.map((a: string) => (
+            {supporter.availability.map((a: string) => (
               <button key={a} onClick={() => update("preferred_time", a)} style={gridBtn(form.preferred_time === a)}>{a}</button>
             ))}
           </div>
@@ -351,8 +345,8 @@ function SignupForm() {
         <div style={{ marginBottom: "14px" }}>
           <label style={{ fontSize: "14px", fontWeight: 600, color: "#a0a0a0", display: "block", marginBottom: "8px" }}>Year <span style={{ color: "#e63946" }}>*</span></label>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
-            {YEARS.map(y => (
-              <button key={y} onClick={() => update("year", y)} style={gridBtn(form.year === y)}>{y}</button>
+            {YEARS.map((y, idx) => (
+              <button key={y} onClick={() => update("year", y)} style={{ ...gridBtn(form.year === y), gridColumn: idx === YEARS.length - 1 ? "1 / -1" : "auto" }}>{y}</button>
             ))}
           </div>
         </div>
@@ -404,10 +398,16 @@ function SignupForm() {
       </section>
 
       <section style={{ marginBottom: "28px" }}>
-        <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "14px" }}>Availability</p>
+        <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>Which days work</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginBottom: "20px" }}>
+          {DAYS.map((d, idx) => (
+            <button key={d} onClick={() => toggleArray("availability", d)} style={{ ...gridBtn(form.availability.includes(d)), gridColumn: idx === DAYS.length - 1 ? "1 / -1" : "auto" }}>{d}</button>
+          ))}
+        </div>
+        <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>What times work</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-          {AVAILABILITY.map(a => (
-            <button key={a} onClick={() => toggleArray("availability", a)} style={gridBtn(form.availability.includes(a))}>{a}</button>
+          {TIME_BLOCKS.map(t => (
+            <button key={t} onClick={() => toggleArray("availability", t)} style={gridBtn(form.availability.includes(t))}>{t}</button>
           ))}
         </div>
       </section>
