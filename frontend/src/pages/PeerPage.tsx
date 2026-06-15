@@ -296,8 +296,12 @@ function SignupForm() {
   const emailValid = isCornellEmail(form.email)
   const refEmailValid = isCornellEmail(form.refEmail)
 
-  const canSubmit = form.name && emailValid && form.phone && form.year && form.locations.length > 0 && form.refName && form.refPhone && refEmailValid
+const sameEmail = form.email.trim().toLowerCase() === form.refEmail.trim().toLowerCase() && form.email !== ""
+const sameName = form.name.trim().toLowerCase() === form.refName.trim().toLowerCase() && form.name !== ""
+const samePhone = form.phone.trim() === form.refPhone.trim() && form.phone !== ""
+const selfReference = sameEmail || sameName || samePhone
 
+const canSubmit = form.name && emailValid && form.phone && form.year && form.locations.length > 0 && form.refName && form.refPhone && refEmailValid && !selfReference
   async function handleSubmit() {
     try {
       await fetch(`${API_URL}/peer-signup`, {
@@ -460,7 +464,8 @@ function SignupForm() {
       <button onClick={handleSubmit} disabled={!canSubmit} style={{ width: "100%", padding: "18px", backgroundColor: canSubmit ? PINK : "#1a1a1a", color: canSubmit ? "#0f0f0f" : "#4a4a4a", border: "none", borderRadius: "8px", fontSize: "15px", fontWeight: 800, letterSpacing: "0.04em" }}>
         Submit application
       </button>
-      {!canSubmit && <p style={{ fontSize: "12px", color: "#4a4a4a", textAlign: "center", marginTop: "10px" }}>Fill in all required fields with valid Cornell emails to submit.</p>}
+      {selfReference && <p style={{ fontSize: "12px", color: "#e63946", textAlign: "center", marginTop: "10px" }}>Your reference must be a different person from you.</p>}
+      {!canSubmit && !selfReference && <p style={{ fontSize: "12px", color: "#4a4a4a", textAlign: "center", marginTop: "10px" }}>Fill in all required fields with valid Cornell emails to submit.</p>}
     </div>
   )
 }

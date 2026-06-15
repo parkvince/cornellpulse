@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 
 const PINK = "#e8a0b4"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
-const ADMIN_PASSWORD = "cornellpulse2026"
+const ADMIN_PASSWORD = "q"
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
@@ -49,6 +49,14 @@ export default function AdminPage() {
       await loadData()
     } catch {}
     setApproving(null)
+  }
+
+  async function deleteSignup(id: number) {
+    if (!confirm("Remove this application? This cannot be undone.")) return
+    try {
+      await fetch(`${API_URL}/peer-signups/${id}`, { method: "DELETE" })
+      await loadData()
+    } catch {}
   }
 
   if (!authed) {
@@ -132,6 +140,7 @@ export default function AdminPage() {
                     {approving === s.id ? "Approving..." : "Approve"}
                   </button>
                 )}
+                <button onClick={() => deleteSignup(s.id)} style={{ padding: "10px 14px", border: "1px solid #e63946", borderRadius: "8px", backgroundColor: "transparent", color: "#e63946", fontSize: "13px" }}>Remove</button>
               </div>
             </div>
           ))}
@@ -204,6 +213,9 @@ export default function AdminPage() {
               Approve this supporter
             </button>
           )}
+          <button onClick={() => { deleteSignup(selectedSignup.id); setSelectedSignup(null) }} style={{ width: "100%", padding: "14px", backgroundColor: "transparent", border: "1px solid #e63946", color: "#e63946", borderRadius: "8px", fontSize: "15px", fontWeight: 800, marginTop: "12px" }}>
+            Remove this application
+          </button>
         </div>
       )}
 

@@ -145,3 +145,13 @@ async def get_requests(db: AsyncSession = Depends(get_db)):
         }
         for r in requests
     ]
+
+@router.delete("/peer-signups/{signup_id}")
+async def delete_signup(signup_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerSignup).where(PeerSignup.id == signup_id))
+    signup = result.scalar_one_or_none()
+    if not signup:
+        return {"error": "Not found"}
+    await db.delete(signup)
+    await db.commit()
+    return {"status": "deleted"}
