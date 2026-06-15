@@ -53,9 +53,10 @@ export default function ResultCard(props) {
       {tr.crisis_flag && (
         <div style={{ backgroundColor: "#1f0a0b", border: "1px solid #e63946", borderRadius: "10px", padding: "20px", marginBottom: "24px" }}>
           <p style={{ fontSize: "15px", fontWeight: 800, color: "#e63946", marginBottom: "8px" }}>Please reach out right now</p>
-          <p style={{ fontSize: "14px", color: "#a0a0a0", lineHeight: 1.6, marginBottom: "16px" }}>Based on what you shared, we want to make sure you get support immediately.</p>
+          <p style={{ fontSize: "14px", color: "#a0a0a0", lineHeight: 1.6, marginBottom: "16px" }}>Based on what you shared, we want to make sure you get support immediately. You do not have to be alone with this.</p>
           <a href="tel:988" style={{ display: "block", backgroundColor: "#e63946", color: "#fff", padding: "16px", borderRadius: "6px", textAlign: "center", fontWeight: 800, fontSize: "15px", marginBottom: "8px", letterSpacing: "0.04em" }}>CALL 988 NOW</a>
-          <a href="sms:741741" style={{ display: "block", border: "1px solid #e63946", color: "#e63946", padding: "14px", borderRadius: "6px", textAlign: "center", fontWeight: 600, fontSize: "14px" }}>Text HOME to 741741</a>
+          <a href="sms:741741" style={{ display: "block", border: "1px solid #e63946", color: "#e63946", padding: "14px", borderRadius: "6px", textAlign: "center", fontWeight: 600, fontSize: "14px", marginBottom: "8px" }}>Text HOME to 741741</a>
+          <a href="tel:6072551111" style={{ display: "block", border: "1px solid #e63946", color: "#e63946", padding: "14px", borderRadius: "6px", textAlign: "center", fontWeight: 600, fontSize: "14px" }}>Call Cornell Police 607-255-1111</a>
         </div>
       )}
 
