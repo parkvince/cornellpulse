@@ -37,13 +37,13 @@ export default function HomePage() {
 
   return (
     <div>
-      <div style={{ padding: "56px 24px 32px" }}>
+      <div style={{ padding: "56px 24px 28px" }}>
         <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "12px" }}>Cornell University</p>
         <h1 style={{ fontSize: "34px", fontWeight: 800, color: "#fff", lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: "14px" }}>
           Find the right support, right now.
         </h1>
-        <p style={{ fontSize: "15px", color: "#a0a0a0", lineHeight: 1.65, marginBottom: "32px" }}>
-          Answer 4 questions. Get matched to the right Cornell resource instantly. Always anonymous.
+        <p style={{ fontSize: "15px", color: "#a0a0a0", lineHeight: 1.65, marginBottom: "28px" }}>
+          Answer 4 questions and get matched to the right Cornell resource instantly. Always anonymous.
         </p>
         <Link to="/checkin" style={{ display: "block", backgroundColor: PINK, color: "#0f0f0f", padding: "18px 24px", borderRadius: "6px", fontWeight: 800, fontSize: "15px", textAlign: "center", letterSpacing: "0.05em", marginBottom: "10px" }}>
           CHECK IN NOW
@@ -52,7 +52,7 @@ export default function HomePage() {
       </div>
 
       {last && (
-        <div style={{ padding: "0 24px 28px" }}>
+        <div style={{ padding: "0 24px 24px" }}>
           <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>Last check-in</p>
           <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
@@ -69,7 +69,7 @@ export default function HomePage() {
       )}
 
       {history.length > 1 && (
-        <div style={{ padding: "0 24px 28px" }}>
+        <div style={{ padding: "0 24px 24px" }}>
           <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>History</p>
           <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", overflow: "hidden" }}>
             {history.slice(0, 5).map((c, idx) => (
@@ -88,18 +88,41 @@ export default function HomePage() {
         </div>
       )}
 
-      <div style={{ padding: "0 24px 28px" }}>
+      <div style={{ padding: "0 24px 24px" }}>
+        <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>Resources</p>
+        <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", overflow: "hidden", marginBottom: "10px" }}>
+          {[
+            { label: "CAPS Individual Therapy", sub: "One-on-one counseling", phone: "607-255-5155", url: "/resources" },
+            { label: "Let's Talk Drop-In", sub: "No appointment needed", phone: null, url: "/resources" },
+            { label: "EARS Peer Counseling", sub: "Sun-Thu 9pm-1am", phone: "607-255-4050", url: "/resources" },
+            { label: "Cornell Health 24/7", sub: "Any time, any day", phone: "607-255-5155", url: "/resources" },
+          ].map((r, idx) => (
+            <Link key={r.label} to="/resources" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: idx < 3 ? "1px solid #242424" : "none", textDecoration: "none" }}>
+              <div>
+                <p style={{ fontSize: "14px", fontWeight: 700, color: "#fff", marginBottom: "2px" }}>{r.label}</p>
+                <p style={{ fontSize: "11px", color: "#4a4a4a" }}>{r.sub}</p>
+              </div>
+              <svg width="16" height="16" fill="none" stroke="#4a4a4a" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+            </Link>
+          ))}
+        </div>
+        <Link to="/resources" style={{ display: "block", textAlign: "center", fontSize: "13px", color: PINK, padding: "10px", letterSpacing: "0.04em", fontWeight: 600 }}>
+          SEE ALL 35+ RESOURCES
+        </Link>
+      </div>
+
+      <div style={{ padding: "0 24px 24px" }}>
         <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>Quick access</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
-          <Link to="/peer" style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "18px 16px" }}>
+          <Link to="/peer" style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "18px 16px", textDecoration: "none" }}>
             <svg width="20" height="20" fill="none" stroke={PINK} strokeWidth="1.8" viewBox="0 0 24 24" style={{ marginBottom: "12px" }}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
             <p style={{ fontSize: "13px", fontWeight: 700, color: "#fff", marginBottom: "3px" }}>Be a supporter</p>
             <p style={{ fontSize: "11px", color: "#4a4a4a" }}>Help other students</p>
           </Link>
-          <Link to="/resources" style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "18px 16px" }}>
-            <svg width="20" height="20" fill="none" stroke={PINK} strokeWidth="1.8" viewBox="0 0 24 24" style={{ marginBottom: "12px" }}><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-            <p style={{ fontSize: "13px", fontWeight: 700, color: "#fff", marginBottom: "3px" }}>All resources</p>
-            <p style={{ fontSize: "11px", color: "#4a4a4a" }}>35+ options</p>
+          <Link to="/peer" style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "18px 16px", textDecoration: "none" }}>
+            <svg width="20" height="20" fill="none" stroke={PINK} strokeWidth="1.8" viewBox="0 0 24 24" style={{ marginBottom: "12px" }}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            <p style={{ fontSize: "13px", fontWeight: 700, color: "#fff", marginBottom: "3px" }}>Talk to someone</p>
+            <p style={{ fontSize: "11px", color: "#4a4a4a" }}>Find a peer supporter</p>
           </Link>
         </div>
         <div style={{ backgroundColor: "#1f1215", border: "1px solid #3a1a22", borderRadius: "10px", padding: "18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
