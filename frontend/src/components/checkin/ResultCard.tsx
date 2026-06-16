@@ -10,15 +10,35 @@ function moodColor(m) {
 function ResourceItem(props) {
   const r = props.resource
   const primary = props.primary
+
+  function saveResource() {
+    const text = [
+      r.name,
+      r.tagline,
+      r.phone ? "Phone: " + r.phone : null,
+      r.hours ? "Hours: " + r.hours : null,
+      r.how_to_access ? "How to access: " + r.how_to_access : null,
+      r.url ? r.url : null,
+    ].filter(Boolean).join("\n")
+
+    if (navigator.share) {
+      navigator.share({ title: r.name, text: text }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Copied to clipboard")
+      }).catch(() => {})
+    }
+  }
+
   return (
-    <div style={{ borderRadius: "10px", padding: "20px", backgroundColor: primary ? "#1f1520" : "#1a1a1a", marginBottom: "8px", borderLeft: primary ? "3px solid " + PINK : "none" }}>
-      {primary && <p style={{ fontSize: "10px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "10px" }}>Best match</p>}
+    <div style={{ borderRadius: "10px", padding: "20px", backgroundColor: primary ? "#1f1520" : "#1a1a1a", marginBottom: "8px", borderLeft: primary ? "3px solid #e8a0b4" : "none" }}>
+      {primary && <p style={{ fontSize: "10px", fontWeight: 700, color: "#e8a0b4", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "10px" }}>Best match</p>}
       <p style={{ fontWeight: 800, fontSize: "17px", marginBottom: "6px", color: "#fff" }}>{r.name}</p>
       <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "16px", lineHeight: 1.5 }}>{r.tagline}</p>
       {r.phone && (
         <div style={{ marginBottom: "10px" }}>
           <p style={{ fontSize: "10px", color: "#4a4a4a", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "3px" }}>Phone</p>
-          <a href={"tel:" + r.phone} style={{ fontSize: "17px", fontWeight: 800, color: PINK }}>{r.phone}</a>
+          <a href={"tel:" + r.phone} style={{ fontSize: "17px", fontWeight: 800, color: "#e8a0b4" }}>{r.phone}</a>
         </div>
       )}
       {r.hours && (
@@ -33,7 +53,14 @@ function ResourceItem(props) {
           <p style={{ fontSize: "13px", color: "#a0a0a0", lineHeight: 1.6 }}>{r.how_to_access}</p>
         </div>
       )}
-      {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: PINK, textDecoration: "underline", marginTop: "8px", display: "block" }}>Visit website</a>}
+      <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
+        {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: "#e8a0b4", textDecoration: "underline" }}>Visit website</a>}
+        {primary && (
+          <button onClick={saveResource} style={{ fontSize: "13px", color: "#4a4a4a", backgroundColor: "transparent", border: "none", textDecoration: "underline", padding: 0 }}>
+            Save resource
+          </button>
+        )}
+      </div>
     </div>
   )
 }
