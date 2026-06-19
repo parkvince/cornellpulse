@@ -12,7 +12,7 @@ function moodColor(m: number) {
 export default function StepMood({ value, onChange, onNext }: Props) {
   return (
     <div>
-      <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "14px" }}>Step 1 of 5</p>
+      <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "14px" }}>Step 1 of 4</p>
       <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#fff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "10px" }}>How are you feeling right now?</h2>
       <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "52px" }}>1 is overwhelmed, 10 is thriving.</p>
       <div style={{ textAlign: "center", marginBottom: "28px" }}>
