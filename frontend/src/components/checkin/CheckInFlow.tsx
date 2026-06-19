@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import StepMood from "./StepMood"
 import StepSleepWorkload from "./StepSleepWorkload"
 import StepTrigger from "./StepTrigger"
@@ -8,18 +8,39 @@ import { submitCheckin } from "../../api/client"
 
 const TOTAL_STEPS = 4
 
+function loadSaved() {
+  try {
+    const raw = sessionStorage.getItem("cornellpulse_checkin_draft")
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 export default function CheckInFlow() {
-  const [step, setStep] = useState<number>(1)
-  const [mood, setMood] = useState<number>(5)
-  const [sleep, setSleep] = useState<string>("")
-  const [workload, setWorkload] = useState<string>("")
-  const [triggers, setTriggers] = useState<string[]>([])
-  const [wantsToTalk, setWantsToTalk] = useState<boolean | null>(null)
-  const [freeText, setFreeText] = useState<string>("")
-  const [college, setCollege] = useState<string>("")
+  const saved = loadSaved()
+  const [step, setStep] = useState<number>(saved?.step || 1)
+  const [mood, setMood] = useState<number>(saved?.mood ?? 5)
+  const [sleep, setSleep] = useState<string>(saved?.sleep || "")
+  const [workload, setWorkload] = useState<string>(saved?.workload || "")
+  const [triggers, setTriggers] = useState<string[]>(saved?.triggers || [])
+  const [wantsToTalk, setWantsToTalk] = useState<boolean | null>(saved?.wantsToTalk ?? null)
+  const [freeText, setFreeText] = useState<string>(saved?.freeText || "")
+  const [college, setCollege] = useState<string>(saved?.college || "")
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>("")
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }, [step])
+
+  useEffect(() => {
+    if (result) return
+    sessionStorage.setItem("cornellpulse_checkin_draft", JSON.stringify({
+      step, mood, sleep, workload, triggers, wantsToTalk, freeText, college,
+    }))
+  }, [step, mood, sleep, workload, triggers, wantsToTalk, freeText, college, result])
 
   const colleges = [
     { value: "engineering", label: "Engineering" },
@@ -50,6 +71,7 @@ export default function CheckInFlow() {
         session_token: token,
       })
       setResult(data)
+      sessionStorage.removeItem("cornellpulse_checkin_draft")
     } catch (e) {
       setError("Something went wrong. Please try again.")
     } finally {
@@ -68,6 +90,7 @@ export default function CheckInFlow() {
     setCollege("")
     setResult(null)
     setError("")
+    sessionStorage.removeItem("cornellpulse_checkin_draft")
   }
 
   if (result) {

@@ -39,12 +39,24 @@ const resources = [
   { cat: "Physical", name: "Cornell Outdoor Education", phone: "607-255-6415", url: "https://outdoor.cornell.edu", desc: "Outdoor trips, climbing wall, and adventure programs. Free or low cost.", loc: "Bartels Hall", hours: "Mon-Fri 9am-5pm", tags: ["outdoor", "adventure"] },
 ]
 
+const QUICK_FILTERS = ["free", "24/7", "lgbtq", "local"]
+
 export default function ResourcesPage() {
   const [cat, setCat] = useState("All")
   const [search, setSearch] = useState("")
+  const [quickFilter, setQuickFilter] = useState("")
+
+  function track(resourceId: string, action: string) {
+    fetch((import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1") + "/track-click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resource_id: resourceId, action }),
+    }).catch(() => {})
+  }
 
 const filtered = resources.filter(r =>
     (cat === "All" || r.cat === cat) &&
+    (quickFilter === "" || r.tags.includes(quickFilter)) &&
     (search === "" || r.name.toLowerCase().includes(search.toLowerCase()) || r.desc.toLowerCase().includes(search.toLowerCase()) || r.tags.some(t => t.includes(search.toLowerCase())))
   )
 
@@ -60,9 +72,9 @@ const filtered = resources.filter(r =>
         <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "20px" }}>Cornell, Ithaca, and beyond.</p>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." style={{ width: "100%", padding: "14px 16px", border: "1px solid #2a2a2a", borderRadius: "8px", fontSize: "15px", backgroundColor: "#1a1a1a", color: "#fff", marginBottom: "16px" }} />
         <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "4px", marginBottom: "20px" }}>
-          {CATS.map(c => (
-            <button key={c} onClick={() => setCat(c)} style={{ padding: "8px 16px", border: "none", borderRadius: "20px", backgroundColor: cat === c ? PINK : "#1a1a1a", color: cat === c ? "#0f0f0f" : "#a0a0a0", fontSize: "13px", fontWeight: cat === c ? 800 : 400, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-              {c}
+          {QUICK_FILTERS.map(f => (
+            <button key={f} onClick={() => setQuickFilter(f === quickFilter ? "" : f)} style={{ padding: "6px 14px", border: "1px solid " + (quickFilter === f ? PINK : "#2a2a2a"), borderRadius: "20px", backgroundColor: "transparent", color: quickFilter === f ? PINK : "#4a4a4a", fontSize: "12px", fontWeight: quickFilter === f ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, textTransform: "capitalize" }}>
+              {f === "24/7" ? "Available now" : f}
             </button>
           ))}
         </div>
@@ -79,12 +91,12 @@ const filtered = resources.filter(r =>
             {r.hours && <p style={{ fontSize: "11px", color: "#4a4a4a", marginBottom: "12px" }}>{r.hours}</p>}
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               {r.phone && (
-                <a href={`tel:${r.phone}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 18px", backgroundColor: r.cat === "Crisis" ? "#e63946" : PINK, color: r.cat === "Crisis" ? "#fff" : "#0f0f0f", borderRadius: "8px", fontSize: "14px", fontWeight: 800, letterSpacing: "0.04em" }}>
+                <a href={`tel:${r.phone}`} onClick={() => track(r.name, "call")} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 18px", backgroundColor: r.cat === "Crisis" ? "#e63946" : PINK, color: r.cat === "Crisis" ? "#fff" : "#0f0f0f", borderRadius: "8px", fontSize: "14px", fontWeight: 800, letterSpacing: "0.04em" }}>
                   <svg width="16" height="16" fill="none" stroke={r.cat === "Crisis" ? "#fff" : "#0f0f0f"} strokeWidth="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
                   {r.phone}
                 </a>
               )}
-              {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ padding: "12px 18px", border: "1px solid #2a2a2a", color: "#a0a0a0", borderRadius: "8px", fontSize: "13px" }}>Website</a>}
+              {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" onClick={() => track(r.name, "website")} style={{ padding: "12px 18px", border: "1px solid #2a2a2a", color: "#a0a0a0", borderRadius: "8px", fontSize: "13px" }}>Website</a>}
               </div>
           </div>
         ))}

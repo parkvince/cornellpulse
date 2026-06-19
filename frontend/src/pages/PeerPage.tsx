@@ -146,6 +146,8 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
   })
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [showReport, setShowReport] = useState(false)
+  const [reportReason, setReportReason] = useState("")
 
   function update(field: string, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -176,7 +178,37 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
             <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#fff", marginBottom: "8px" }}>Request sent</h3>
             <p style={{ fontSize: "14px", color: "#a0a0a0", lineHeight: 1.6 }}>We will reach out within 24 hours to connect you with {supporter.name}. Check your email.</p>
           </div>
-          <button onClick={onSubmit} style={{ width: "100%", padding: "16px", backgroundColor: PINK, color: "#0f0f0f", border: "none", borderRadius: "8px", fontSize: "15px", fontWeight: 800, letterSpacing: "0.04em" }}>Done</button>
+          <button onClick={onSubmit} style={{ width: "100%", padding: "16px", backgroundColor: PINK, color: "#0f0f0f", border: "none", borderRadius: "8px", fontSize: "15px", fontWeight: 800, letterSpacing: "0.04em", marginBottom: "10px" }}>Done</button>
+          <button onClick={() => setShowReport(true)} style={{ width: "100%", padding: "10px", backgroundColor: "transparent", border: "none", color: "#4a4a4a", fontSize: "12px" }}>Report a concern about this supporter</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (showReport) {
+    return (
+      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "430px", height: "100%", backgroundColor: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "flex-end" }}>
+        <div style={{ backgroundColor: "#1a1a1a", borderRadius: "16px 16px 0 0", padding: "24px 24px 48px", width: "100%" }}>
+          <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#fff", marginBottom: "8px" }}>Report a concern</h3>
+          <p style={{ fontSize: "13px", color: "#a0a0a0", marginBottom: "16px", lineHeight: 1.5 }}>This goes directly to our team and is kept confidential.</p>
+          <textarea value={reportReason} onChange={e => setReportReason(e.target.value)} placeholder="What happened?" rows={4} style={{ width: "100%", padding: "12px 14px", border: "1px solid #2a2a2a", borderRadius: "8px", fontSize: "14px", backgroundColor: "#242424", color: "#fff", resize: "none", marginBottom: "16px" }} />
+          <button
+            onClick={async () => {
+              try {
+                await fetch(`${API_URL}/report-supporter`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ supporter_name: supporter.name, reporter_email: form.requester_email, reason: reportReason }),
+                })
+              } catch {}
+              setShowReport(false)
+              onSubmit()
+            }}
+            disabled={!reportReason.trim()}
+            style={{ width: "100%", padding: "14px", backgroundColor: reportReason.trim() ? "#e63946" : "#242424", color: reportReason.trim() ? "#fff" : "#4a4a4a", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 800 }}
+          >
+            Submit report
+          </button>
         </div>
       </div>
     )
@@ -242,9 +274,11 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
           <p style={{ fontSize: "12px", color: "#a0a0a0", lineHeight: 1.6 }}>We will introduce you both over email within 24 hours. {supporter.name} has been vetted and approved by our team.</p>
         </div>
 
-        <button onClick={handleSubmit} disabled={!canSubmit || loading} style={{ width: "100%", padding: "16px", backgroundColor: canSubmit && !loading ? PINK : "#242424", color: canSubmit && !loading ? "#0f0f0f" : "#4a4a4a", border: "none", borderRadius: "8px", fontSize: "15px", fontWeight: 800, letterSpacing: "0.04em" }}>
-          {loading ? "Sending..." : "Send request"}
+        <button onClick={handleSubmit} disabled={!canSubmit || loading} style={{ width: "100%", padding: "16px", backgroundColor: canSubmit && !loading ? PINK : "#242424", color: canSubmit && !loading ? "#0f0f0f" : "#a0a0a0", border: "none", borderRadius: "8px", fontSize: "15px", fontWeight: 800, letterSpacing: "0.04em", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}>
+          {loading && <span style={{ width: "14px", height: "14px", border: "2px solid #4a4a4a", borderTopColor: PINK, borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />}
+          {loading ? "Sending" : "Send request"}
         </button>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
   )

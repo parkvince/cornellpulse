@@ -231,3 +231,52 @@ async def delete_signup(signup_id: int, db: AsyncSession = Depends(get_db)):
     await db.delete(signup)
     await db.commit()
     return {"status": "deleted"}
+
+
+class ReportRequest(BaseModel):
+    supporter_name: str
+    reporter_email: Optional[str] = None
+    reason: str
+
+@router.post("/report-supporter")
+async def report_supporter(request: ReportRequest, db: AsyncSession = Depends(get_db)):
+    from app.models.db_models import SupporterReport
+    report = SupporterReport(
+        supporter_name=request.supporter_name,
+        reporter_email=request.reporter_email,
+        reason=request.reason,
+    )
+    db.add(report)
+    await db.commit()
+
+    send_email(
+        to=ADMIN_EMAIL,
+        subject=f"Report filed against {request.supporter_name}",
+        html=f"""
+        <h2>A student has filed a report</h2>
+        <p><strong>Supporter:</strong> {request.supporter_name}</p>
+        <p><strong>Reporter contact:</strong> {request.reporter_email or 'Not provided'}</p>
+        <p><strong>Reason:</strong> {request.reason}</p>
+        <br/>
+        <p>Please review this as soon as possible.</p>
+        """
+    )
+
+    return {"status": "received"}
+
+@router.get("/reports")
+async def get_reports(db: AsyncSession = Depends(get_db)):
+    from app.models.db_models import SupporterReport
+    result = await db.execute(select(SupporterReport).order_by(SupporterReport.reported_at.desc()))
+    reports = result.scalars().all()
+    return [
+        {
+            "id": r.id,
+            "supporter_name": r.supporter_name,
+            "reporter_email": r.reporter_email,
+            "reason": r.reason,
+            "reported_at": r.reported_at.isoformat() if r.reported_at else None,
+            "resolved": r.resolved,
+        }
+        for r in reports
+    ]

@@ -92,3 +92,22 @@ class PeerConnectRequest(Base):
     message = Column(Text)
     status = Column(String(50), default="pending")
     requested_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    class ResourceClick(Base):
+    __tablename__ = "resource_clicks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    resource_id = Column(String(100), nullable=False)
+    action = Column(String(20), nullable=False)
+    clicked_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+    class SupporterReport(Base):
+    __tablename__ = "supporter_reports"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    supporter_name = Column(String(200), nullable=False)
+    reporter_email = Column(String(200))
+    reason = Column(Text, nullable=False)
+    reported_at = Column(DateTime(timezone=True), server_default=func.now())
+    resolved = Column(Boolean, default=False)

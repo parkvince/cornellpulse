@@ -31,14 +31,18 @@ export default function StepTrigger(props: Props) {
   function toggle(val: string) {
     if (val === "nothing_specific") { onChange(["nothing_specific"]); return }
     const f = values.filter(v => v !== "nothing_specific")
-    onChange(f.includes(val) ? f.filter(v => v !== val) : [...f, val])
+    if (f.includes(val)) {
+      onChange(f.filter(v => v !== val))
+    } else if (f.length < 4) {
+      onChange([...f, val])
+    }
   }
 
   return (
     <div>
       <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "14px" }}>Step 4 of 4</p>
       <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#fff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "10px" }}>What is weighing on you?</h2>
-      <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "24px" }}>Select everything that applies.</p>
+      <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "24px" }}>Select up to 4 that apply most.</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px", marginBottom: "32px" }}>
         {triggers.map(opt => {
           const sel = values.includes(opt.value)
