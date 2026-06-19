@@ -523,13 +523,33 @@ export default function PeerPage() {
             </div>
           )}
 
+          <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "20px", marginBottom: "16px" }}>
+            <p style={{ fontSize: "15px", fontWeight: 800, color: "#fff", marginBottom: "10px" }}>How peer connect works</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {[
+                { step: "1", text: "Browse students below who have signed up to listen, grab food, or just hang out." },
+                { step: "2", text: "Tap a supporter and fill out a short request. Takes about 30 seconds." },
+                { step: "3", text: "We reach out to both of you within 24 hours and make the introduction over email." },
+              ].map(item => (
+                <div key={item.step} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "12px", backgroundColor: PINK, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: "12px", fontWeight: 800, color: "#0f0f0f" }}>{item.step}</span>
+                  </div>
+                  <p style={{ fontSize: "14px", color: "#a0a0a0", lineHeight: 1.55, paddingTop: "2px" }}>{item.text}</p>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setTab("signup")} style={{ width: "100%", marginTop: "16px", padding: "12px", border: "1px solid #2a2a2a", borderRadius: "8px", backgroundColor: "transparent", color: PINK, fontSize: "13px", fontWeight: 700, letterSpacing: "0.04em" }}>
+              BECOME A SUPPORTER
+            </button>
+          </div>
+
           {loading && <div style={{ textAlign: "center", padding: "48px 0" }}><p style={{ fontSize: "14px", color: "#4a4a4a" }}>Loading supporters...</p></div>}
 
           {!loading && filtered.length === 0 && (
-            <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "32px 20px", textAlign: "center" }}>
-              <p style={{ fontSize: "16px", fontWeight: 800, color: "#fff", marginBottom: "8px" }}>No supporters yet</p>
-              <p style={{ fontSize: "14px", color: "#a0a0a0", lineHeight: 1.6, marginBottom: "20px" }}>We are building our network. Be the first to sign up.</p>
-              <button onClick={() => setTab("signup")} style={{ padding: "12px 24px", backgroundColor: PINK, color: "#0f0f0f", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 800 }}>Sign up as a supporter</button>
+            <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "24px 20px", textAlign: "center" }}>
+              <p style={{ fontSize: "15px", fontWeight: 800, color: "#fff", marginBottom: "8px" }}>No supporters yet</p>
+              <p style={{ fontSize: "14px", color: "#a0a0a0", lineHeight: 1.6 }}>We are building our network. Be the first to sign up and help other students.</p>
             </div>
           )}
 

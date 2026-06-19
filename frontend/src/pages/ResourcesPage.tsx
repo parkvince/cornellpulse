@@ -70,8 +70,7 @@ const filtered = resources.filter(r =>
       <div style={{ padding: "0 20px" }}>
         {filtered.length === 0 && <p style={{ fontSize: "15px", color: "#4a4a4a", textAlign: "center", padding: "40px 0" }}>No results.</p>}
         {filtered.map(r => (
-          <div key={r.name} style={{ borderRadius: "10px", padding: "18px", backgroundColor: "#1a1a1a", marginBottom: "8px", borderLeft: r.cat === "Crisis" ? "3px solid #e63946" : "none" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+            <div key={r.name} style={{ borderRadius: "10px", padding: "18px", backgroundColor: r.cat === "Crisis" ? "#1f0a0b" : "#1a1a1a", marginBottom: "8px", borderLeft: r.cat === "Crisis" ? "3px solid #e63946" : "none" }}>            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
               <p style={{ fontSize: "15px", fontWeight: 800, color: "#fff", flex: 1, paddingRight: "10px", lineHeight: 1.3 }}>{r.name}</p>
               <span style={{ fontSize: "9px", fontWeight: 700, color: "#4a4a4a", backgroundColor: "#242424", padding: "3px 8px", borderRadius: "4px", whiteSpace: "nowrap", flexShrink: 0, letterSpacing: "0.08em" }}>{r.cat.toUpperCase()}</span>
             </div>
@@ -79,13 +78,17 @@ const filtered = resources.filter(r =>
             {r.loc && <p style={{ fontSize: "11px", color: "#4a4a4a", marginBottom: "2px" }}>{r.loc}</p>}
             {r.hours && <p style={{ fontSize: "11px", color: "#4a4a4a", marginBottom: "12px" }}>{r.hours}</p>}
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {r.phone && <a href={`tel:${r.phone}`} style={{ padding: "9px 16px", backgroundColor: PINK, color: "#0f0f0f", borderRadius: "20px", fontSize: "12px", fontWeight: 800, letterSpacing: "0.04em" }}>CALL {r.phone}</a>}
-              {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ padding: "9px 16px", border: "1px solid #2a2a2a", color: "#a0a0a0", borderRadius: "20px", fontSize: "12px" }}>Website</a>}
-            </div>
+              {r.phone && (
+                <a href={`tel:${r.phone}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 18px", backgroundColor: r.cat === "Crisis" ? "#e63946" : PINK, color: r.cat === "Crisis" ? "#fff" : "#0f0f0f", borderRadius: "8px", fontSize: "14px", fontWeight: 800, letterSpacing: "0.04em" }}>
+                  <svg width="16" height="16" fill="none" stroke={r.cat === "Crisis" ? "#fff" : "#0f0f0f"} strokeWidth="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+                  {r.phone}
+                </a>
+              )}
+              {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ padding: "12px 18px", border: "1px solid #2a2a2a", color: "#a0a0a0", borderRadius: "8px", fontSize: "13px" }}>Website</a>}
+              </div>
           </div>
         ))}
       </div>
     </div>
   )
 }
-//

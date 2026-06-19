@@ -90,6 +90,13 @@ export default function ResultCard(props) {
       <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "10px" }}>Your results</p>
       <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", marginBottom: "10px" }}>Here is what we recommend</h2>
 
+      {props.triggers && props.triggers.length > 0 && !tr.crisis_flag && (
+        <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "16px 18px", marginBottom: "16px" }}>
+          <p style={{ fontSize: "14px", color: "#fff", lineHeight: 1.6 }}>
+            It sounds like <strong style={{ color: "#e8a0b4" }}>{props.triggers.slice(0, 2).join(" and ").toLowerCase()}</strong> {props.triggers.length === 1 ? "is" : "are"} weighing on you right now. That is completely valid. Here is what we think could help most.
+          </p>
+        </div>
+      )}
       {tr.why && <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "24px", lineHeight: 1.65, paddingLeft: "14px", borderLeft: "2px solid #2a2a2a" }}>{tr.why}</p>}
 
       <ResourceItem resource={tr.primary} primary={true} />
@@ -115,3 +122,4 @@ export default function ResultCard(props) {
     </div>
   )
 }
+

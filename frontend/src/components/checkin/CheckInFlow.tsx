@@ -1,13 +1,12 @@
 import { useState } from "react"
 import StepMood from "./StepMood"
-import StepSleep from "./StepSleep"
-import StepWorkload from "./StepWorkload"
+import StepSleepWorkload from "./StepSleepWorkload"
 import StepTrigger from "./StepTrigger"
 import StepText from "./StepText"
 import ResultCard from "./ResultCard"
 import { submitCheckin } from "../../api/client"
 
-const TOTAL_STEPS = 5
+const TOTAL_STEPS = 4
 
 export default function CheckInFlow() {
   const [step, setStep] = useState<number>(1)
@@ -72,7 +71,7 @@ export default function CheckInFlow() {
   }
 
   if (result) {
-    return <ResultCard result={result} moodScore={mood} onRestart={restart} />
+    return <ResultCard result={result} moodScore={mood} triggers={triggers} onRestart={restart} />
   }
 
   return (
@@ -88,11 +87,10 @@ export default function CheckInFlow() {
           }} />
         </div>
       </div>
-      {step === 1 && <StepMood value={mood} onChange={setMood} onNext={function() { setStep(2) }} />}
-      {step === 2 && <StepSleep value={sleep} onChange={setSleep} onNext={function() { setStep(3) }} onBack={function() { setStep(1) }} />}
-      {step === 3 && <StepWorkload value={workload} onChange={setWorkload} onNext={function() { setStep(4) }} onBack={function() { setStep(2) }} />}
-      {step === 4 && <StepTrigger values={triggers} onChange={(v: string[]) => setTriggers(v)} wantsToTalk={wantsToTalk} onWantsToTalkChange={(v: boolean) => setWantsToTalk(v)} onNext={function() { setStep(5) }} onBack={function() { setStep(3) }} />}
-      {step === 5 && <StepText value={freeText} onChange={setFreeText} college={college} onCollegeChange={setCollege} colleges={colleges} onSubmit={handleSubmit} onBack={function() { setStep(4) }} loading={loading} error={error} />}
+      {step === 1 && <StepMood value={mood} onChange={setMood} onNext={() => setStep(2)} />}
+      {step === 2 && <StepSleepWorkload sleep={sleep} onSleepChange={setSleep} workload={workload} onWorkloadChange={setWorkload} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
+      {step === 3 && <StepTrigger values={triggers} onChange={(v: string[]) => setTriggers(v)} wantsToTalk={wantsToTalk} onWantsToTalkChange={(v: boolean) => setWantsToTalk(v)} onNext={() => setStep(4)} onBack={() => setStep(2)} />}
+      {step === 4 && <StepText value={freeText} onChange={setFreeText} college={college} onCollegeChange={setCollege} colleges={colleges} onSubmit={handleSubmit} onBack={() => setStep(3)} loading={loading} error={error} />}
     </div>
   )
 }

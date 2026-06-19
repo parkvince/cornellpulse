@@ -10,7 +10,7 @@ const opts = [
 export default function StepWorkload({ value, onChange, onNext, onBack }: Props) {
   return (
     <div>
-      <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "14px" }}>Step 3 of 5</p>
+      <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "14px" }}>Step 3 of 4</p>
       <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#fff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "10px" }}>How is your workload right now?</h2>
       <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "32px" }}>Think about the last few days.</p>
       <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "48px" }}>
