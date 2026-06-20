@@ -5,7 +5,7 @@ interface Props { value: string; onChange: (v: string) => void; college: string;
 export default function StepText({ value, onChange, college, onCollegeChange, colleges, onSubmit, onBack, loading, error }: Props) {
   return (
     <div>
-      <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "14px" }}>Step 5 of 5</p>
+      <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "14px" }}>Step 4 of 4</p>
       <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#fff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "10px" }}>Anything else on your mind?</h2>
       <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "24px" }}>Optional. Never saved anywhere.</p>
       <textarea value={value} onChange={e => onChange(e.target.value)} maxLength={500} placeholder="You can write anything here..." rows={4} style={{ width: "100%", padding: "16px", border: "1px solid #2a2a2a", borderRadius: "8px", fontSize: "15px", resize: "none", marginBottom: "8px", backgroundColor: "#1a1a1a", color: "#fff" }} />

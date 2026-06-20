@@ -31,32 +31,32 @@ function ResourceItem(props) {
   }
 
   return (
-    <div style={{ borderRadius: "10px", padding: "20px", backgroundColor: primary ? "#1f1520" : "#1a1a1a", marginBottom: "8px", borderLeft: primary ? "3px solid #e8a0b4" : "none" }}>
-      {primary && <p style={{ fontSize: "10px", fontWeight: 700, color: "#e8a0b4", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "10px" }}>Best match</p>}
-      <p style={{ fontWeight: 800, fontSize: "17px", marginBottom: "6px", color: "#fff" }}>{r.name}</p>
-      <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "16px", lineHeight: 1.5 }}>{r.tagline}</p>
+    <div style={{ borderRadius: "12px", padding: primary ? "24px 20px" : "20px", backgroundColor: primary ? "#e8a0b4" : "#1a1a1a", marginBottom: "10px" }}>
+      {primary && <p style={{ fontSize: "10px", fontWeight: 800, color: "#0f0f0f", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "12px", opacity: 0.65 }}>Best match for you</p>}
+      <p style={{ fontWeight: 800, fontSize: primary ? "20px" : "17px", marginBottom: "6px", color: primary ? "#0f0f0f" : "#fff" }}>{r.name}</p>
+      <p style={{ fontSize: "14px", color: primary ? "#1a1a1a" : "#a0a0a0", marginBottom: "16px", lineHeight: 1.5, opacity: primary ? 0.85 : 1 }}>{r.tagline}</p>
       {r.phone && (
         <div style={{ marginBottom: "10px" }}>
-          <p style={{ fontSize: "10px", color: "#4a4a4a", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "3px" }}>Phone</p>
-          <a href={"tel:" + r.phone} style={{ fontSize: "17px", fontWeight: 800, color: "#e8a0b4" }}>{r.phone}</a>
+          <p style={{ fontSize: "10px", color: primary ? "#0f0f0f" : "#4a4a4a", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "3px", opacity: primary ? 0.6 : 1 }}>Phone</p>
+          <a href={"tel:" + r.phone} style={{ fontSize: "18px", fontWeight: 800, color: primary ? "#0f0f0f" : "#e8a0b4" }}>{r.phone}</a>
         </div>
       )}
       {r.hours && (
         <div style={{ marginBottom: "10px" }}>
-          <p style={{ fontSize: "10px", color: "#4a4a4a", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "3px" }}>Hours</p>
-          <p style={{ fontSize: "14px", color: "#a0a0a0" }}>{r.hours}</p>
+          <p style={{ fontSize: "10px", color: primary ? "#0f0f0f" : "#4a4a4a", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "3px", opacity: primary ? 0.6 : 1 }}>Hours</p>
+          <p style={{ fontSize: "14px", color: primary ? "#1a1a1a" : "#a0a0a0", opacity: primary ? 0.85 : 1 }}>{r.hours}</p>
         </div>
       )}
       {r.how_to_access && (
-        <div style={{ backgroundColor: "#242424", borderRadius: "6px", padding: "12px", marginBottom: "8px" }}>
-          <p style={{ fontSize: "10px", color: "#4a4a4a", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>How to access</p>
-          <p style={{ fontSize: "13px", color: "#a0a0a0", lineHeight: 1.6 }}>{r.how_to_access}</p>
+        <div style={{ backgroundColor: primary ? "rgba(15,15,15,0.1)" : "#242424", borderRadius: "8px", padding: "14px", marginBottom: "8px" }}>
+          <p style={{ fontSize: "10px", color: primary ? "#0f0f0f" : "#4a4a4a", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px", opacity: primary ? 0.6 : 1 }}>How to access</p>
+          <p style={{ fontSize: "13px", color: primary ? "#1a1a1a" : "#a0a0a0", lineHeight: 1.6, opacity: primary ? 0.9 : 1 }}>{r.how_to_access}</p>
         </div>
       )}
-      <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
-        {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: "#e8a0b4", textDecoration: "underline" }}>Visit website</a>}
+      <div style={{ display: "flex", gap: "14px", marginTop: "14px", flexWrap: "wrap" }}>
+        {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: primary ? "#0f0f0f" : "#e8a0b4", fontWeight: primary ? 700 : 400, textDecoration: "underline" }}>Visit website</a>}
         {primary && (
-          <button onClick={saveResource} style={{ fontSize: "13px", color: "#4a4a4a", backgroundColor: "transparent", border: "none", textDecoration: "underline", padding: 0 }}>
+          <button onClick={saveResource} style={{ fontSize: "13px", color: "#0f0f0f", fontWeight: 700, backgroundColor: "transparent", border: "none", textDecoration: "underline", padding: 0 }}>
             Save resource
           </button>
         )}
@@ -91,13 +91,11 @@ export default function ResultCard(props) {
       <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", marginBottom: "10px" }}>Here is what we recommend</h2>
 
       {props.triggers && props.triggers.length > 0 && !tr.crisis_flag && (
-        <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "16px 18px", marginBottom: "16px" }}>
-          <p style={{ fontSize: "14px", color: "#fff", lineHeight: 1.6 }}>
-            It sounds like <strong style={{ color: "#e8a0b4" }}>{props.triggers.slice(0, 2).join(" and ").toLowerCase()}</strong> {props.triggers.length === 1 ? "is" : "are"} weighing on you right now. That is completely valid. Here is what we think could help most.
-          </p>
-        </div>
+        <p style={{ fontSize: "15px", color: "#fff", lineHeight: 1.6, marginBottom: "8px" }}>
+          It sounds like <strong style={{ color: "#e8a0b4", fontWeight: 700 }}>{props.triggers.slice(0, 2).join(" and ").toLowerCase()}</strong> {props.triggers.length === 1 ? "is" : "are"} weighing on you right now. That is completely valid.
+        </p>
       )}
-      {tr.why && <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "24px", lineHeight: 1.65, paddingLeft: "14px", borderLeft: "2px solid #2a2a2a" }}>{tr.why}</p>}
+      {tr.why && <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "24px", lineHeight: 1.65 }}>{tr.why}</p>}
 
       <ResourceItem resource={tr.primary} primary={true} />
 
