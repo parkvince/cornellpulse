@@ -253,6 +253,9 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
             {supporter.locations.map((loc: string) => (
               <button key={loc} onClick={() => update("preferred_location", loc)} style={gridBtn(form.preferred_location === loc)}>{loc}</button>
             ))}
+            <button onClick={() => update("preferred_location", "Will figure out together")} style={{ ...gridBtn(form.preferred_location === "Will figure out together"), gridColumn: "1 / -1" }}>
+              Not sure yet, we will figure it out together
+            </button>
           </div>
         </div>
 
@@ -262,6 +265,9 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
             {supporter.availability.map((a: string) => (
               <button key={a} onClick={() => update("preferred_time", a)} style={gridBtn(form.preferred_time === a)}>{a}</button>
             ))}
+            <button onClick={() => update("preferred_time", "Will figure out together")} style={{ ...gridBtn(form.preferred_time === "Will figure out together"), gridColumn: "1 / -1" }}>
+              Not sure yet, we will figure it out together
+            </button>
           </div>
         </div>
 
