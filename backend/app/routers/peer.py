@@ -179,26 +179,45 @@ async def peer_connect(request: PeerConnectRequestModel, db: AsyncSession = Depe
     db.add(connect)
     await db.commit()
 
-    if resend.api_key:
-        try:
-            resend.Emails.send({
-                "from": "CornellPulse <onboarding@resend.dev>",
-                "to": ADMIN_EMAIL,
-                "subject": f"New peer connect request from {request.requester_name}",
-                "html": f"""
-                <h2>New peer connect request</h2>
-                <p><strong>From:</strong> {request.requester_name} ({request.requester_email})</p>
-                <p><strong>Wants to meet:</strong> {request.supporter_name}</p>
-                <p><strong>Preferred location:</strong> {request.preferred_location}</p>
-                <p><strong>Preferred time:</strong> {request.preferred_time}</p>
-                <p><strong>Phone:</strong> {request.requester_phone or 'Not provided'}</p>
-                <p><strong>Message:</strong> {request.message or 'Not provided'}</p>
-                <br/>
-                <p>Reply to this email or log into the admin dashboard to follow up within 24 hours.</p>
-                """
-            })
-        except Exception:
-            pass
+    supporter_result = await db.execute(
+        select(PeerSignup).where(PeerSignup.name == request.supporter_name, PeerSignup.approved == True)
+    )
+    supporter = supporter_result.scalars().first()
+
+    if supporter:
+        send_email(
+            to=supporter.email,
+            subject=f"{request.requester_name} wants to connect with you on CornellPulse",
+            html=f"""
+            <h2>Someone reached out to you</h2>
+            <p>Hi {supporter.name},</p>
+            <p>A Cornell student saw your profile on CornellPulse and would like to meet up.</p>
+            <p><strong>Name:</strong> {request.requester_name}</p>
+            <p><strong>Email:</strong> {request.requester_email}</p>
+            <p><strong>Phone:</strong> {request.requester_phone or 'Not provided'}</p>
+            <p><strong>Preferred location:</strong> {request.preferred_location}</p>
+            <p><strong>Preferred time:</strong> {request.preferred_time}</p>
+            <p><strong>Message:</strong> {request.message or 'Not provided'}</p>
+            <br/>
+            <p>They have your contact info and may reach out directly. Feel free to respond whenever works for you.</p>
+            <p>Thank you for being a peer supporter. It means a lot.</p>
+            """
+        )
+
+    send_email(
+        to=ADMIN_EMAIL,
+        subject=f"New peer connect: {request.requester_name} to {request.supporter_name}",
+        html=f"""
+        <h2>New peer connect request</h2>
+        <p><strong>From:</strong> {request.requester_name} ({request.requester_email})</p>
+        <p><strong>Wants to meet:</strong> {request.supporter_name}</p>
+        <p><strong>Preferred location:</strong> {request.preferred_location}</p>
+        <p><strong>Preferred time:</strong> {request.preferred_time}</p>
+        <p><strong>Message:</strong> {request.message or 'Not provided'}</p>
+        <br/>
+        <p>Both parties have been given each other's contact info directly.</p>
+        """
+    )
 
     return {"status": "received"}
 

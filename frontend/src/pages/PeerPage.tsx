@@ -175,10 +175,25 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         <div style={{ backgroundColor: "#1a1a1a", borderRadius: "16px 16px 0 0", padding: "32px 24px 48px", width: "100%" }}>
           <div style={{ textAlign: "center", marginBottom: "20px" }}>
             <div style={{ fontSize: "40px", marginBottom: "12px", color: PINK }}>&#10003;</div>
-            <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#fff", marginBottom: "8px" }}>Request sent</h3>
-            <p style={{ fontSize: "14px", color: "#a0a0a0", lineHeight: 1.6 }}>We will reach out within 24 hours to connect you with {supporter.name}. Check your email.</p>
+            <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#fff", marginBottom: "8px" }}>You are connected</h3>
+            <p style={{ fontSize: "14px", color: "#a0a0a0", lineHeight: 1.6 }}>{supporter.name} has been notified and here is how to reach them directly.</p>
           </div>
-          <button onClick={onSubmit} style={{ width: "100%", padding: "16px", backgroundColor: PINK, color: "#0f0f0f", border: "none", borderRadius: "8px", fontSize: "15px", fontWeight: 800, letterSpacing: "0.04em", marginBottom: "10px" }}>Done</button>
+
+          <div style={{ backgroundColor: "#242424", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
+            <p style={{ fontSize: "11px", color: "#4a4a4a", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>{supporter.name}</p>
+            {supporter.phone && (
+              <a href={`tel:${supporter.phone}`} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px", backgroundColor: PINK, color: "#0f0f0f", borderRadius: "8px", fontSize: "15px", fontWeight: 800, marginBottom: "8px" }}>
+                Call or text {supporter.phone}
+              </a>
+            )}
+            {supporter.email && (
+              <a href={`mailto:${supporter.email}`} style={{ display: "block", padding: "12px", border: "1px solid #2a2a2a", color: "#a0a0a0", borderRadius: "8px", fontSize: "14px", textAlign: "center" }}>
+                Email {supporter.email}
+              </a>
+            )}
+          </div>
+
+          <button onClick={onSubmit} style={{ width: "100%", padding: "16px", backgroundColor: "transparent", border: "1px solid #2a2a2a", color: "#fff", borderRadius: "8px", fontSize: "15px", fontWeight: 700, letterSpacing: "0.04em", marginBottom: "10px" }}>Done</button>
           <button onClick={() => setShowReport(true)} style={{ width: "100%", padding: "10px", backgroundColor: "transparent", border: "none", color: "#4a4a4a", fontSize: "12px" }}>Report a concern about this supporter</button>
         </div>
       </div>
