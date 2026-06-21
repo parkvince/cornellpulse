@@ -7,6 +7,19 @@ from app.database import get_db
 from app.models.db_models import PeerSignup, PeerConnectRequest
 import os
 import resend
+from collections import defaultdict
+from datetime import datetime, timedelta
+from fastapi import Request, HTTPException
+
+submission_log = defaultdict(list)
+
+def check_rate_limit(ip: str, max_per_hour: int = 5):
+    now = datetime.now()
+    cutoff = now - timedelta(hours=1)
+    submission_log[ip] = [t for t in submission_log[ip] if t > cutoff]
+    if len(submission_log[ip]) >= max_per_hour:
+        raise HTTPException(status_code=429, detail="Too many submissions. Please try again later.")
+    submission_log[ip].append(now)
 
 router = APIRouter()
 
@@ -38,7 +51,8 @@ class PeerConnectRequestModel(BaseModel):
     message: Optional[str] = None
 
 @router.post("/peer-signup")
-async def peer_signup(request: PeerSignupRequest, db: AsyncSession = Depends(get_db)):
+async def peer_signup(request: PeerSignupRequest, req: Request, db: AsyncSession = Depends(get_db)):
+    check_rate_limit(req.client.host, max_per_hour=3)
     signup = PeerSignup(
         name=request.name,
         email=request.email,
@@ -165,7 +179,8 @@ async def get_supporters(db: AsyncSession = Depends(get_db)):
     ]
 
 @router.post("/peer-connect")
-async def peer_connect(request: PeerConnectRequestModel, db: AsyncSession = Depends(get_db)):
+async def peer_connect(request: PeerConnectRequestModel, req: Request, db: AsyncSession = Depends(get_db)):
+    check_rate_limit(req.client.host, max_per_hour=5)
     connect = PeerConnectRequest(
         supporter_name=request.supporter_name,
         requester_name=request.requester_name,

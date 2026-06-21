@@ -1,3 +1,5 @@
+import { useState } from "react"
+
 const PINK = "#e8a0b4"
 
 function moodColor(m) {
@@ -25,7 +27,7 @@ function ResourceItem(props) {
       navigator.share({ title: r.name, text: text }).catch(() => {})
     } else {
       navigator.clipboard.writeText(text).then(() => {
-        alert("Copied to clipboard")
+        if (props.onSaved) props.onSaved()
       }).catch(() => {})
     }
   }
@@ -67,6 +69,12 @@ function ResourceItem(props) {
 
 export default function ResultCard(props) {
   const tr = props.result.triage_result
+  const [toast, setToast] = useState("")
+
+  function showToast(msg) {
+    setToast(msg)
+    setTimeout(() => setToast(""), 2200)
+  }
 
   function save() {
     try {
@@ -97,7 +105,7 @@ export default function ResultCard(props) {
       )}
       {tr.why && <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "24px", lineHeight: 1.65 }}>{tr.why}</p>}
 
-      <ResourceItem resource={tr.primary} primary={true} />
+      <ResourceItem resource={tr.primary} primary={true} onSaved={() => showToast("Copied to clipboard")} />
 
       {tr.show_peer_connect && (
         <div style={{ borderRadius: "10px", padding: "20px", marginBottom: "8px", backgroundColor: "#1a1a1a" }}>
@@ -106,7 +114,8 @@ export default function ResultCard(props) {
           <a href="mailto:cornellpulse@gmail.com?subject=Peer Connect Request" style={{ display: "block", border: "1px solid #2a2a2a", color: "#fff", padding: "14px", borderRadius: "6px", textAlign: "center", fontWeight: 700, fontSize: "14px", letterSpacing: "0.04em" }}>CONNECT ME WITH SOMEONE</a>
           <p style={{ fontSize: "11px", color: "#4a4a4a", textAlign: "center", marginTop: "8px" }}>Completely optional.</p>
         </div>
-      )}
+        )
+      }
 
       {tr.secondary.length > 0 && (
         <div style={{ marginTop: "16px" }}>
@@ -117,6 +126,12 @@ export default function ResultCard(props) {
 
       <button onClick={function() { save(); props.onRestart() }} style={{ marginTop: "20px", width: "100%", padding: "18px", backgroundColor: "transparent", color: "#a0a0a0", border: "1px solid #2a2a2a", borderRadius: "6px", fontSize: "14px", letterSpacing: "0.04em" }}>CHECK IN AGAIN</button>
       <p style={{ fontSize: "11px", color: "#4a4a4a", textAlign: "center", marginTop: "14px" }}>Your responses were not saved to our servers.</p>
+
+      {toast && (
+        <div style={{ position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)", backgroundColor: "#e8a0b4", color: "#0f0f0f", padding: "12px 20px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" }}>
+          {toast}
+        </div>
+      )}
     </div>
   )
 }

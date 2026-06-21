@@ -243,6 +243,18 @@ WORKLOAD_SCORES = {
     "unbearable": 1.0,
 }
 
+CRISIS_KEYWORDS = [
+    "kill myself", "kill my self", "suicide", "suicidal", "end my life", "end it all",
+    "want to die", "wanna die", "better off dead", "not worth living", "hurt myself",
+    "harm myself", "self harm", "self-harm", "cutting myself", "overdose", "no reason to live",
+]
+
+def contains_crisis_language(text):
+    if not text:
+        return False
+    lowered = text.lower()
+    return any(kw in lowered for kw in CRISIS_KEYWORDS)
+
 def run_triage(request: CheckInRequest) -> TriageResult:
     mood = request.mood_score
     sleep = request.sleep_category.value
@@ -250,7 +262,7 @@ def run_triage(request: CheckInRequest) -> TriageResult:
     college = request.college.value
     triggers = [t.value for t in request.stress_triggers] if request.stress_triggers else []
 
-    if mood <= 2:
+    if mood <= 2 or contains_crisis_language(request.free_text):
         return TriageResult(
             primary=RESOURCES["crisis_line"],
             secondary=[
