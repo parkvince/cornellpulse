@@ -42,7 +42,7 @@ export default function CheckInFlow() {
     }))
   }, [step, mood, sleep, workload, triggers, wantsToTalk, freeText, college, result])
 
-  const colleges = [
+const colleges = [
     { value: "engineering", label: "Engineering" },
     { value: "arts_sciences", label: "Arts and Sciences" },
     { value: "dyson", label: "Dyson" },
@@ -50,6 +50,9 @@ export default function CheckInFlow() {
     { value: "cals", label: "CALS" },
     { value: "aap", label: "AAP" },
     { value: "vet", label: "Vet" },
+    { value: "hotel", label: "Nolan School of Hotel Administration" },
+    { value: "bowers", label: "Bowers College of Computing and Information Science" },
+    { value: "public_policy", label: "Brooks School of Public Policy" },
     { value: "graduate", label: "Graduate" },
     { value: "professional", label: "Professional" },
     { value: "other", label: "Prefer not to say" },
