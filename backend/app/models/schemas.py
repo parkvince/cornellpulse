@@ -10,6 +10,7 @@ class CollegeEnum(str, Enum):
     cals = "cals"
     aap = "aap"
     vet = "vet"
+    human_ecology = "human_ecology"
     hotel = "hotel"
     bowers = "bowers"
     public_policy = "public_policy"

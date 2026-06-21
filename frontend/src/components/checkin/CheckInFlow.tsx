@@ -50,6 +50,7 @@ const colleges = [
     { value: "cals", label: "CALS" },
     { value: "aap", label: "AAP" },
     { value: "vet", label: "Vet" },
+    { value: "human_ecology", label: "Human Ecology" },
     { value: "hotel", label: "Nolan School of Hotel Administration" },
     { value: "bowers", label: "Bowers College of Computing and Information Science" },
     { value: "public_policy", label: "Brooks School of Public Policy" },
