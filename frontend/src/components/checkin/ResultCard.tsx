@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 const PINK = "#e8a0b4"
 
@@ -33,14 +33,14 @@ function ResourceItem(props) {
   }
 
   return (
-    <div style={{ borderRadius: "12px", padding: primary ? "24px 20px" : "20px", backgroundColor: primary ? "#e8a0b4" : "#1a1a1a", marginBottom: "10px" }}>
+    <div style={{ borderRadius: "12px", padding: primary ? "24px 20px" : "20px", backgroundColor: primary ? PINK : "#1a1a1a", marginBottom: "10px" }}>
       {primary && <p style={{ fontSize: "10px", fontWeight: 800, color: "#0f0f0f", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "12px", opacity: 0.65 }}>Best match for you</p>}
       <p style={{ fontWeight: 800, fontSize: primary ? "20px" : "17px", marginBottom: "6px", color: primary ? "#0f0f0f" : "#fff" }}>{r.name}</p>
       <p style={{ fontSize: "14px", color: primary ? "#1a1a1a" : "#a0a0a0", marginBottom: "16px", lineHeight: 1.5, opacity: primary ? 0.85 : 1 }}>{r.tagline}</p>
       {r.phone && (
         <div style={{ marginBottom: "10px" }}>
           <p style={{ fontSize: "10px", color: primary ? "#0f0f0f" : "#4a4a4a", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "3px", opacity: primary ? 0.6 : 1 }}>Phone</p>
-          <a href={"tel:" + r.phone} style={{ fontSize: "18px", fontWeight: 800, color: primary ? "#0f0f0f" : "#e8a0b4" }}>{r.phone}</a>
+          <a href={"tel:" + r.phone} style={{ fontSize: "18px", fontWeight: 800, color: primary ? "#0f0f0f" : PINK }}>{r.phone}</a>
         </div>
       )}
       {r.hours && (
@@ -56,7 +56,7 @@ function ResourceItem(props) {
         </div>
       )}
       <div style={{ display: "flex", gap: "14px", marginTop: "14px", flexWrap: "wrap" }}>
-        {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: primary ? "#0f0f0f" : "#e8a0b4", fontWeight: primary ? 700 : 400, textDecoration: "underline" }}>Visit website</a>}
+        {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: primary ? "#0f0f0f" : PINK, fontWeight: primary ? 700 : 400, textDecoration: "underline" }}>Visit website</a>}
         {primary && (
           <button onClick={saveResource} style={{ fontSize: "13px", color: "#0f0f0f", fontWeight: 700, backgroundColor: "transparent", border: "none", textDecoration: "underline", padding: 0 }}>
             Save resource
@@ -71,17 +71,27 @@ export default function ResultCard(props) {
   const tr = props.result.triage_result
   const [toast, setToast] = useState("")
 
+  useEffect(() => {
+    try {
+      const h = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
+      const entry = {
+        date: new Date().toISOString(),
+        mood: props.moodScore || 5,
+        distress_level: tr.distress_level,
+        resource: tr.primary.name,
+      }
+      localStorage.setItem("cornellpulse_history", JSON.stringify([entry, ...h].slice(0, 20)))
+    } catch {}
+  }, [])
+
   function showToast(msg) {
     setToast(msg)
     setTimeout(() => setToast(""), 2200)
   }
 
-  function save() {
-    try {
-      const h = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
-      localStorage.setItem("cornellpulse_history", JSON.stringify([{ date: new Date().toISOString(), mood: props.moodScore || 5, distress_level: tr.distress_level, resource: tr.primary.name }, ...h].slice(0, 20)))
-    } catch {}
-  }
+  const cleanTriggers = (props.triggers || [])
+    .filter(t => t !== "nothing_specific")
+    .map(t => t.replace(/_/g, " "))
 
   return (
     <div>
@@ -98,11 +108,12 @@ export default function ResultCard(props) {
       <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "10px" }}>Your results</p>
       <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", marginBottom: "10px" }}>Here is what we recommend</h2>
 
-      {props.triggers && props.triggers.length > 0 && !tr.crisis_flag && (
+      {cleanTriggers.length > 0 && !tr.crisis_flag && (
         <p style={{ fontSize: "15px", color: "#fff", lineHeight: 1.6, marginBottom: "8px" }}>
-          It sounds like <strong style={{ color: "#e8a0b4", fontWeight: 700 }}>{props.triggers.slice(0, 2).join(" and ").toLowerCase()}</strong> {props.triggers.length === 1 ? "is" : "are"} weighing on you right now. That is completely valid.
+          It sounds like <strong style={{ color: PINK, fontWeight: 700 }}>{cleanTriggers.slice(0, 2).join(" and ")}</strong> {cleanTriggers.length === 1 ? "is" : "are"} weighing on you right now. That is completely valid.
         </p>
       )}
+
       {tr.why && <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "24px", lineHeight: 1.65 }}>{tr.why}</p>}
 
       <ResourceItem resource={tr.primary} primary={true} onSaved={() => showToast("Copied to clipboard")} />
@@ -114,8 +125,7 @@ export default function ResultCard(props) {
           <a href="mailto:cornellpulse@gmail.com?subject=Peer Connect Request" style={{ display: "block", border: "1px solid #2a2a2a", color: "#fff", padding: "14px", borderRadius: "6px", textAlign: "center", fontWeight: 700, fontSize: "14px", letterSpacing: "0.04em" }}>CONNECT ME WITH SOMEONE</a>
           <p style={{ fontSize: "11px", color: "#4a4a4a", textAlign: "center", marginTop: "8px" }}>Completely optional.</p>
         </div>
-        )
-      }
+      )}
 
       {tr.secondary.length > 0 && (
         <div style={{ marginTop: "16px" }}>
@@ -124,15 +134,14 @@ export default function ResultCard(props) {
         </div>
       )}
 
-      <button onClick={function() { save(); props.onRestart() }} style={{ marginTop: "20px", width: "100%", padding: "18px", backgroundColor: "transparent", color: "#a0a0a0", border: "1px solid #2a2a2a", borderRadius: "6px", fontSize: "14px", letterSpacing: "0.04em" }}>CHECK IN AGAIN</button>
+      <button onClick={props.onRestart} style={{ marginTop: "20px", width: "100%", padding: "18px", backgroundColor: "transparent", color: "#a0a0a0", border: "1px solid #2a2a2a", borderRadius: "6px", fontSize: "14px", letterSpacing: "0.04em" }}>CHECK IN AGAIN</button>
       <p style={{ fontSize: "11px", color: "#4a4a4a", textAlign: "center", marginTop: "14px" }}>Your responses were not saved to our servers.</p>
 
       {toast && (
-        <div style={{ position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)", backgroundColor: "#e8a0b4", color: "#0f0f0f", padding: "12px 20px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" }}>
+        <div style={{ position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)", backgroundColor: PINK, color: "#0f0f0f", padding: "12px 20px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" }}>
           {toast}
         </div>
       )}
     </div>
   )
 }
-
