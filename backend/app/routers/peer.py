@@ -1,15 +1,20 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.models.db_models import PeerSignup, PeerConnectRequest
-import os
-import resend
 from collections import defaultdict
 from datetime import datetime, timedelta
-from fastapi import Request, HTTPException
+import os
+import resend
+
+router = APIRouter()
+
+resend.api_key = os.environ.get("RESEND_API_KEY", "")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+FROM_EMAIL = "CornellPulse <onboarding@resend.dev>"
 
 submission_log = defaultdict(list)
 
@@ -21,6 +26,18 @@ def check_rate_limit(ip: str, max_per_hour: int = 5):
         raise HTTPException(status_code=429, detail="Too many submissions. Please try again later.")
     submission_log[ip].append(now)
 
+def send_email(to: str, subject: str, html: str):
+    if not resend.api_key:
+        return
+    try:
+        resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": to,
+            "subject": subject,
+            "html": html,
+        })
+    except Exception as e:
+        print(f"Email failed: {e}")
 router = APIRouter()
 
 resend.api_key = os.environ.get("RESEND_API_KEY", "")
