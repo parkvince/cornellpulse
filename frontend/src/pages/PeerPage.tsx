@@ -84,7 +84,7 @@ interface RequestForm {
   requester_email: string
   requester_phone: string
   preferred_location: string
-  preferred_time: string
+  preferred_times: string[]
   message: string
 }
 
@@ -142,7 +142,7 @@ function SupporterCard({ supporter, onRequest }: { supporter: Supporter, onReque
 function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, onClose: () => void, onSubmit: () => void }) {
   const [form, setForm] = useState<RequestForm>({
     requester_name: "", requester_email: "", requester_phone: "",
-    preferred_location: "", preferred_time: "", message: "",
+    preferred_location: "", preferred_times: [], message: "",
   })
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
@@ -154,7 +154,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
   }
 
   const emailValid = isCornellEmail(form.requester_email)
-  const canSubmit = form.requester_name && emailValid && form.preferred_location && form.preferred_time
+const canSubmit = form.requester_name && emailValid && form.preferred_location && form.preferred_times.length > 0
 
   async function handleSubmit() {
     setLoading(true)
@@ -162,7 +162,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
       await fetch(`${API_URL}/peer-connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, supporter_name: supporter.name }),
+        body: JSON.stringify({ ...form, preferred_time: form.preferred_times.join(", "), supporter_name: supporter.name }),
       })
     } catch {}
     setLoading(false)
@@ -275,12 +275,20 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <label style={{ fontSize: "13px", fontWeight: 700, color: "#a0a0a0", display: "block", marginBottom: "8px" }}>When works for you <span style={{ color: "#e63946" }}>*</span></label>
+          <label style={{ fontSize: "13px", fontWeight: 700, color: "#a0a0a0", display: "block", marginBottom: "8px" }}>When works for you <span style={{ color: "#e63946" }}>*</span> <span style={{ color: "#4a4a4a", fontWeight: 400 }}>(select all that apply)</span></label>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-            {supporter.availability.map((a: string) => (
-              <button key={a} onClick={() => update("preferred_time", a)} style={gridBtn(form.preferred_time === a)}>{a}</button>
-            ))}
-            <button onClick={() => update("preferred_time", "Will figure out together")} style={{ ...gridBtn(form.preferred_time === "Will figure out together"), gridColumn: "1 / -1" }}>
+            {supporter.availability.map((a: string) => {
+              const selected = form.preferred_times.includes(a)
+              return (
+                <button key={a} onClick={() => {
+                  const times = form.preferred_times.includes(a)
+                    ? form.preferred_times.filter(t => t !== a)
+                    : [...form.preferred_times.filter(t => t !== "Will figure out together"), a]
+                  setForm(prev => ({ ...prev, preferred_times: times }))
+                }} style={gridBtn(selected)}>{a}</button>
+              )
+            })}
+            <button onClick={() => setForm(prev => ({ ...prev, preferred_times: ["Will figure out together"] }))} style={{ ...gridBtn(form.preferred_times.includes("Will figure out together")), gridColumn: "1 / -1" }}>
               Not sure yet, we will figure it out together
             </button>
           </div>
