@@ -82,7 +82,8 @@ const filtered = resources.filter(r =>
       <div style={{ padding: "0 20px" }}>
         {filtered.length === 0 && <p style={{ fontSize: "15px", color: "#4a4a4a", textAlign: "center", padding: "40px 0" }}>No results.</p>}
         {filtered.map(r => (
-            <div key={r.name} style={{ borderRadius: "10px", padding: "18px", backgroundColor: r.cat === "Crisis" ? "#1f0a0b" : "#1a1a1a", marginBottom: "8px", borderLeft: r.cat === "Crisis" ? "3px solid #e63946" : "none" }}>            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+            <div key={r.name} style={{ borderRadius: "10px", padding: "18px", backgroundColor: r.cat === "Crisis" ? "#1f0a0b" : "#1a1a1a", marginBottom: "8px", border: r.cat === "Crisis" ? "1px solid #e63946" : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
               <p style={{ fontSize: "15px", fontWeight: 800, color: "#fff", flex: 1, paddingRight: "10px", lineHeight: 1.3 }}>{r.name}</p>
               <span style={{ fontSize: "9px", fontWeight: 700, color: "#4a4a4a", backgroundColor: "#242424", padding: "3px 8px", borderRadius: "4px", whiteSpace: "nowrap", flexShrink: 0, letterSpacing: "0.08em" }}>{r.cat.toUpperCase()}</span>
             </div>
