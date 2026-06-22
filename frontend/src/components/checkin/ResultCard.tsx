@@ -72,6 +72,8 @@ export default function ResultCard(props) {
   const [toast, setToast] = useState("")
 
   useEffect(() => {
+    const saved = sessionStorage.getItem("cornellpulse_result_saved")
+    if (saved) return
     try {
       const h = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
       const entry = {
@@ -81,6 +83,7 @@ export default function ResultCard(props) {
         resource: tr.primary.name,
       }
       localStorage.setItem("cornellpulse_history", JSON.stringify([entry, ...h].slice(0, 20)))
+      sessionStorage.setItem("cornellpulse_result_saved", "1")
     } catch {}
   }, [])
 
@@ -134,9 +137,7 @@ export default function ResultCard(props) {
         </div>
       )}
 
-      <button onClick={props.onRestart} style={{ marginTop: "20px", width: "100%", padding: "18px", backgroundColor: "transparent", color: "#a0a0a0", border: "1px solid #2a2a2a", borderRadius: "6px", fontSize: "14px", letterSpacing: "0.04em" }}>CHECK IN AGAIN</button>
-      <p style={{ fontSize: "11px", color: "#4a4a4a", textAlign: "center", marginTop: "14px" }}>Your responses were not saved to our servers.</p>
-
+      <button onClick={() => { sessionStorage.removeItem("cornellpulse_result_saved"); props.onRestart() }} style={{ marginTop: "20px", width: "100%", padding: "18px", backgroundColor: "transparent", color: "#a0a0a0", border: "1px solid #2a2a2a", borderRadius: "6px", fontSize: "14px", letterSpacing: "0.04em" }}>CHECK IN AGAIN</button>      <p style={{ fontSize: "11px", color: "#4a4a4a", textAlign: "center", marginTop: "14px" }}>Your responses were not saved to our servers.</p>
       {toast && (
         <div style={{ position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)", backgroundColor: PINK, color: "#0f0f0f", padding: "12px 20px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" }}>
           {toast}
