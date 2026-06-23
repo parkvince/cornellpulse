@@ -1,15 +1,15 @@
 import { Link } from "react-router-dom"
 import { useEffect, useState } from "react"
 
-const PINK = "#e8a0b4"
+const CORAL = "#FF5A5F"
 
 interface CheckIn { date: string; mood: number; resource: string }
 
 function moodColor(m: number) {
-  if (m >= 7) return "#e8a0b4"
-  if (m >= 5) return "#f4c97a"
-  if (m >= 3) return "#e8935a"
-  return "#e63946"
+  if (m >= 7) return "#00A699"
+  if (m >= 5) return "#FC642D"
+  if (m >= 3) return "#FF5A5F"
+  return "#c0392b"
 }
 
 function moodLabel(m: number) {
@@ -37,100 +37,126 @@ export default function HomePage() {
 
   return (
     <div>
-      <div style={{ padding: "56px 24px 28px" }}>
-        <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "12px" }}>Cornell University</p>
-        <h1 style={{ fontSize: "34px", fontWeight: 800, color: "#fff", lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: "14px" }}>
-          Find the right support, right now.
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 32px" }}>
+        <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Cornell University</p>
+        {last && <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.8)", marginBottom: "4px" }}>Welcome back</p>}
+        <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "20px" }}>
+          Find the right support,{"\n"}right now.
         </h1>
-        <p style={{ fontSize: "15px", color: "#a0a0a0", lineHeight: 1.65, marginBottom: "28px" }}>
-          Answer 4 questions and get matched to the right Cornell resource instantly. Always anonymous.
-        </p>
-        <Link to="/checkin" style={{ display: "block", backgroundColor: PINK, color: "#0f0f0f", padding: "18px 24px", borderRadius: "6px", fontWeight: 800, fontSize: "15px", textAlign: "center", letterSpacing: "0.05em", marginBottom: "10px" }}>
-          CHECK IN NOW
+        <Link to="/checkin" style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          backgroundColor: "#ffffff",
+          borderRadius: "16px",
+          padding: "16px 20px",
+          textDecoration: "none",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#FFE8E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              </svg>
+            </div>
+            <div>
+              <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222" }}>Start a check-in</p>
+              <p style={{ fontSize: "12px", color: "#717171" }}>~45 seconds. No account.</p>
+            </div>
+          </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
         </Link>
-        <p style={{ fontSize: "12px", color: "#4a4a4a", textAlign: "center" }}>No account needed. Nothing stored about you.</p>
       </div>
 
-      {last && (
-        <div style={{ padding: "0 24px 24px" }}>
-          <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>Last check-in</p>
-          <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-              <div>
-                <span style={{ fontSize: "48px", fontWeight: 800, color: moodColor(last.mood), letterSpacing: "-0.04em", lineHeight: 1 }}>{last.mood}</span>
-                <span style={{ fontSize: "18px", color: "#4a4a4a" }}>/10</span>
-              </div>
-              <span style={{ fontSize: "12px", color: "#4a4a4a", marginTop: "6px" }}>{timeAgo(last.date)}</span>
-            </div>
-            <p style={{ fontSize: "13px", fontWeight: 700, color: moodColor(last.mood), marginBottom: "4px" }}>{moodLabel(last.mood)}</p>
-            <p style={{ fontSize: "12px", color: "#4a4a4a" }}>{last.resource}</p>
-          </div>
-        </div>
-      )}
-
-      {history.length > 1 && (
-        <div style={{ padding: "0 24px 24px" }}>
-          <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>History</p>
-          <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", overflow: "hidden" }}>
-            {history.slice(0, 5).map((c, idx) => (
-              <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: idx < 4 && idx < history.length - 1 ? "1px solid #242424" : "none" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: moodColor(c.mood), flexShrink: 0 }} />
-                  <div>
-                    <p style={{ fontSize: "14px", fontWeight: 700, color: moodColor(c.mood) }}>{c.mood}/10</p>
-                    <p style={{ fontSize: "11px", color: "#4a4a4a" }}>{moodLabel(c.mood)}</p>
+      <div style={{ padding: "20px 20px 0" }}>
+        {last && (
+          <div style={{ marginBottom: "24px" }}>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Last check-in</p>
+            <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "18px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "40px", fontWeight: 800, color: moodColor(last.mood), lineHeight: 1 }}>{last.mood}</span>
+                    <span style={{ fontSize: "16px", color: "#b0b0b0" }}>/10</span>
                   </div>
+                  <p style={{ fontSize: "13px", fontWeight: 600, color: moodColor(last.mood), marginBottom: "4px" }}>{moodLabel(last.mood)}</p>
+                  <p style={{ fontSize: "12px", color: "#717171" }}>{last.resource}</p>
                 </div>
-                <span style={{ fontSize: "11px", color: "#4a4a4a" }}>{timeAgo(c.date)}</span>
+                <span style={{ fontSize: "12px", color: "#b0b0b0", marginTop: "4px" }}>{timeAgo(last.date)}</span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {history.length > 1 && (
+          <div style={{ marginBottom: "24px" }}>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>History</p>
+            <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+              {history.slice(0, 5).map((c, idx) => (
+                <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < Math.min(history.length, 5) - 1 ? "1px solid #f5f5f5" : "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: moodColor(c.mood), flexShrink: 0 }} />
+                    <div>
+                      <p style={{ fontSize: "14px", fontWeight: 600, color: moodColor(c.mood) }}>{c.mood}/10</p>
+                      <p style={{ fontSize: "11px", color: "#717171" }}>{moodLabel(c.mood)}</p>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: "11px", color: "#b0b0b0" }}>{timeAgo(c.date)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginBottom: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em" }}>Resources</p>
+            <Link to="/resources" style={{ fontSize: "13px", fontWeight: 600, color: CORAL }}>See all →</Link>
+          </div>
+          <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+            {[
+              { label: "CAPS Individual Therapy", sub: "One-on-one counseling" },
+              { label: "Let's Talk Drop-In", sub: "No appointment needed" },
+              { label: "EARS Peer Counseling", sub: "Sun-Thu 9pm-1am" },
+              { label: "Cornell Health 24/7", sub: "Any time, any day" },
+            ].map((r, idx) => (
+              <Link key={r.label} to="/resources" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < 3 ? "1px solid #f5f5f5" : "none", textDecoration: "none" }}>
+                <div>
+                  <p style={{ fontSize: "14px", fontWeight: 500, color: "#222222", marginBottom: "2px" }}>{r.label}</p>
+                  <p style={{ fontSize: "12px", color: "#717171" }}>{r.sub}</p>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+              </Link>
             ))}
           </div>
         </div>
-      )}
 
-      <div style={{ padding: "0 24px 24px" }}>
-        <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>Resources</p>
-        <div style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", overflow: "hidden", marginBottom: "10px" }}>
-          {[
-            { label: "CAPS Individual Therapy", sub: "One-on-one counseling", phone: "607-255-5155", url: "/resources" },
-            { label: "Let's Talk Drop-In", sub: "No appointment needed", phone: null, url: "/resources" },
-            { label: "EARS Peer Counseling", sub: "Sun-Thu 9pm-1am", phone: "607-255-4050", url: "/resources" },
-            { label: "Cornell Health 24/7", sub: "Any time, any day", phone: "607-255-5155", url: "/resources" },
-          ].map((r, idx) => (
-            <Link key={r.label} to="/resources" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: idx < 3 ? "1px solid #242424" : "none", textDecoration: "none" }}>
-              <div>
-                <p style={{ fontSize: "14px", fontWeight: 700, color: "#fff", marginBottom: "2px" }}>{r.label}</p>
-                <p style={{ fontSize: "11px", color: "#4a4a4a" }}>{r.sub}</p>
+        <div style={{ marginBottom: "24px" }}>
+          <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Quick access</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+            <Link to="/peer" style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "18px 16px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", textDecoration: "none" }}>
+              <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#FFE8E8", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
               </div>
-              <svg width="16" height="16" fill="none" stroke="#4a4a4a" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+              <p style={{ fontSize: "13px", fontWeight: 700, color: "#222222", marginBottom: "3px" }}>Be a supporter</p>
+              <p style={{ fontSize: "11px", color: "#717171" }}>Help other students</p>
             </Link>
-          ))}
-        </div>
-        <Link to="/resources" style={{ display: "block", textAlign: "center", fontSize: "13px", color: PINK, padding: "10px", letterSpacing: "0.04em", fontWeight: 600 }}>
-          SEE ALL 35+ RESOURCES
-        </Link>
-      </div>
-
-      <div style={{ padding: "0 24px 24px" }}>
-        <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>Quick access</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
-          <Link to="/peer" style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "18px 16px", textDecoration: "none" }}>
-            <svg width="20" height="20" fill="none" stroke={PINK} strokeWidth="1.8" viewBox="0 0 24 24" style={{ marginBottom: "12px" }}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-            <p style={{ fontSize: "13px", fontWeight: 700, color: "#fff", marginBottom: "3px" }}>Be a supporter</p>
-            <p style={{ fontSize: "11px", color: "#4a4a4a" }}>Help other students</p>
-          </Link>
-          <Link to="/peer" style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "18px 16px", textDecoration: "none" }}>
-            <svg width="20" height="20" fill="none" stroke={PINK} strokeWidth="1.8" viewBox="0 0 24 24" style={{ marginBottom: "12px" }}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            <p style={{ fontSize: "13px", fontWeight: 700, color: "#fff", marginBottom: "3px" }}>Talk to someone</p>
-            <p style={{ fontSize: "11px", color: "#4a4a4a" }}>Find a peer supporter</p>
-          </Link>
-        </div>
-        <div style={{ backgroundColor: "#1f1215", border: "1px solid #3a1a22", borderRadius: "10px", padding: "18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <p style={{ fontSize: "13px", fontWeight: 700, color: "#fff", marginBottom: "3px" }}>Crisis support</p>
-            <p style={{ fontSize: "11px", color: "#4a4a4a" }}>Available 24/7</p>
+            <Link to="/peer" style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "18px 16px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", textDecoration: "none" }}>
+              <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#FFE8E8", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              </div>
+              <p style={{ fontSize: "13px", fontWeight: 700, color: "#222222", marginBottom: "3px" }}>Talk to someone</p>
+              <p style={{ fontSize: "11px", color: "#717171" }}>Find a peer supporter</p>
+            </Link>
           </div>
-          <a href="tel:988" style={{ backgroundColor: "#e63946", color: "#fff", padding: "10px 18px", borderRadius: "6px", fontSize: "13px", fontWeight: 800, letterSpacing: "0.04em" }}>CALL 988</a>
+          <div style={{ backgroundColor: "#FF5A5F", borderRadius: "16px", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <p style={{ fontSize: "13px", fontWeight: 700, color: "#ffffff", marginBottom: "2px" }}>Crisis support</p>
+              <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.8)" }}>Available 24/7</p>
+            </div>
+            <a href="tel:988" style={{ backgroundColor: "#ffffff", color: CORAL, padding: "8px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 700 }}>Call 988</a>
+          </div>
         </div>
       </div>
     </div>
