@@ -1,4 +1,4 @@
-const PINK = "#e8a0b4"
+const CORAL = "#FF5A5F"
 
 interface Props {
   values: string[]
@@ -31,39 +31,37 @@ export default function StepTrigger(props: Props) {
   function toggle(val: string) {
     if (val === "nothing_specific") { onChange(["nothing_specific"]); return }
     const f = values.filter(v => v !== "nothing_specific")
-    if (f.includes(val)) {
-      onChange(f.filter(v => v !== val))
-    } else if (f.length < 4) {
-      onChange([...f, val])
-    }
+    if (f.length >= 4 && !f.includes(val)) return
+    onChange(f.includes(val) ? f.filter(v => v !== val) : [...f, val])
   }
 
   return (
     <div>
-      <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "14px" }}>Step 4 of 4</p>
-      <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#fff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "10px" }}>What is weighing on you?</h2>
-      <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "24px" }}>Select up to 4 that apply most.</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px", marginBottom: "32px" }}>
+      <p style={{ fontSize: "12px", fontWeight: 600, color: CORAL, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Step 3 of 4</p>
+      <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#222222", lineHeight: 1.2, marginBottom: "6px" }}>What is weighing on you?</h2>
+      <p style={{ fontSize: "14px", color: "#717171", marginBottom: "24px" }}>Select up to 4 that apply most.</p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "28px" }}>
         {triggers.map(opt => {
           const sel = values.includes(opt.value)
           return (
-            <button key={opt.value} onClick={() => toggle(opt.value)} style={{ padding: "15px 10px", border: "none", borderRadius: "8px", backgroundColor: sel ? PINK : "#1a1a1a", textAlign: "center" }}>
-              <span style={{ fontSize: "13px", fontWeight: sel ? 800 : 400, color: sel ? "#0f0f0f" : "#fff", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{opt.label}</span>
+            <button key={opt.value} onClick={() => toggle(opt.value)} style={{ padding: "13px 10px", border: "2px solid " + (sel ? CORAL : "#ebebeb"), borderRadius: "12px", backgroundColor: sel ? "#FFF0F0" : "#ffffff", textAlign: "center" }}>
+              <span style={{ fontSize: "13px", fontWeight: 600, color: sel ? CORAL : "#222222", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{opt.label}</span>
             </button>
           )
         })}
       </div>
-      <div style={{ marginBottom: "32px" }}>
-        <p style={{ fontSize: "15px", fontWeight: 700, color: "#fff", marginBottom: "6px" }}>Want to talk to another Cornell student?</p>
-        <p style={{ fontSize: "13px", color: "#a0a0a0", marginBottom: "14px" }}>We can connect you with someone who wants to grab food or coffee and just listen.</p>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button onClick={() => onWantsToTalkChange(true)} style={{ flex: 1, padding: "16px", border: "none", borderRadius: "8px", backgroundColor: wantsToTalk === true ? PINK : "#1a1a1a", fontSize: "14px", fontWeight: wantsToTalk === true ? 800 : 400, color: wantsToTalk === true ? "#0f0f0f" : "#fff" }}>Yes please</button>
-          <button onClick={() => onWantsToTalkChange(false)} style={{ flex: 1, padding: "16px", border: "none", borderRadius: "8px", backgroundColor: wantsToTalk === false ? PINK : "#1a1a1a", fontSize: "14px", fontWeight: wantsToTalk === false ? 800 : 400, color: wantsToTalk === false ? "#0f0f0f" : "#fff" }}>Not right now</button>
-        </div>
+
+      <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222", marginBottom: "6px" }}>Want to talk to another Cornell student?</p>
+      <p style={{ fontSize: "13px", color: "#717171", marginBottom: "14px" }}>We can connect you with someone who wants to grab food or coffee.</p>
+      <div style={{ display: "flex", gap: "8px", marginBottom: "32px" }}>
+        <button onClick={() => onWantsToTalkChange(true)} style={{ flex: 1, padding: "14px", border: "2px solid " + (wantsToTalk === true ? CORAL : "#ebebeb"), borderRadius: "12px", backgroundColor: wantsToTalk === true ? "#FFF0F0" : "#ffffff", fontSize: "14px", fontWeight: 600, color: wantsToTalk === true ? CORAL : "#222222" }}>Yes please</button>
+        <button onClick={() => onWantsToTalkChange(false)} style={{ flex: 1, padding: "14px", border: "2px solid " + (wantsToTalk === false ? CORAL : "#ebebeb"), borderRadius: "12px", backgroundColor: wantsToTalk === false ? "#FFF0F0" : "#ffffff", fontSize: "14px", fontWeight: 600, color: wantsToTalk === false ? CORAL : "#222222" }}>Not right now</button>
       </div>
+
       <div style={{ display: "flex", gap: "10px" }}>
-        <button onClick={onBack} style={{ flex: 1, padding: "18px", backgroundColor: "transparent", color: "#a0a0a0", border: "1px solid #2a2a2a", borderRadius: "6px", fontSize: "14px" }}>Back</button>
-        <button onClick={onNext} disabled={values.length === 0} style={{ flex: 2, padding: "18px", backgroundColor: values.length > 0 ? PINK : "#1a1a1a", color: values.length > 0 ? "#0f0f0f" : "#4a4a4a", border: "none", borderRadius: "6px", fontSize: "15px", fontWeight: 800, letterSpacing: "0.05em" }}>NEXT</button>
+        <button onClick={onBack} style={{ flex: 1, padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600 }}>Back</button>
+        <button onClick={onNext} disabled={values.length === 0} style={{ flex: 2, padding: "16px", backgroundColor: values.length > 0 ? CORAL : "#ebebeb", color: values.length > 0 ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "14px", fontSize: "15px", fontWeight: 700 }}>Continue ?</button>
       </div>
     </div>
   )

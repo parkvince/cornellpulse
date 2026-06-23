@@ -1,29 +1,32 @@
-const PINK = "#e8a0b4"
+const CORAL = "#FF5A5F"
 
 interface Props { value: number; onChange: (v: number) => void; onNext: () => void }
 
 function moodColor(m: number) {
-  if (m >= 7) return "#e8a0b4"
-  if (m >= 5) return "#f4c97a"
-  if (m >= 3) return "#e8935a"
-  return "#e63946"
+  if (m >= 7) return "#00A699"
+  if (m >= 5) return "#FC642D"
+  if (m >= 3) return "#FF5A5F"
+  return "#c0392b"
 }
 
 export default function StepMood({ value, onChange, onNext }: Props) {
   return (
     <div>
-      <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "14px" }}>Step 1 of 4</p>
-      <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#fff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "10px" }}>How are you feeling right now?</h2>
-      <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "52px" }}>1 is overwhelmed, 10 is thriving.</p>
+      <p style={{ fontSize: "12px", fontWeight: 600, color: CORAL, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Step 1 of 4</p>
+      <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#222222", lineHeight: 1.2, marginBottom: "6px" }}>How are you feeling today?</h2>
+      <p style={{ fontSize: "14px", color: "#717171", marginBottom: "40px" }}>1 = really not great, 10 = really good</p>
+
       <div style={{ textAlign: "center", marginBottom: "28px" }}>
-        <span style={{ fontSize: "96px", fontWeight: 800, color: moodColor(value), letterSpacing: "-0.06em", lineHeight: 1 }}>{value}</span>
-        <span style={{ fontSize: "28px", color: "#4a4a4a", fontWeight: 400 }}>/10</span>
+        <span style={{ fontSize: "88px", fontWeight: 800, color: moodColor(value), letterSpacing: "-0.04em", lineHeight: 1 }}>{value}</span>
+        <span style={{ fontSize: "24px", color: "#b0b0b0" }}>/10</span>
       </div>
-      <input type="range" min={1} max={10} value={value} onChange={e => onChange(Number(e.target.value))} style={{ width: "100%", marginBottom: "10px", accentColor: moodColor(value) }} />
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#4a4a4a", marginBottom: "52px" }}>
+
+      <input type="range" min={1} max={10} value={value} onChange={e => onChange(Number(e.target.value))} style={{ width: "100%", marginBottom: "10px", accentColor: moodColor(value), height: "4px" }} />
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#b0b0b0", marginBottom: "48px" }}>
         <span>Overwhelmed</span><span>Thriving</span>
       </div>
-      <button onClick={onNext} style={{ width: "100%", padding: "18px", backgroundColor: PINK, color: "#0f0f0f", border: "none", borderRadius: "6px", fontSize: "15px", fontWeight: 800, letterSpacing: "0.05em" }}>NEXT</button>
+
+      <button onClick={onNext} style={{ width: "100%", padding: "18px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700 }}>Continue →</button>
     </div>
   )
 }
