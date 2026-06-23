@@ -40,8 +40,8 @@ def send_email(to: str, subject: str, html: str):
         print(f"Email failed: {e}")
 router = APIRouter()
 
-resend.api_key = os.environ.get("RESEND_API_KEY", "")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "cornellpulse@gmail.com")
+resend.api_key = settings.RESEND_API_KEY
+ADMIN_EMAIL = settings.ADMIN_EMAIL
 
 class PeerSignupRequest(BaseModel):
     name: str
