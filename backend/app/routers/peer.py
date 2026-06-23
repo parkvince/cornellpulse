@@ -12,7 +12,6 @@ from app.config import settings
 
 router = APIRouter()
 
-resend.api_key = settings.RESEND_API_KEY
 ADMIN_EMAIL = settings.ADMIN_EMAIL
 FROM_EMAIL = "CornellPulse <onboarding@resend.dev>"
 
@@ -27,15 +26,20 @@ def check_rate_limit(ip: str, max_per_hour: int = 5):
     submission_log[ip].append(now)
 
 def send_email(to: str, subject: str, html: str):
-    if not resend.api_key:
+    api_key = settings.RESEND_API_KEY
+    print(f"Attempting email to {to}, api_key set: {bool(api_key)}")
+    if not api_key:
+        print("No API key, skipping email")
         return
     try:
-        resend.Emails.send({
+        resend.api_key = api_key
+        result = resend.Emails.send({
             "from": FROM_EMAIL,
             "to": to,
             "subject": subject,
             "html": html,
         })
+        print(f"Email sent successfully: {result}")
     except Exception as e:
         print(f"Email failed: {e}")
 router = APIRouter()
