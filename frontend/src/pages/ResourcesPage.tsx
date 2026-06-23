@@ -1,16 +1,17 @@
 import { useState } from "react"
 
-const PINK = "#e8a0b4"
+const CORAL = "#FF5A5F"
 const CATS = ["All", "Cornell", "Crisis", "Community", "Stress Relief", "Physical"]
+const QUICK_FILTERS = ["free", "24/7", "lgbtq", "local"]
 
 const resources = [
-  { cat: "Cornell", name: "CAPS Individual Therapy", phone: "607-255-5155", url: "https://health.cornell.edu/services/mental-health-care", desc: "One-on-one counseling with a licensed therapist. Access Appointment within 1-2 days.", loc: "Gannett Health Center, 110 Ho Plaza", hours: "Mon-Fri 8:30am-4:30pm", tags: ["therapy", "free"] },
+  { cat: "Cornell", name: "CAPS Individual Therapy", phone: "607-255-5155", url: "https://health.cornell.edu/services/mental-health-care", desc: "One-on-one counseling with a licensed therapist. First appointment within 1-2 days.", loc: "Gannett Health Center, 110 Ho Plaza", hours: "Mon-Fri 8:30am-4:30pm", tags: ["therapy", "free"] },
   { cat: "Cornell", name: "Let's Talk Drop-In", phone: null, url: "https://health.cornell.edu/services/mental-health-care/lets-talk", desc: "Informal 15-20 min conversations with a CAPS counselor. No appointment needed.", loc: "Various campus locations", hours: "Mon-Fri, check website", tags: ["drop-in", "free"] },
   { cat: "Cornell", name: "EARS Peer Counseling", phone: "607-255-4050", url: "https://ears.cornell.edu", desc: "Confidential peer counseling with trained Cornell students. No judgment.", loc: "305 Willard Straight Hall", hours: "Sun-Thu 9pm-1am", tags: ["peer", "free", "evening"] },
   { cat: "Cornell", name: "Cornell Health 24/7", phone: "607-255-5155", url: "https://health.cornell.edu", desc: "Talk to a health professional any time. Press 2 for mental health support.", loc: "Phone only", hours: "24/7 including holidays", tags: ["24/7", "free"] },
   { cat: "Cornell", name: "CAPS Group Therapy", phone: "607-255-5155", url: "https://health.cornell.edu/services/mental-health-care", desc: "Therapist-led groups for anxiety, grief, identity, relationships, and more.", loc: "Gannett Health Center", hours: "Varies by group", tags: ["group", "free"] },
   { cat: "Cornell", name: "Headspace App", phone: null, url: "https://www.headspace.com/studentplan", desc: "Free meditation and sleep app for all Cornell students.", loc: "Online / Mobile", hours: "Always available", tags: ["app", "free", "meditation"] },
-  { cat: "Cornell", name: "Office of Diversity and Inclusion", phone: "607-255-4857", url: "https://diversity.cornell.edu", desc: "Counseling for students of color, LGBTQ+, first-gen, and international students.", loc: "626 Thurston Ave", hours: "Mon-Fri 8am-5pm", tags: ["identity", "diversity", "free"] },
+  { cat: "Cornell", name: "Office of Diversity and Inclusion", phone: "607-255-4857", url: "https://diversity.cornell.edu", desc: "Counseling for students of color, LGBTQ+, first-gen, and international students.", loc: "626 Thurston Ave", hours: "Mon-Fri 8am-5pm", tags: ["identity", "diversity", "free", "lgbtq"] },
   { cat: "Cornell", name: "LGBT Resource Center", phone: "607-255-6482", url: "https://lgbtq.cornell.edu", desc: "Community, support, and resources for LGBTQ+ students.", loc: "626 Thurston Ave", hours: "Mon-Fri 9am-5pm", tags: ["lgbtq", "free"] },
   { cat: "Cornell", name: "Financial Aid Emergency Fund", phone: "607-255-5145", url: "https://finaid.cornell.edu/emergency-fund", desc: "Emergency grants for unexpected expenses. You do not need to pay them back.", loc: "203 Day Hall", hours: "Mon-Fri 8am-5pm", tags: ["financial", "emergency", "free"] },
   { cat: "Cornell", name: "Basic Needs Support", phone: null, url: "https://basicneeds.cornell.edu", desc: "Food pantry, emergency housing, and basic needs support. No questions asked.", loc: "Multiple locations", hours: "Check website", tags: ["food", "housing", "free"] },
@@ -39,66 +40,97 @@ const resources = [
   { cat: "Physical", name: "Cornell Outdoor Education", phone: "607-255-6415", url: "https://outdoor.cornell.edu", desc: "Outdoor trips, climbing wall, and adventure programs. Free or low cost.", loc: "Bartels Hall", hours: "Mon-Fri 9am-5pm", tags: ["outdoor", "adventure"] },
 ]
 
-const QUICK_FILTERS = ["free", "24/7", "lgbtq", "local"]
+function track(resourceId: string, action: string) {
+  fetch((import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1") + "/track-click", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ resource_id: resourceId, action }),
+  }).catch(() => {})
+}
 
 export default function ResourcesPage() {
   const [cat, setCat] = useState("All")
   const [search, setSearch] = useState("")
   const [quickFilter, setQuickFilter] = useState("")
 
-  function track(resourceId: string, action: string) {
-    fetch((import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1") + "/track-click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ resource_id: resourceId, action }),
-    }).catch(() => {})
-  }
-
-const filtered = resources.filter(r =>
+  const filtered = resources.filter(r =>
     (cat === "All" || r.cat === cat) &&
     (quickFilter === "" || r.tags.includes(quickFilter)) &&
     (search === "" || r.name.toLowerCase().includes(search.toLowerCase()) || r.desc.toLowerCase().includes(search.toLowerCase()) || r.tags.some(t => t.includes(search.toLowerCase())))
   )
 
-  if (cat === "All" && !search) {
-    filtered.sort((a, b) => (a.cat === "Crisis" ? 0 : 1) - (b.cat === "Crisis" ? 0 : 1))
-  }
-
   return (
     <div style={{ paddingBottom: "24px" }}>
-      <div style={{ padding: "52px 20px 0" }}>
-        <p style={{ fontSize: "11px", fontWeight: 700, color: PINK, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "10px" }}>Resources</p>
-        <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", marginBottom: "4px" }}>All resources</h1>
-        <p style={{ fontSize: "14px", color: "#a0a0a0", marginBottom: "20px" }}>Cornell, Ithaca, and beyond.</p>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." style={{ width: "100%", padding: "14px 16px", border: "1px solid #2a2a2a", borderRadius: "8px", fontSize: "15px", backgroundColor: "#1a1a1a", color: "#fff", marginBottom: "16px" }} />
-        <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "4px", marginBottom: "20px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 24px" }}>
+        <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Resources</p>
+        <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", marginBottom: "4px" }}>Resources for every kind of moment.</h1>
+        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", marginBottom: "16px" }}>Free, anonymous, ready when you are.</p>
+        <div style={{ position: "relative" }}>
+          <svg style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." style={{ width: "100%", padding: "12px 14px 12px 40px", border: "none", borderRadius: "12px", fontSize: "15px", backgroundColor: "#ffffff", color: "#222222" }} />
+        </div>
+      </div>
+
+      <div style={{ padding: "16px 20px 0" }}>
+        <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "4px", marginBottom: "10px" }}>
+          {CATS.map(c => (
+            <button key={c} onClick={() => setCat(c)} style={{ padding: "7px 14px", border: "none", borderRadius: "20px", backgroundColor: cat === c ? CORAL : "#ffffff", color: cat === c ? "#ffffff" : "#717171", fontSize: "13px", fontWeight: cat === c ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, boxShadow: cat === c ? "none" : "0 1px 4px rgba(0,0,0,0.08)" }}>
+              {c}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "4px", marginBottom: "16px" }}>
           {QUICK_FILTERS.map(f => (
-            <button key={f} onClick={() => setQuickFilter(f === quickFilter ? "" : f)} style={{ padding: "6px 14px", border: "1px solid " + (quickFilter === f ? PINK : "#2a2a2a"), borderRadius: "20px", backgroundColor: "transparent", color: quickFilter === f ? PINK : "#4a4a4a", fontSize: "12px", fontWeight: quickFilter === f ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, textTransform: "capitalize" }}>
+            <button key={f} onClick={() => setQuickFilter(f === quickFilter ? "" : f)} style={{ padding: "5px 12px", border: `1.5px solid ${quickFilter === f ? CORAL : "#ebebeb"}`, borderRadius: "20px", backgroundColor: quickFilter === f ? "#FFF0F0" : "#ffffff", color: quickFilter === f ? CORAL : "#717171", fontSize: "12px", fontWeight: quickFilter === f ? 600 : 400, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, textTransform: "capitalize" }}>
               {f === "24/7" ? "Available now" : f}
             </button>
           ))}
         </div>
-      </div>
-      <div style={{ padding: "0 20px" }}>
-        {filtered.length === 0 && <p style={{ fontSize: "15px", color: "#4a4a4a", textAlign: "center", padding: "40px 0" }}>No results.</p>}
-        {filtered.map(r => (
-            <div key={r.name} style={{ borderRadius: "10px", padding: "18px", backgroundColor: r.cat === "Crisis" ? "#1f0a0b" : "#1a1a1a", marginBottom: "8px", border: r.cat === "Crisis" ? "1px solid #e63946" : "none" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-              <p style={{ fontSize: "15px", fontWeight: 800, color: "#fff", flex: 1, paddingRight: "10px", lineHeight: 1.3 }}>{r.name}</p>
-              <span style={{ fontSize: "9px", fontWeight: 700, color: "#4a4a4a", backgroundColor: "#242424", padding: "3px 8px", borderRadius: "4px", whiteSpace: "nowrap", flexShrink: 0, letterSpacing: "0.08em" }}>{r.cat.toUpperCase()}</span>
+
+        {cat === "All" && !search && (
+          <div style={{ backgroundColor: CORAL, borderRadius: "16px", padding: "16px 20px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <p style={{ fontSize: "13px", fontWeight: 700, color: "#ffffff", marginBottom: "2px" }}>In crisis right now?</p>
+              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)" }}>Call 988 — 24/7 support</p>
             </div>
-            <p style={{ fontSize: "13px", color: "#a0a0a0", lineHeight: 1.55, marginBottom: "12px" }}>{r.desc}</p>
-            {r.loc && <p style={{ fontSize: "11px", color: "#4a4a4a", marginBottom: "2px" }}>{r.loc}</p>}
-            {r.hours && <p style={{ fontSize: "11px", color: "#4a4a4a", marginBottom: "12px" }}>{r.hours}</p>}
+            <a href="tel:988" onClick={() => track("988", "call")} style={{ backgroundColor: "#ffffff", color: CORAL, padding: "8px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+              Call
+            </a>
+          </div>
+        )}
+
+        {filtered.length === 0 && <p style={{ fontSize: "15px", color: "#b0b0b0", textAlign: "center", padding: "40px 0" }}>No results.</p>}
+
+        {filtered.map(r => (
+          <div key={r.name} style={{ borderRadius: "16px", padding: "18px", backgroundColor: "#ffffff", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: r.cat === "Crisis" ? `1.5px solid ${CORAL}` : "1px solid #f0f0f0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+              <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", flex: 1, paddingRight: "10px", lineHeight: 1.3 }}>{r.name}</p>
+              <span style={{ fontSize: "10px", fontWeight: 600, color: r.cat === "Crisis" ? CORAL : "#717171", backgroundColor: r.cat === "Crisis" ? "#FFF0F0" : "#f5f5f5", padding: "3px 8px", borderRadius: "6px", whiteSpace: "nowrap", flexShrink: 0 }}>{r.cat.toUpperCase()}</span>
+            </div>
+            <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.55, marginBottom: "10px" }}>{r.desc}</p>
+            {r.loc && <p style={{ fontSize: "11px", color: "#b0b0b0", marginBottom: "2px" }}>{r.loc}</p>}
+            {r.hours && <p style={{ fontSize: "11px", color: "#b0b0b0", marginBottom: "10px" }}>{r.hours}</p>}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
+              {r.tags.slice(0, 3).map(tag => (
+                <span key={tag} style={{ padding: "3px 8px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "6px", fontSize: "11px", fontWeight: 500, textTransform: "capitalize" }}>{tag}</span>
+              ))}
+            </div>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               {r.phone && (
-                <a href={`tel:${r.phone}`} onClick={() => track(r.name, "call")} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 18px", backgroundColor: r.cat === "Crisis" ? "#e63946" : PINK, color: r.cat === "Crisis" ? "#fff" : "#0f0f0f", borderRadius: "8px", fontSize: "14px", fontWeight: 800, letterSpacing: "0.04em" }}>
-                  <svg width="16" height="16" fill="none" stroke={r.cat === "Crisis" ? "#fff" : "#0f0f0f"} strokeWidth="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
-                  {r.phone}
+                <a href={`tel:${r.phone}`} onClick={() => track(r.name, "call")} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 16px", backgroundColor: r.cat === "Crisis" ? CORAL : "#FFF0F0", color: r.cat === "Crisis" ? "#ffffff" : CORAL, borderRadius: "10px", fontSize: "13px", fontWeight: 700 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={r.cat === "Crisis" ? "#fff" : CORAL} strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+                  Call {r.phone}
                 </a>
               )}
-              {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" onClick={() => track(r.name, "website")} style={{ padding: "12px 18px", border: "1px solid #2a2a2a", color: "#a0a0a0", borderRadius: "8px", fontSize: "13px" }}>Website</a>}
-              </div>
+              {r.url && (
+                <a href={r.url} target="_blank" rel="noopener noreferrer" onClick={() => track(r.name, "website")} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 16px", border: "1.5px solid #ebebeb", color: "#717171", borderRadius: "10px", fontSize: "13px" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  Visit
+                </a>
+              )}
+            </div>
           </div>
         ))}
       </div>
