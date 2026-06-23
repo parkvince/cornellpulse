@@ -27,7 +27,6 @@ def check_rate_limit(ip: str, max_per_hour: int = 5):
 
 def send_email(to: str, subject: str, html: str):
     api_key = settings.RESEND_API_KEY
-    print(f"Attempting email to {to}, api_key set: {bool(api_key)}")
     if not api_key:
         print("No API key, skipping email")
         return
@@ -39,13 +38,10 @@ def send_email(to: str, subject: str, html: str):
             "subject": subject,
             "html": html,
         })
-        print(f"Email sent successfully: {result}")
+        print(f"Email sent: {result}")
     except Exception as e:
         print(f"Email failed: {e}")
-router = APIRouter()
 
-resend.api_key = settings.RESEND_API_KEY
-ADMIN_EMAIL = settings.ADMIN_EMAIL
 
 class PeerSignupRequest(BaseModel):
     name: str
@@ -71,9 +67,16 @@ class PeerConnectRequestModel(BaseModel):
     preferred_time: str
     message: Optional[str] = None
 
+class ReportRequest(BaseModel):
+    supporter_name: str
+    reporter_email: Optional[str] = None
+    reason: str
+
+
 @router.post("/peer-signup")
 async def peer_signup(request: PeerSignupRequest, req: Request, db: AsyncSession = Depends(get_db)):
     check_rate_limit(req.client.host, max_per_hour=3)
+
     signup = PeerSignup(
         name=request.name,
         email=request.email,
@@ -93,35 +96,31 @@ async def peer_signup(request: PeerSignupRequest, req: Request, db: AsyncSession
     db.add(signup)
     await db.commit()
 
-    if resend.api_key:
-        try:
-            resend.Emails.send({
-                "from": "CornellPulse <onboarding@resend.dev>",
-                "to": ADMIN_EMAIL,
-                "subject": f"New supporter application from {request.name}",
-                "html": f"""
-                <h2>New peer supporter application</h2>
-                <p><strong>Name:</strong> {request.name}</p>
-                <p><strong>Email:</strong> {request.email}</p>
-                <p><strong>Phone:</strong> {request.phone}</p>
-                <p><strong>Year:</strong> {request.year}</p>
-                <p><strong>Major:</strong> {request.major or 'Not provided'}</p>
-                <p><strong>About:</strong> {request.about or 'Not provided'}</p>
-                <p><strong>Locations:</strong> {', '.join(request.locations)}</p>
-                <br/>
-                <h3>Reference</h3>
-                <p><strong>Name:</strong> {request.refName}</p>
-                <p><strong>Phone:</strong> {request.refPhone}</p>
-                <p><strong>Email:</strong> {request.refEmail}</p>
-                <p><strong>Relationship:</strong> {request.refRelationship or 'Not provided'}</p>
-                <br/>
-                <p>Log in to the admin dashboard to review and approve this application.</p>
-                """
-            })
-        except Exception:
-            pass
+    send_email(
+        to=ADMIN_EMAIL,
+        subject=f"New supporter application from {request.name}",
+        html=f"""
+        <h2>New peer supporter application</h2>
+        <p><strong>Name:</strong> {request.name}</p>
+        <p><strong>Email:</strong> {request.email}</p>
+        <p><strong>Phone:</strong> {request.phone}</p>
+        <p><strong>Year:</strong> {request.year}</p>
+        <p><strong>Major:</strong> {request.major or 'Not provided'}</p>
+        <p><strong>About:</strong> {request.about or 'Not provided'}</p>
+        <p><strong>Locations:</strong> {', '.join(request.locations)}</p>
+        <br/>
+        <h3>Reference</h3>
+        <p><strong>Name:</strong> {request.refName}</p>
+        <p><strong>Phone:</strong> {request.refPhone}</p>
+        <p><strong>Email:</strong> {request.refEmail}</p>
+        <p><strong>Relationship:</strong> {request.refRelationship or 'Not provided'}</p>
+        <br/>
+        <p>Log into the admin dashboard to review and approve.</p>
+        """
+    )
 
     return {"status": "received"}
+
 
 @router.get("/peer-signups")
 async def get_signups(db: AsyncSession = Depends(get_db)):
@@ -150,6 +149,7 @@ async def get_signups(db: AsyncSession = Depends(get_db)):
         for i, s in enumerate(signups)
     ]
 
+
 @router.post("/peer-signups/{signup_id}/approve")
 async def approve_signup(signup_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PeerSignup).where(PeerSignup.id == signup_id))
@@ -159,26 +159,24 @@ async def approve_signup(signup_id: int, db: AsyncSession = Depends(get_db)):
     signup.approved = True
     await db.commit()
 
-    if resend.api_key:
-        try:
-            resend.Emails.send({
-                "from": "CornellPulse <onboarding@resend.dev>",
-                "to": signup.email,
-                "subject": "You have been approved as a CornellPulse peer supporter",
-                "html": f"""
-                <h2>You are approved!</h2>
-                <p>Hi {signup.name},</p>
-                <p>We have reviewed your application and approved you as a peer supporter on CornellPulse. Cornell students can now find your profile and request to meet up with you.</p>
-                <p>When a student requests to connect with you, we will reach out to both of you over email to make the introduction.</p>
-                <p>Thank you for being willing to show up for other students. It means a lot.</p>
-                <br/>
-                <p>The CornellPulse Team</p>
-                """
-            })
-        except Exception:
-            pass
+    send_email(
+        to=ADMIN_EMAIL,
+        subject=f"ACTION NEEDED: Email approval to {signup.name} at {signup.email}",
+        html=f"""
+        <h2>Forward this approval to {signup.name} at {signup.email}</h2>
+        <hr/>
+        <h3>Message for {signup.name}</h3>
+        <p>Hi {signup.name},</p>
+        <p>We have reviewed your application and approved you as a peer supporter on CornellPulse. Cornell students can now find your profile and request to meet up with you.</p>
+        <p>When a student requests to connect with you, we will reach out to let you know.</p>
+        <p>Thank you for being willing to show up for other students.</p>
+        <br/>
+        <p>The CornellPulse Team</p>
+        """
+    )
 
     return {"status": "approved"}
+
 
 @router.get("/peer-supporters")
 async def get_supporters(db: AsyncSession = Depends(get_db)):
@@ -199,9 +197,11 @@ async def get_supporters(db: AsyncSession = Depends(get_db)):
         for s in supporters
     ]
 
+
 @router.post("/peer-connect")
 async def peer_connect(request: PeerConnectRequestModel, req: Request, db: AsyncSession = Depends(get_db)):
     check_rate_limit(req.client.host, max_per_hour=5)
+
     connect = PeerConnectRequest(
         supporter_name=request.supporter_name,
         requester_name=request.requester_name,
@@ -222,21 +222,23 @@ async def peer_connect(request: PeerConnectRequestModel, req: Request, db: Async
 
     if supporter:
         send_email(
-            to=supporter.email,
-            subject=f"{request.requester_name} wants to connect with you on CornellPulse",
+            to=ADMIN_EMAIL,
+            subject=f"ACTION NEEDED: Forward to {supporter.name} -- {request.requester_name} wants to connect",
             html=f"""
-            <h2>Someone reached out to you</h2>
+            <h2>Forward this to {supporter.name} at {supporter.email}</h2>
+            <p>A student wants to connect with <strong>{supporter.name}</strong>. Please forward the details below to them.</p>
+            <hr/>
+            <h3>Message for {supporter.name}</h3>
             <p>Hi {supporter.name},</p>
             <p>A Cornell student saw your profile on CornellPulse and would like to meet up.</p>
-            <p><strong>Name:</strong> {request.requester_name}</p>
-            <p><strong>Email:</strong> {request.requester_email}</p>
-            <p><strong>Phone:</strong> {request.requester_phone or 'Not provided'}</p>
+            <p><strong>Their name:</strong> {request.requester_name}</p>
+            <p><strong>Their email:</strong> {request.requester_email}</p>
+            <p><strong>Their phone:</strong> {request.requester_phone or 'Not provided'}</p>
             <p><strong>Preferred location:</strong> {request.preferred_location}</p>
             <p><strong>Preferred time:</strong> {request.preferred_time}</p>
             <p><strong>Message:</strong> {request.message or 'Not provided'}</p>
             <br/>
-            <p>They have your contact info and may reach out directly. Feel free to respond whenever works for you.</p>
-            <p>Thank you for being a peer supporter. It means a lot.</p>
+            <p>They already have your contact info and may reach out directly.</p>
             """
         )
 
@@ -250,12 +252,11 @@ async def peer_connect(request: PeerConnectRequestModel, req: Request, db: Async
         <p><strong>Preferred location:</strong> {request.preferred_location}</p>
         <p><strong>Preferred time:</strong> {request.preferred_time}</p>
         <p><strong>Message:</strong> {request.message or 'Not provided'}</p>
-        <br/>
-        <p>Both parties have been given each other's contact info directly.</p>
         """
     )
 
     return {"status": "received"}
+
 
 @router.get("/peer-requests")
 async def get_requests(db: AsyncSession = Depends(get_db)):
@@ -277,6 +278,7 @@ async def get_requests(db: AsyncSession = Depends(get_db)):
         for r in requests
     ]
 
+
 @router.delete("/peer-signups/{signup_id}")
 async def delete_signup(signup_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PeerSignup).where(PeerSignup.id == signup_id))
@@ -287,11 +289,6 @@ async def delete_signup(signup_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"status": "deleted"}
 
-
-class ReportRequest(BaseModel):
-    supporter_name: str
-    reporter_email: Optional[str] = None
-    reason: str
 
 @router.post("/report-supporter")
 async def report_supporter(request: ReportRequest, db: AsyncSession = Depends(get_db)):
@@ -318,6 +315,7 @@ async def report_supporter(request: ReportRequest, db: AsyncSession = Depends(ge
     )
 
     return {"status": "received"}
+
 
 @router.get("/reports")
 async def get_reports(db: AsyncSession = Depends(get_db)):
