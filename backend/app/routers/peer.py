@@ -7,13 +7,13 @@ from app.database import get_db
 from app.models.db_models import PeerSignup, PeerConnectRequest
 from collections import defaultdict
 from datetime import datetime, timedelta
-import os
 import resend
+from app.config import settings
 
 router = APIRouter()
 
-resend.api_key = os.environ.get("RESEND_API_KEY", "")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+resend.api_key = settings.RESEND_API_KEY
+ADMIN_EMAIL = settings.ADMIN_EMAIL
 FROM_EMAIL = "CornellPulse <onboarding@resend.dev>"
 
 submission_log = defaultdict(list)

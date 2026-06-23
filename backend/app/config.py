@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD_HASH: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
     ENVIRONMENT: str = "dev"
+    RESEND_API_KEY: str = ""
+    ADMIN_EMAIL: str = ""
 
     class Config:
         env_file = ".env"
