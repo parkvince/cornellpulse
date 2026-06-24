@@ -14,42 +14,47 @@ function ResourceItem(props: any) {
   const primary = props.primary
 
   function saveResource() {
-    const text = [r.name, r.tagline, r.phone ? "Phone: " + r.phone : null, r.hours ? "Hours: " + r.hours : null, r.how_to_access ? "How to access: " + r.how_to_access : null, r.url].filter(Boolean).join("\n")
+    const text = [r.name, r.tagline, r.phone ? "Phone: " + r.phone : null, r.hours ? "Hours: " + r.hours : null, r.how_to_access, r.url].filter(Boolean).join("\n")
     if (navigator.share) {
-      navigator.share({ title: r.name, text: text }).catch(() => {})
+      navigator.share({ title: r.name, text }).catch(() => {})
     } else {
       navigator.clipboard.writeText(text).then(() => { if (props.onSaved) props.onSaved() }).catch(() => {})
     }
   }
 
-  return (
-    <div style={{ borderRadius: "16px", padding: "20px", backgroundColor: primary ? CORAL : "#ffffff", marginBottom: "10px", boxShadow: primary ? "0 4px 20px rgba(255,90,95,0.3)" : "0 2px 12px rgba(0,0,0,0.06)", border: primary ? "none" : "1px solid #f0f0f0" }}>
-      {primary && <p style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>Best match for you</p>}
-      <p style={{ fontWeight: 800, fontSize: primary ? "20px" : "16px", marginBottom: "6px", color: primary ? "#ffffff" : "#222222" }}>{r.name}</p>
-      <p style={{ fontSize: "14px", color: primary ? "rgba(255,255,255,0.85)" : "#717171", marginBottom: "14px", lineHeight: 1.5 }}>{r.tagline}</p>
-
-      {r.phone && (
-        <div style={{ marginBottom: "10px" }}>
-          <p style={{ fontSize: "10px", color: primary ? "rgba(255,255,255,0.6)" : "#b0b0b0", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "3px" }}>Phone</p>
-          <a href={"tel:" + r.phone} style={{ fontSize: "18px", fontWeight: 800, color: primary ? "#ffffff" : CORAL }}>{r.phone}</a>
+  if (primary) {
+    return (
+      <div style={{ borderRadius: "20px", overflow: "hidden", marginBottom: "12px", boxShadow: "0 8px 32px rgba(255,90,95,0.25)" }}>
+        <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "24px 20px 20px" }}>
+          <p style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>Best match for you</p>
+          <p style={{ fontSize: "22px", fontWeight: 800, color: "#ffffff", marginBottom: "6px" }}>{r.name}</p>
+          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", lineHeight: 1.5, marginBottom: "16px" }}>{r.tagline}</p>
+          {r.phone && (
+            <a href={"tel:" + r.phone} style={{ display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontWeight: 700, fontSize: "15px", textDecoration: "none" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+              {r.phone}
+            </a>
+          )}
         </div>
-      )}
-      {r.hours && (
-        <div style={{ marginBottom: "10px" }}>
-          <p style={{ fontSize: "10px", color: primary ? "rgba(255,255,255,0.6)" : "#b0b0b0", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "3px" }}>Hours</p>
-          <p style={{ fontSize: "14px", color: primary ? "rgba(255,255,255,0.85)" : "#717171" }}>{r.hours}</p>
+        <div style={{ backgroundColor: "#ffffff", padding: "16px 20px" }}>
+          {r.hours && <p style={{ fontSize: "13px", color: "#717171", marginBottom: "8px" }}><span style={{ fontWeight: 600, color: "#222222" }}>Hours: </span>{r.hours}</p>}
+          {r.how_to_access && <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>{r.how_to_access}</p>}
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: CORAL, fontWeight: 600, textDecoration: "underline" }}>Visit website</a>}
+            <button onClick={saveResource} style={{ fontSize: "13px", color: "#717171", backgroundColor: "transparent", border: "none", textDecoration: "underline", padding: 0, cursor: "pointer" }}>Save</button>
+          </div>
         </div>
-      )}
-      {r.how_to_access && (
-        <div style={{ backgroundColor: primary ? "rgba(0,0,0,0.1)" : "#fff8f7", borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
-          <p style={{ fontSize: "10px", color: primary ? "rgba(255,255,255,0.6)" : "#b0b0b0", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>How to access</p>
-          <p style={{ fontSize: "13px", color: primary ? "rgba(255,255,255,0.9)" : "#717171", lineHeight: 1.6 }}>{r.how_to_access}</p>
-        </div>
-      )}
-      <div style={{ display: "flex", gap: "14px", marginTop: "12px", flexWrap: "wrap" }}>
-        {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: primary ? "#ffffff" : CORAL, fontWeight: 600, textDecoration: "underline" }}>Visit website</a>}
-        {primary && <button onClick={saveResource} style={{ fontSize: "13px", color: "rgba(255,255,255,0.8)", fontWeight: 600, backgroundColor: "transparent", border: "none", textDecoration: "underline", padding: 0, cursor: "pointer" }}>Save resource</button>}
       </div>
+    )
+  }
+
+  return (
+    <div style={{ borderRadius: "16px", padding: "18px", backgroundColor: "#ffffff", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
+      <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>{r.name}</p>
+      <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5, marginBottom: "10px" }}>{r.tagline}</p>
+      {r.phone && <a href={"tel:" + r.phone} style={{ fontSize: "14px", fontWeight: 700, color: CORAL, display: "block", marginBottom: "6px" }}>{r.phone}</a>}
+      {r.hours && <p style={{ fontSize: "12px", color: "#b0b0b0", marginBottom: "8px" }}>{r.hours}</p>}
+      {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: CORAL, fontWeight: 600, textDecoration: "underline" }}>Visit website</a>}
     </div>
   )
 }
@@ -57,13 +62,14 @@ function ResourceItem(props: any) {
 export default function ResultCard(props: any) {
   const tr = props.result.triage_result
   const [toast, setToast] = useState("")
+  const moodScore = props.moodScore || 5
 
   useEffect(() => {
     const saved = sessionStorage.getItem("cornellpulse_result_saved")
     if (saved) return
     try {
       const h = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
-      const entry = { date: new Date().toISOString(), mood: props.moodScore || 5, distress_level: tr.distress_level, resource: tr.primary.name }
+      const entry = { date: new Date().toISOString(), mood: moodScore, distress_level: tr.distress_level, resource: tr.primary.name }
       localStorage.setItem("cornellpulse_history", JSON.stringify([entry, ...h].slice(0, 20)))
       sessionStorage.setItem("cornellpulse_result_saved", "1")
     } catch {}
@@ -77,7 +83,7 @@ export default function ResultCard(props: any) {
   const cleanTriggers = (props.triggers || []).filter((t: string) => t !== "nothing_specific").map((t: string) => t.replace(/_/g, " "))
 
   return (
-    <div style={{ padding: "24px 20px" }}>
+    <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh", padding: "24px 20px 32px" }}>
       {tr.crisis_flag && (
         <div style={{ backgroundColor: "#FFF0F0", border: "2px solid #FF5A5F", borderRadius: "16px", padding: "20px", marginBottom: "24px" }}>
           <p style={{ fontSize: "15px", fontWeight: 800, color: CORAL, marginBottom: "8px" }}>Please reach out right now</p>
@@ -88,8 +94,15 @@ export default function ResultCard(props: any) {
         </div>
       )}
 
-      <p style={{ fontSize: "12px", fontWeight: 600, color: CORAL, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Your results</p>
-      <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#222222", marginBottom: "10px", letterSpacing: "-0.01em" }}>Here is what we recommend</h2>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+        <div style={{ width: "52px", height: "52px", borderRadius: "16px", backgroundColor: moodColor(moodScore) + "20", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: "22px", fontWeight: 800, color: moodColor(moodScore) }}>{moodScore}</span>
+        </div>
+        <div>
+          <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "2px" }}>Your results</p>
+          <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", letterSpacing: "-0.01em" }}>Here is what we found</h2>
+        </div>
+      </div>
 
       {cleanTriggers.length > 0 && !tr.crisis_flag && (
         <div style={{ backgroundColor: "#FFF0F0", borderRadius: "12px", padding: "14px 16px", marginBottom: "16px" }}>
@@ -104,11 +117,10 @@ export default function ResultCard(props: any) {
       <ResourceItem resource={tr.primary} primary={true} onSaved={() => showToast("Copied to clipboard")} />
 
       {tr.show_peer_connect && (
-        <div style={{ borderRadius: "16px", padding: "20px", marginBottom: "10px", backgroundColor: "#ffffff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
-          <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "6px" }}>Want to talk to another student?</p>
-          <p style={{ fontSize: "14px", color: "#717171", marginBottom: "16px", lineHeight: 1.5 }}>Sometimes the best thing is sitting with someone who gets it.</p>
+        <div style={{ borderRadius: "16px", padding: "18px", marginBottom: "10px", backgroundColor: "#ffffff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
+          <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>Want to talk to another student?</p>
+          <p style={{ fontSize: "13px", color: "#717171", marginBottom: "14px", lineHeight: 1.5 }}>Sometimes the best thing is sitting with someone who gets it.</p>
           <a href="mailto:cornellpulse@gmail.com?subject=Peer Connect Request" style={{ display: "block", border: "2px solid " + CORAL, color: CORAL, padding: "12px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "14px" }}>Connect me with someone</a>
-          <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "8px" }}>Completely optional.</p>
         </div>
       )}
 
@@ -119,8 +131,10 @@ export default function ResultCard(props: any) {
         </div>
       )}
 
-      <button onClick={() => { sessionStorage.removeItem("cornellpulse_result_saved"); props.onRestart() }} style={{ marginTop: "20px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Check in again</button>
-      <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "14px" }}>Your responses were not saved to our servers.</p>
+      <button onClick={() => { sessionStorage.removeItem("cornellpulse_result_saved"); props.onRestart() }} style={{ marginTop: "20px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
+        Check in again
+      </button>
+      <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "12px" }}>Your responses were not saved to our servers.</p>
 
       {toast && (
         <div style={{ position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)", backgroundColor: CORAL, color: "#ffffff", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" }}>
