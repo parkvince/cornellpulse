@@ -61,7 +61,7 @@ export default function StepTrigger(props: Props) {
 
       <div style={{ display: "flex", gap: "10px" }}>
         <button onClick={onBack} style={{ flex: 1, padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600 }}>Back</button>
-        <button onClick={onNext} disabled={values.length === 0} style={{ flex: 2, padding: "16px", backgroundColor: values.length > 0 ? CORAL : "#ebebeb", color: values.length > 0 ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "14px", fontSize: "15px", fontWeight: 700 }}>Continue ?</button>
+        <button onClick={onNext} disabled={values.length === 0} style={{ flex: 2, padding: "16px", backgroundColor: values.length > 0 ? CORAL : "#ebebeb", color: values.length > 0 ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "14px", fontSize: "15px", fontWeight: 700 }}>Continue</button>
       </div>
     </div>
   )
