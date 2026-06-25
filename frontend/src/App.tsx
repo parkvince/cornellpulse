@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation, Link, Navigate } from "react-router-dom"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactElement } from "react"
 import HomePage from "./pages/HomePage"
 import CheckInPage from "./pages/CheckInPage"
 import ResourcesPage from "./pages/ResourcesPage"
@@ -14,7 +14,7 @@ function BottomNav() {
   const hide = ["/admin", "/onboarding"].includes(location.pathname)
   if (hide) return null
 
-  const tabs = [
+  const tabs: { path: string; label: string; icon: (active: boolean) => ReactElement }[] = [
     {
       path: "/",
       label: "Home",
