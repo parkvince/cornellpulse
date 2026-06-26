@@ -1,43 +1,11 @@
 import { Link } from "react-router-dom"
-import { useEffect, useState } from "react"
 
 const CORAL = "#FF5A5F"
 
-interface CheckIn { date: string; mood: number; resource: string }
-
-function moodColor(m: number) {
-  if (m >= 7) return "#00A699"
-  if (m >= 5) return "#FC642D"
-  if (m >= 3) return "#FF5A5F"
-  return "#c0392b"
-}
-
-function moodLabel(m: number) {
-  if (m >= 7) return "Doing well"
-  if (m >= 5) return "Some stress"
-  if (m >= 3) return "High stress"
-  return "Very high stress"
-}
-
-function timeAgo(d: string) {
-  const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000)
-  if (diff === 0) return "Today"
-  if (diff === 1) return "Yesterday"
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-}
-
 export default function HomePage() {
-  const [history, setHistory] = useState<CheckIn[]>([])
-
-  useEffect(() => {
-    try { setHistory(JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")) } catch {}
-  }, [])
-
-  const last = history[0]
-
   return (
     <div style={{ backgroundColor: "#fff8f7" }}>
-      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Cornell University</p>
         <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "24px" }}>
           Find the right support, right now.
@@ -58,46 +26,6 @@ export default function HomePage() {
       </div>
 
       <div style={{ padding: "24px 20px 0" }}>
-        {last && (
-          <div style={{ marginBottom: "24px" }}>
-            <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Last check-in</p>
-            <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
-                  <span style={{ fontSize: "48px", fontWeight: 800, color: moodColor(last.mood), lineHeight: 1 }}>{last.mood}</span>
-                  <span style={{ fontSize: "18px", color: "#b0b0b0" }}>/10</span>
-                </div>
-                <span style={{ fontSize: "12px", color: "#b0b0b0", backgroundColor: "#f5f5f5", padding: "4px 10px", borderRadius: "20px" }}>{timeAgo(last.date)}</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: moodColor(last.mood) }} />
-                <p style={{ fontSize: "14px", fontWeight: 600, color: moodColor(last.mood) }}>{moodLabel(last.mood)}</p>
-              </div>
-              <p style={{ fontSize: "13px", color: "#717171" }}>{last.resource}</p>
-            </div>
-          </div>
-        )}
-
-        {history.length > 1 && (
-          <div style={{ marginBottom: "24px" }}>
-            <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>History</p>
-            <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
-              {history.slice(0, 5).map((c, idx) => (
-                <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < Math.min(history.length, 5) - 1 ? "1px solid #f5f5f5" : "none" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: moodColor(c.mood), flexShrink: 0 }} />
-                    <div>
-                      <p style={{ fontSize: "14px", fontWeight: 600, color: moodColor(c.mood) }}>{c.mood}/10</p>
-                      <p style={{ fontSize: "11px", color: "#717171" }}>{moodLabel(c.mood)}</p>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: "11px", color: "#b0b0b0" }}>{timeAgo(c.date)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div style={{ marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em" }}>Resources</p>
@@ -105,10 +33,10 @@ export default function HomePage() {
           </div>
           <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
             {[
-              { label: "CAPS Individual Therapy", sub: "One-on-one counseling", phone: "607-255-5155" },
-              { label: "Let's Talk Drop-In", sub: "No appointment needed", phone: null },
-              { label: "EARS Peer Counseling", sub: "Sun-Thu 9pm-1am", phone: "607-255-4050" },
-              { label: "Cornell Health 24/7", sub: "Any time, any day", phone: "607-255-5155" },
+              { label: "CAPS Individual Therapy", sub: "One-on-one counseling" },
+              { label: "Let's Talk Drop-In", sub: "No appointment needed" },
+              { label: "EARS Peer Counseling", sub: "Sun-Thu 9pm-1am" },
+              { label: "Cornell Health 24/7", sub: "Any time, any day" },
             ].map((r, idx) => (
               <Link key={r.label} to="/resources" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < 3 ? "1px solid #f5f5f5" : "none", textDecoration: "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
