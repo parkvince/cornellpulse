@@ -1,8 +1,41 @@
 import { Link } from "react-router-dom"
+import { useEffect, useState } from "react"
 
 const CORAL = "#FF5A5F"
 
+interface CheckIn { date: string; mood: number; resource: string }
+
+function moodColor(m: number) {
+  if (m >= 7) return "#00A699"
+  if (m >= 5) return "#FC642D"
+  if (m >= 3) return "#FF5A5F"
+  return "#c0392b"
+}
+
+function moodLabel(m: number) {
+  if (m >= 7) return "Doing well"
+  if (m >= 5) return "Some stress"
+  if (m >= 3) return "High stress"
+  return "Very high stress"
+}
+
+function timeAgo(d: string) {
+  const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000)
+  if (diff === 0) return "Today"
+  if (diff === 1) return "Yesterday"
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
 export default function HomePage() {
+  const [last, setLast] = useState<CheckIn | null>(null)
+
+  useEffect(() => {
+    try {
+      const h = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
+      if (h.length > 0) setLast(h[0])
+    } catch {}
+  }, [])
+
   return (
     <div style={{ backgroundColor: "#fff8f7" }}>
       <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
@@ -26,6 +59,26 @@ export default function HomePage() {
       </div>
 
       <div style={{ padding: "24px 20px 0" }}>
+        {last && (
+          <div style={{ marginBottom: "24px" }}>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Last check-in</p>
+            <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
+                  <span style={{ fontSize: "48px", fontWeight: 800, color: moodColor(last.mood), lineHeight: 1 }}>{last.mood}</span>
+                  <span style={{ fontSize: "18px", color: "#b0b0b0" }}>/10</span>
+                </div>
+                <span style={{ fontSize: "12px", color: "#b0b0b0", backgroundColor: "#f5f5f5", padding: "4px 10px", borderRadius: "20px" }}>{timeAgo(last.date)}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: moodColor(last.mood) }} />
+                <p style={{ fontSize: "14px", fontWeight: 600, color: moodColor(last.mood) }}>{moodLabel(last.mood)}</p>
+              </div>
+              <p style={{ fontSize: "13px", color: "#717171" }}>{last.resource}</p>
+            </div>
+          </div>
+        )}
+
         <div style={{ marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em" }}>Resources</p>
