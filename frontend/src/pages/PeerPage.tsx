@@ -490,8 +490,8 @@ export default function PeerPage() {
         <RequestModal supporter={selectedSupporter} onClose={() => setSelectedSupporter(null)} onSubmit={() => setSelectedSupporter(null)} />
       )}
 
-      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
-        <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Peer support</p>
+<div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
+          <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Peer support</p>
         <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", marginBottom: "6px" }}>Talk to a student who gets it.</h1>
         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", marginBottom: "20px", lineHeight: 1.5 }}>Trained Cornell peer supporters, ready to meet up -- coffee, a walk, or a chat.</p>
         <div style={{ position: "relative" }}>
