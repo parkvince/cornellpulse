@@ -6,6 +6,7 @@ import ResourcesPage from "./pages/ResourcesPage"
 import PeerPage from "./pages/PeerPage"
 import AdminPage from "./pages/AdminPage"
 import OnboardingPage from "./pages/OnboardingPage"
+import ProfilePage from "./pages/ProfilePage"
 
 const CORAL = "#FF5A5F"
 
@@ -17,21 +18,8 @@ function BottomNav() {
   const active = (path: string) => location.pathname === path
 
   return (
-    <div style={{
-      position: "fixed",
-      bottom: 0,
-      left: "50%",
-      transform: "translateX(-50%)",
-      width: "100%",
-      maxWidth: "430px",
-      backgroundColor: "#ffffff",
-      borderTop: "1px solid #ebebeb",
-      display: "flex",
-      alignItems: "center",
-      zIndex: 100,
-      paddingBottom: "24px",
-      paddingTop: "8px",
-    }}>
+    <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "430px", backgroundColor: "#ffffff", borderTop: "1px solid #ebebeb", display: "flex", alignItems: "center", zIndex: 100, paddingBottom: "24px", paddingTop: "8px" }}>
+
       <Link to="/" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", color: active("/") ? CORAL : "#717171", fontSize: "10px", fontWeight: active("/") ? 600 : 400, textDecoration: "none" }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/") ? CORAL : "#717171"} strokeWidth="1.8">
           <path d="M3 12L12 4l9 8"/>
@@ -66,13 +54,14 @@ function BottomNav() {
         <span>Connect</span>
       </Link>
 
-      <Link to="/admin" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", color: active("/admin") ? CORAL : "#717171", fontSize: "10px", fontWeight: active("/admin") ? 600 : 400, textDecoration: "none" }}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/admin") ? CORAL : "#717171"} strokeWidth="1.8">
+      <Link to="/profile" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", color: active("/profile") ? CORAL : "#717171", fontSize: "10px", fontWeight: active("/profile") ? 600 : 400, textDecoration: "none" }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/profile") ? CORAL : "#717171"} strokeWidth="1.8">
           <circle cx="12" cy="8" r="4"/>
           <path d="M6 20v-2a6 6 0 0112 0v2"/>
         </svg>
-        <span>Admin</span>
+        <span>Profile</span>
       </Link>
+
     </div>
   )
 }
@@ -95,6 +84,7 @@ export default function App() {
           <Route path="/checkin" element={<CheckInPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/peer" element={<PeerPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </div>
