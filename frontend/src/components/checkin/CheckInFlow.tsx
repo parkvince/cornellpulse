@@ -101,7 +101,7 @@ const colleges = [
   }
 
   if (result) {
-    return <ResultCard result={result} moodScore={mood} triggers={triggers} onRestart={restart} />
+return <ResultCard result={result} moodScore={mood} triggers={triggers} wantsToTalk={wantsToTalk} onRestart={restart} />
   }
 
   return (

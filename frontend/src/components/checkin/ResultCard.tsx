@@ -1,4 +1,68 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
+
+function PeerConnectSuggestion() {
+  const navigate = useNavigate()
+  const [supporter, setSupporter] = useState<any>(null)
+
+  useEffect(() => {
+    fetch(`${API_URL}/peer-supporters`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          const random = data[Math.floor(Math.random() * data.length)]
+          setSupporter(random)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const AVATAR_COLORS = ["#FF5A5F", "#00A699", "#FC642D", "#7B68EE", "#20B2AA"]
+  const color = supporter ? AVATAR_COLORS[supporter.name.charCodeAt(0) % AVATAR_COLORS.length] : CORAL
+
+  return (
+    <div style={{ borderRadius: "16px", overflow: "hidden", marginBottom: "10px", backgroundColor: "#ffffff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
+      <div style={{ padding: "18px 18px 14px" }}>
+        <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>Want to talk to another student?</p>
+        <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Sometimes the best thing is sitting with someone who gets it.</p>
+      </div>
+
+      {supporter && (
+        <div style={{ margin: "0 18px 14px", backgroundColor: "#fff8f7", borderRadius: "12px", padding: "14px" }}>
+          <p style={{ fontSize: "10px", fontWeight: 700, color: "#b0b0b0", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Suggested for you</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "10px" }}>
+            <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: color + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: "16px", fontWeight: 800, color }}>{supporter.name.charAt(0)}</span>
+            </div>
+            <div>
+              <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222" }}>{supporter.name}</p>
+              <p style={{ fontSize: "12px", color: "#717171" }}>{supporter.year}{supporter.major ? ` · ${supporter.major}` : ""}</p>
+            </div>
+          </div>
+          {supporter.about && <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5, marginBottom: "10px" }}>{supporter.about}</p>}
+          {supporter.interests && supporter.interests.length > 0 && (
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+              {supporter.interests.slice(0, 3).map((i: string) => (
+                <span key={i} style={{ padding: "3px 8px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "6px", fontSize: "11px", fontWeight: 500 }}>{i}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: "8px", padding: "0 18px 18px" }}>
+        <button onClick={() => navigate("/peer")} style={{ flex: 2, padding: "13px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
+          {supporter ? `Meet ${supporter.name.split(" ")[0]}` : "Find a supporter"}
+        </button>
+        <button onClick={() => navigate("/peer")} style={{ flex: 1, padding: "13px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+          See all
+        </button>
+      </div>
+    </div>
+  )
+}
 
 const CORAL = "#FF5A5F"
 
@@ -116,12 +180,8 @@ export default function ResultCard(props: any) {
 
       <ResourceItem resource={tr.primary} primary={true} onSaved={() => showToast("Copied to clipboard")} />
 
-      {tr.show_peer_connect && (
-        <div style={{ borderRadius: "16px", padding: "18px", marginBottom: "10px", backgroundColor: "#ffffff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
-          <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>Want to talk to another student?</p>
-          <p style={{ fontSize: "13px", color: "#717171", marginBottom: "14px", lineHeight: 1.5 }}>Sometimes the best thing is sitting with someone who gets it.</p>
-          <a href="mailto:cornellpulse@gmail.com?subject=Peer Connect Request" style={{ display: "block", border: "2px solid " + CORAL, color: CORAL, padding: "12px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "14px" }}>Connect me with someone</a>
-        </div>
+      {(tr.show_peer_connect || props.wantsToTalk) && (
+        <PeerConnectSuggestion />
       )}
 
       {tr.secondary.length > 0 && (
