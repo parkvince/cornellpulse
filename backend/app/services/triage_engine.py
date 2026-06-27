@@ -1,259 +1,318 @@
 from app.models.schemas import CheckInRequest, TriageResult, ResourceResult
-from typing import List
+
+CRISIS_KEYWORDS = [
+    "kill myself", "kill my self", "suicide", "suicidal", "end my life", "end it all",
+    "want to die", "wanna die", "better off dead", "not worth living", "hurt myself",
+    "harm myself", "self harm", "self-harm", "cutting myself", "overdose", "no reason to live",
+    "cant go on", "can't go on", "dont want to be here", "don't want to be here",
+    "ending it", "take my life", "nothing to live for", "give up on life",
+]
+
+RESOURCE_KEYWORDS = {
+    "caps": [
+        "therapy", "therapist", "counseling", "counselor", "mental health", "psychiatrist",
+        "psychiatric", "diagnosis", "diagnosed", "depression", "anxiety", "panic attack",
+        "panic attacks", "ptsd", "trauma", "ocd", "bipolar", "adhd", "medication",
+        "antidepressant", "antidepressants", "prescription", "treatment", "clinical",
+        "breakdown", "crying all the time", "cant function", "can't function",
+        "not eating", "not sleeping for weeks", "serious", "professional help",
+        "see someone", "talk to someone professional",
+    ],
+    "lets_talk": [
+        "stressed", "overwhelmed", "burned out", "burnout", "burnt out", "anxious",
+        "nervous", "worried", "worry", "not okay", "struggling", "hard time",
+        "difficult", "tough week", "rough week", "too much", "cant handle",
+        "can't handle", "breaking down", "falling apart", "need to talk",
+        "just need to vent", "vent", "venting", "talk to someone", "chat",
+        "drop in", "no appointment", "quick", "today", "right now", "urgent",
+    ],
+    "ears": [
+        "lonely", "loneliness", "alone", "isolated", "isolation", "no friends",
+        "no one to talk to", "nobody cares", "feel invisible", "feel like a burden",
+        "peer", "student", "someone who gets it", "relate", "understand me",
+        "late night", "cant sleep", "can't sleep", "night", "up late",
+        "homesick", "miss home", "miss my family", "miss my friends",
+        "college is hard", "college is tough",
+    ],
+    "financial": [
+        "money", "financial", "finances", "broke", "debt", "loan", "loans",
+        "cant afford", "can't afford", "tuition", "rent", "housing costs",
+        "food insecure", "hungry", "cant eat", "can't eat", "emergency fund",
+        "grant", "scholarship", "financial aid", "work study", "job",
+        "pay bills", "bills", "stressed about money", "financial stress",
+        "cost of living", "textbooks", "expenses",
+    ],
+    "basic_needs": [
+        "food", "hungry", "starving", "food pantry", "groceries", "eating",
+        "housing", "homeless", "evicted", "eviction", "shelter", "housing insecure",
+        "couch surfing", "nowhere to stay", "basic needs", "necessities",
+        "utilities", "hygiene", "clothes", "clothing", "supplies",
+    ],
+    "fitness": [
+        "exercise", "gym", "workout", "work out", "run", "running", "lift",
+        "lifting", "weights", "fitness", "physical", "body", "active",
+        "sports", "yoga", "stretch", "movement", "energy", "tired body",
+        "need to move", "get active", "stay active", "healthy",
+    ],
+    "nature": [
+        "outside", "outdoors", "nature", "walk", "hike", "hiking", "fresh air",
+        "clear my head", "get away", "escape", "park", "gorge", "waterfall",
+        "trail", "trees", "garden", "botanic", "lake", "scenery", "peaceful",
+        "quiet place", "calm", "decompress", "breathe",
+    ],
+    "sleep": [
+        "sleep", "insomnia", "cant sleep", "can't sleep", "not sleeping",
+        "tired", "exhausted", "fatigue", "fatigued", "no energy", "low energy",
+        "wired", "racing thoughts at night", "wake up", "waking up",
+        "rest", "restless", "sleep deprived", "sleep deprivation", "pulling all nighters",
+        "all nighter", "sleep schedule", "circadian",
+    ],
+    "academics": [
+        "grades", "gpa", "failing", "fail", "failed", "exam", "exams", "test",
+        "midterm", "midterms", "finals", "assignment", "deadline", "deadlines",
+        "paper", "essay", "project", "class", "classes", "professor", "ta",
+        "academic probation", "academic stress", "studying", "study",
+        "cant focus", "can't focus", "procrastinating", "procrastination",
+        "overwhelmed with work", "too much work", "workload", "drop a class",
+        "withdraw", "incomplete", "extension",
+    ],
+    "social": [
+        "friends", "friendship", "social", "socialize", "people", "community",
+        "belong", "belonging", "fit in", "fitting in", "left out", "excluded",
+        "excluded from", "no social life", "introvert", "shy", "awkward",
+        "social anxiety", "meeting people", "making friends", "greek life",
+        "club", "clubs", "activities", "get involved",
+    ],
+    "identity": [
+        "identity", "who am i", "purpose", "meaning", "lost", "direction",
+        "lgbtq", "gay", "lesbian", "bisexual", "transgender", "trans", "queer",
+        "nonbinary", "non-binary", "coming out", "sexuality", "gender",
+        "race", "racism", "racial", "discrimination", "microaggression",
+        "first gen", "first generation", "international student", "immigrant",
+        "culture", "cultural", "religion", "religious", "faith", "values",
+        "imposter syndrome", "impostor syndrome",
+    ],
+    "grief": [
+        "grief", "grieving", "loss", "lost someone", "death", "died", "passed away",
+        "funeral", "mourning", "mourn", "heartbreak", "heartbroken", "breakup",
+        "broke up", "relationship ended", "divorce", "parents divorcing",
+        "family problems", "family issues", "toxic family", "estranged",
+    ],
+    "headspace": [
+        "meditate", "meditation", "mindfulness", "breathe", "breathing",
+        "calm down", "relax", "relaxation", "stress relief", "app",
+        "headspace", "sleep sounds", "guided", "quick fix", "few minutes",
+        "on my own", "by myself", "self help", "self-help",
+    ],
+    "health": [
+        "sick", "ill", "illness", "doctor", "medical", "health", "physical health",
+        "stomach", "headache", "migraine", "pain", "injury", "injured",
+        "hospital", "urgent care", "emergency", "infection", "symptoms",
+        "medication management", "prescriptions", "cornell health",
+    ],
+    "advocacy": [
+        "unfair", "policy", "grade appeal", "academic integrity", "dean",
+        "misconduct", "harassment", "Title IX", "complaint", "advocate",
+        "rights", "navigate", "report", "investigation", "suspend",
+        "probation", "disciplinary", "dispute", "conflict with professor",
+    ],
+}
+
+def contains_crisis_language(text: str) -> bool:
+    if not text:
+        return False
+    lowered = text.lower()
+    return any(kw in lowered for kw in CRISIS_KEYWORDS)
+
+def score_text_keywords(text: str) -> dict:
+    if not text:
+        return {}
+    lowered = text.lower()
+    scores = {}
+    for resource, keywords in RESOURCE_KEYWORDS.items():
+        count = sum(1 for kw in keywords if kw in lowered)
+        if count > 0:
+            scores[resource] = count
+    return scores
 
 RESOURCES = {
-    "caps_individual": ResourceResult(
-        resource_id="caps_individual",
+    "caps": ResourceResult(
+        resource_id="caps",
         name="CAPS Individual Therapy",
-        tagline="One-on-one counseling with a licensed therapist. Best for persistent or serious concerns.",
+        tagline="One-on-one counseling with a licensed therapist. First appointment within 1-2 days.",
         phone="607-255-5155",
+        hours="Mon-Fri 8:30am-4:30pm",
+        how_to_access="Call or walk into Gannett Health Center at 110 Ho Plaza. Ask for CAPS. First appointments are usually within 1-2 business days.",
         url="https://health.cornell.edu/services/mental-health-care",
-        hours="Mon-Fri 8:30am-4:30pm. 24/7 phone line available.",
-        how_to_access="Call 607-255-5155 and ask for an Access Appointment. You can usually be seen within 1-2 days. Tell them briefly what you are dealing with so they can match you to the right counselor."
-    ),
-    "caps_group": ResourceResult(
-        resource_id="caps_group",
-        name="CAPS Group Therapy",
-        tagline="Therapist-led groups for anxiety, grief, identity, relationships, and more.",
-        phone="607-255-5155",
-        url="https://health.cornell.edu/services/mental-health-care",
-        hours="Varies by group. Most meet weekly during the semester.",
-        how_to_access="Call CAPS at 607-255-5155 to ask about current groups. They will match you to one that fits. Groups are confidential and free."
+        tags=["therapy", "free", "professional"],
     ),
     "lets_talk": ResourceResult(
         resource_id="lets_talk",
         name="Let's Talk Drop-In",
-        tagline="Free, informal 15-20 minute conversations with a CAPS counselor. No appointment needed.",
+        tagline="Informal 15-20 min chat with a CAPS counselor. No appointment needed.",
         phone=None,
+        hours="Mon-Fri, check website for locations and times",
+        how_to_access="Just show up. No appointment, no paperwork. Various locations around campus including Olin Library and the multicultural center.",
         url="https://health.cornell.edu/services/mental-health-care/lets-talk",
-        hours="Mon-Fri at various campus locations. Check the website for today's schedule.",
-        how_to_access="Just show up during listed hours. No appointment, no paperwork, no commitment to ongoing therapy. Great if you want to talk to someone today without the formality of a full appointment."
+        tags=["drop-in", "free", "quick"],
     ),
     "ears": ResourceResult(
         resource_id="ears",
         name="EARS Peer Counseling",
-        tagline="Talk to a trained Cornell student who genuinely gets what you are going through.",
+        tagline="Confidential peer counseling with trained Cornell students. No judgment.",
         phone="607-255-4050",
+        hours="Sun-Thu 9pm-1am",
+        how_to_access="Call the EARS line or walk into 305 Willard Straight Hall Sunday through Thursday between 9pm and 1am.",
         url="https://ears.cornell.edu",
-        hours="Sun-Thu 9pm-1am during the semester.",
-        how_to_access="Call 607-255-4050 or walk into 305 Willard Straight Hall during hours. EARS counselors are fellow students trained in active listening. Everything is confidential. There is no judgment."
+        tags=["peer", "free", "evening"],
     ),
-    "cornell_health_phone": ResourceResult(
-        resource_id="cornell_health_phone",
-        name="Cornell Health 24/7 Phone Line",
-        tagline="Talk to a real health professional right now, any time of day or night.",
+    "cornell_health": ResourceResult(
+        resource_id="cornell_health",
+        name="Cornell Health 24/7",
+        tagline="Talk to a health professional any time. Press 2 for mental health.",
         phone="607-255-5155",
+        hours="24/7 including holidays",
+        how_to_access="Call 607-255-5155 any time and press 2 for mental health support. Available around the clock.",
         url="https://health.cornell.edu",
-        hours="24 hours a day, 7 days a week including holidays.",
-        how_to_access="Call 607-255-5155 and press 2 for after-hours mental health support. A counselor will pick up. This is not a crisis line, it is a real consultation with a trained professional."
+        tags=["24/7", "free"],
     ),
-    "protocall": ResourceResult(
-        resource_id="protocall",
-        name="ProtoCall After-Hours Counseling",
-        tagline="Professional mental health support on evenings and weekends when CAPS is closed.",
+    "financial": ResourceResult(
+        resource_id="financial",
+        name="Financial Aid Emergency Fund",
+        tagline="Emergency grants for unexpected expenses. You do not need to pay them back.",
+        phone="607-255-5145",
+        hours="Mon-Fri 8am-5pm",
+        how_to_access="Call or visit 203 Day Hall. Explain your situation and ask about emergency funding. Grants do not need to be repaid.",
+        url="https://finaid.cornell.edu/emergency-fund",
+        tags=["financial", "emergency", "free"],
+    ),
+    "basic_needs": ResourceResult(
+        resource_id="basic_needs",
+        name="Basic Needs Support",
+        tagline="Food pantry, emergency housing, and basic needs. No questions asked.",
+        phone=None,
+        hours="Check website",
+        how_to_access="Visit basicneeds.cornell.edu to find the nearest food pantry location and hours. No ID or referral required.",
+        url="https://basicneeds.cornell.edu",
+        tags=["food", "housing", "free"],
+    ),
+    "fitness": ResourceResult(
+        resource_id="fitness",
+        name="Campus Fitness Centers",
+        tagline="Free gym access for all Cornell students. One of the most effective stress relievers.",
+        phone=None,
+        hours="Mon-Fri 6am-11pm, weekends 8am-9pm",
+        how_to_access="Show your Cornell ID at Helen Newman Hall, Noyes Center, or Bartels Hall. Free group fitness classes including yoga are also available.",
+        url="https://recreation.athletics.cornell.edu",
+        tags=["gym", "free", "fitness"],
+    ),
+    "nature": ResourceResult(
+        resource_id="nature",
+        name="Cornell Botanic Gardens",
+        tagline="Free, beautiful gardens on campus. A walk here genuinely clears your head.",
+        phone=None,
+        hours="Dawn to dusk",
+        how_to_access="Walk in from any entrance. Completely free and open to everyone. The F.R. Newman Arboretum is also worth exploring.",
+        url="https://cornellbotanicgardens.org",
+        tags=["nature", "free", "outdoors"],
+    ),
+    "sleep": ResourceResult(
+        resource_id="sleep",
+        name="Sleep Health Program",
+        tagline="Evidence-based coaching for sleep problems. CBT techniques for insomnia.",
         phone="607-255-5155",
-        url=None,
-        hours="Weekdays after 4:30pm, all day Saturday and Sunday.",
-        how_to_access="Call Cornell Health at 607-255-5155. After hours you will be automatically connected to ProtoCall, a professional after-hours mental health service. Free for Cornell students."
+        hours="Mon-Fri 8am-5pm",
+        how_to_access="Call Cornell Health and ask about the Sleep Health program. They use proven cognitive behavioral techniques specifically for insomnia.",
+        url="https://health.cornell.edu/services/health-coaching",
+        tags=["sleep", "free"],
     ),
-    "crisis_line": ResourceResult(
-        resource_id="crisis_line",
-        name="988 Suicide and Crisis Lifeline",
-        tagline="Immediate support if you are in crisis. Call or text 988 right now.",
-        phone="988",
-        url="https://988lifeline.org",
-        hours="24 hours a day, 7 days a week.",
-        how_to_access="Call or text 988. You will reach a trained crisis counselor within seconds. You can also text HOME to 741741 for the Crisis Text Line. Both are free, confidential, and available right now."
+    "headspace": ResourceResult(
+        resource_id="headspace",
+        name="Headspace App",
+        tagline="Free meditation and sleep tools for all Cornell students.",
+        phone=None,
+        hours="Always available",
+        how_to_access="Sign up at headspace.com/studentplan using your Cornell email. Free for all enrolled students.",
+        url="https://www.headspace.com/studentplan",
+        tags=["app", "free", "meditation"],
     ),
-    "cornell_police_crisis": ResourceResult(
-        resource_id="cornell_police_crisis",
-        name="Cornell Crisis Response",
-        tagline="On-campus emergency mental health response.",
-        phone="607-255-1111",
-        url=None,
-        hours="24 hours a day, 7 days a week.",
-        how_to_access="Call Cornell Police at 607-255-1111. Ask for the on-call mental health crisis manager. They can send someone to you on campus."
+    "identity": ResourceResult(
+        resource_id="identity",
+        name="Office of Diversity and Inclusion",
+        tagline="Counseling and support for students of color, LGBTQ+, first-gen, and international students.",
+        phone="607-255-4857",
+        hours="Mon-Fri 8am-5pm",
+        how_to_access="Visit 626 Thurston Ave or call to schedule a meeting. Counselors specialize in identity-related stress and discrimination.",
+        url="https://diversity.cornell.edu",
+        tags=["identity", "diversity", "free", "lgbtq"],
+    ),
+    "advocacy": ResourceResult(
+        resource_id="advocacy",
+        name="University Advocate",
+        tagline="Free confidential support navigating Cornell policies and academic difficulties.",
+        phone="607-255-4321",
+        hours="Mon-Fri 9am-5pm",
+        how_to_access="Call or visit 160 Day Hall. The advocate helps you understand your rights and navigate Cornell's systems confidentially.",
+        url="https://advocate.cornell.edu",
+        tags=["advocacy", "free"],
+    ),
+    "health": ResourceResult(
+        resource_id="health",
+        name="Cornell Health Primary Care",
+        tagline="General medical care including mental health medication management.",
+        phone="607-255-5155",
+        hours="Mon-Fri 8am-5pm",
+        how_to_access="Call to make an appointment at Gannett Health Center. Walk-in urgent care is also available for acute concerns.",
+        url="https://health.cornell.edu",
+        tags=["medical", "free"],
     ),
     "self_help": ResourceResult(
         resource_id="self_help",
         name="Cornell Self-Help Resources",
         tagline="Guided tools, wellness tips, and mental health content you can use right now.",
         phone=None,
+        hours="Always available online",
+        how_to_access="Visit mentalhealth.cornell.edu for self-guided programs, relaxation tools, and wellness tips. Also check out the Headspace app which is free for all Cornell students through Student Health Benefits.",
         url="https://mentalhealth.cornell.edu",
-        hours="Always available online.",
-        how_to_access="Visit mentalhealth.cornell.edu for self-guided programs, relaxation tools, and wellness tips. Also check out the Headspace app which is free for all Cornell students through Student Health Benefits."
+        tags=["self-help", "free", "online"],
     ),
-    "headspace": ResourceResult(
-        resource_id="headspace",
-        name="Headspace App",
-        tagline="Free meditation and sleep app for all Cornell students.",
-        phone=None,
-        url="https://www.headspace.com/studentplan",
-        hours="Always available.",
-        how_to_access="Sign up at headspace.com/studentplan using your Cornell email. Free for enrolled students. Great for stress, sleep issues, and building a daily mindfulness habit."
+    "crisis_988": ResourceResult(
+        resource_id="crisis_988",
+        name="988 Suicide and Crisis Lifeline",
+        tagline="Call or text 988. Trained crisis counselor in seconds. Free, confidential, 24/7.",
+        phone="988",
+        hours="24/7",
+        how_to_access="Call or text 988 from any phone. You will reach a trained crisis counselor within seconds. Free and confidential.",
+        url="https://988lifeline.org",
+        tags=["crisis", "24/7", "free"],
     ),
-    "diversity_inclusion": ResourceResult(
-        resource_id="diversity_inclusion",
-        name="Office of Diversity and Inclusion Counseling",
-        tagline="Culturally sensitive counseling for students from underrepresented communities.",
-        phone="607-255-4857",
-        url="https://diversity.cornell.edu",
-        hours="Mon-Fri 8am-5pm.",
-        how_to_access="Call 607-255-4857 or visit 626 Thurston Ave. Offers counseling and support specifically attuned to the experiences of students of color, LGBTQ+ students, first-gen students, and international students."
-    ),
-    "lgbtq_center": ResourceResult(
-        resource_id="lgbtq_center",
-        name="Cornell LGBT Resource Center",
-        tagline="Support, community, and resources for LGBTQ+ students.",
-        phone="607-255-6482",
-        url="https://lgbtq.cornell.edu",
-        hours="Mon-Fri 9am-5pm.",
-        how_to_access="Visit 626 Thurston Ave or call 607-255-6482. Offers individual support, community events, and referrals to LGBTQ-affirming counselors at CAPS."
-    ),
-    "international_students": ResourceResult(
-        resource_id="international_students",
-        name="International Student Support",
-        tagline="Dedicated support for international students navigating life at Cornell.",
-        phone="607-255-5243",
-        url="https://isso.cornell.edu",
-        hours="Mon-Fri 9am-5pm.",
-        how_to_access="Contact the International Students and Scholars Office at 607-255-5243 or isso.cornell.edu. They offer counseling referrals, cultural adjustment support, and visa-related stress resources."
-    ),
-    "financial_stress": ResourceResult(
-        resource_id="financial_stress",
-        name="Student Financial Aid Emergency Fund",
-        tagline="Emergency financial assistance for students in unexpected hardship.",
-        phone="607-255-5145",
-        url="https://finaid.cornell.edu/emergency-fund",
-        hours="Mon-Fri 8am-5pm.",
-        how_to_access="Contact the Financial Aid office at 607-255-5145 or visit 203 Day Hall. Emergency grants are available for unexpected expenses. You do not need to pay them back."
-    ),
-    "basic_needs": ResourceResult(
-        resource_id="basic_needs",
-        name="Cornell Basic Needs Support",
-        tagline="Food, housing, and emergency support for students in need.",
-        phone="607-255-5243",
-        url="https://basicneeds.cornell.edu",
-        hours="Mon-Fri 9am-5pm.",
-        how_to_access="Visit basicneeds.cornell.edu to access food pantry locations, emergency housing support, and other basic needs resources. No questions asked."
-    ),
-    "graduate_support": ResourceResult(
-        resource_id="graduate_support",
-        name="Graduate Student Mental Health",
-        tagline="Specialized support for the unique pressures of graduate and PhD programs.",
-        phone="607-255-5155",
-        url="https://gradschool.cornell.edu/student-life/health-and-wellness",
-        hours="Mon-Fri 8:30am-4:30pm.",
-        how_to_access="CAPS has counselors who specialize in graduate student concerns including advisor relationships, dissertation stress, imposter syndrome, and career uncertainty. Request a grad-specialist when you call."
-    ),
-    "student_advocacy": ResourceResult(
-        resource_id="student_advocacy",
-        name="University Advocate",
-        tagline="Free confidential support navigating Cornell policies and difficult situations.",
-        phone="607-255-4321",
-        url="https://advocate.cornell.edu",
-        hours="Mon-Fri 9am-5pm.",
-        how_to_access="Call 607-255-4321 or visit advocate.cornell.edu. The University Advocate helps students navigate academic difficulties, conflicts with professors, and other institutional challenges."
-    ),
-    "gannett_health": ResourceResult(
-        resource_id="gannett_health",
-        name="Cornell Health Primary Care",
-        tagline="Medical care for physical health concerns, including mental health medication management.",
-        phone="607-255-5155",
-        url="https://health.cornell.edu",
-        hours="Mon-Fri 8am-5pm. Urgent care available during extended hours.",
-        how_to_access="Call 607-255-5155 to schedule an appointment. Cornell Health can also help with medication management for depression, anxiety, and ADHD if you are already working with a provider."
-    ),
-    "bereavement": ResourceResult(
-        resource_id="bereavement",
-        name="Grief and Loss Support at CAPS",
-        tagline="Specialized support for students dealing with loss, grief, or trauma.",
-        phone="607-255-5155",
-        url="https://health.cornell.edu/services/mental-health-care",
-        hours="Mon-Fri 8:30am-4:30pm.",
-        how_to_access="Call CAPS at 607-255-5155 and mention you are dealing with grief or loss. They can connect you with a counselor who specializes in bereavement and trauma."
-    ),
-    "sleep_health": ResourceResult(
-        resource_id="sleep_health",
-        name="Cornell Sleep Health Program",
-        tagline="Evidence-based help for sleep problems that are affecting your life.",
-        phone="607-255-5155",
-        url="https://health.cornell.edu/services/health-coaching",
-        hours="Mon-Fri 8am-5pm.",
-        how_to_access="Call Cornell Health and ask about the Sleep Health Program. They offer individual coaching and CBT-based techniques for insomnia and sleep disruption. Free for enrolled students."
-    ),
-    "career_advising": ResourceResult(
-        resource_id="career_advising",
-        name="Cornell Career Services",
-        tagline="Support for career anxiety, job search stress, and uncertainty about the future.",
-        phone="607-255-5378",
-        url="https://career.cornell.edu",
-        hours="Mon-Fri 8am-5pm.",
-        how_to_access="Call 607-255-5378 or visit career.cornell.edu to schedule an appointment. Career counselors can help with job search anxiety, career uncertainty, and the stress of figuring out what comes next."
-    ),
-    "let_me_help": ResourceResult(
-        resource_id="let_me_help",
-        name="Let Me Help Peer Support",
-        tagline="Cornell students trained to support peers through difficult times.",
-        phone=None,
-        url="https://health.cornell.edu/resources/health-topics/mental-health",
-        hours="Available during the academic semester.",
-        how_to_access="Ask your RA or residence hall staff about Let Me Help peer supporters in your building. They are trained students who can listen, provide support, and connect you to professional resources."
-    ),
-    "gym": ResourceResult(
-        resource_id="gym",
-        name="Campus Fitness Centers",
-        tagline="Free gym access for all Cornell students. Exercise is one of the most effective stress relievers.",
-        phone=None,
-        url="https://recreation.athletics.cornell.edu",
-        hours="Mon-Fri 6am-11pm, weekends 8am-9pm.",
-        how_to_access="Show your Cornell ID at Helen Newman Hall, Noyes Center, or Bartels Hall. All free for enrolled students. Group fitness classes including yoga are also free."
-    ),
-    "botanic_gardens": ResourceResult(
-        resource_id="botanic_gardens",
-        name="Cornell Botanic Gardens",
-        tagline="Free, peaceful gardens on campus. A walk here genuinely clears your head.",
-        phone=None,
-        url="https://cornellbotanicgardens.org",
-        hours="Dawn to dusk daily.",
-        how_to_access="Walk in for free any time. Located on the north end of campus near the engineering quad. No need to bring anything."
-    ),
-    "outdoor_education": ResourceResult(
-        resource_id="outdoor_education",
-        name="Cornell Outdoor Education",
-        tagline="Climbing wall, outdoor trips, and adventure programs. A great way to get outside and reset.",
-        phone="607-255-6415",
-        url="https://outdoor.cornell.edu",
-        hours="Mon-Fri 9am-5pm.",
-        how_to_access="Visit Bartels Hall or outdoor.cornell.edu to sign up for trips and use the climbing wall. Many programs are free or low cost for Cornell students."
+    "crisis_text": ResourceResult(
+        resource_id="crisis_text",
+        name="Crisis Text Line",
+        tagline="Text HOME to 741741. Free confidential crisis counseling by text.",
+        phone="741741",
+        hours="24/7",
+        how_to_access="Text HOME to 741741 from any phone. Free, confidential, and available 24/7.",
+        url="https://www.crisistextline.org",
+        tags=["crisis", "text", "free"],
     ),
 }
 
-SLEEP_SCORES = {
-    "under_4": 1.0,
-    "4_to_6": 0.6,
-    "6_to_8": 0.2,
-    "over_8": 0.0,
+TRIGGER_TO_RESOURCES = {
+    "academics": ["lets_talk", "caps", "advocacy", "headspace"],
+    "social": ["ears", "lets_talk", "fitness", "nature"],
+    "financial": ["financial", "basic_needs", "lets_talk"],
+    "family": ["caps", "ears", "lets_talk"],
+    "identity": ["identity", "caps", "ears"],
+    "health": ["health", "caps", "cornell_health"],
+    "future": ["lets_talk", "caps", "self_help"],
+    "loneliness": ["ears", "fitness", "nature", "lets_talk"],
+    "sleep": ["sleep", "headspace", "fitness"],
+    "housing": ["basic_needs", "financial", "advocacy"],
+    "grief": ["caps", "ears", "lets_talk"],
+    "discrimination": ["identity", "advocacy", "caps"],
+    "nothing_specific": ["self_help", "headspace", "nature"],
 }
-
-WORKLOAD_SCORES = {
-    "light": 0.0,
-    "moderate": 0.3,
-    "heavy": 0.6,
-    "unbearable": 1.0,
-}
-
-CRISIS_KEYWORDS = [
-    "kill myself", "kill my self", "suicide", "suicidal", "end my life", "end it all",
-    "want to die", "wanna die", "better off dead", "not worth living", "hurt myself",
-    "harm myself", "self harm", "self-harm", "cutting myself", "overdose", "no reason to live",
-]
-
-def contains_crisis_language(text):
-    if not text:
-        return False
-    lowered = text.lower()
-    return any(kw in lowered for kw in CRISIS_KEYWORDS)
 
 def run_triage(request: CheckInRequest) -> TriageResult:
     mood = request.mood_score
@@ -264,204 +323,92 @@ def run_triage(request: CheckInRequest) -> TriageResult:
 
     if mood <= 2 or contains_crisis_language(request.free_text):
         return TriageResult(
-            primary=RESOURCES["crisis_line"],
-            secondary=[
-                RESOURCES["cornell_health_phone"],
-                RESOURCES["cornell_police_crisis"],
-            ],
-            crisis_flag=True,
             distress_level="crisis",
-            why="Based on what you shared, we think you need immediate support right now. Please reach out.",
-            show_peer_connect=False
+            crisis_flag=True,
+            why="Based on what you shared, please reach out for immediate support.",
+            primary=RESOURCES["crisis_988"],
+            secondary=[RESOURCES["crisis_text"], RESOURCES["cornell_health"]],
+            show_peer_connect=False,
         )
 
-    sleep_score = SLEEP_SCORES.get(sleep, 0.5)
-    workload_score = WORKLOAD_SCORES.get(workload, 0.5)
-    mood_normalized = (10 - mood) / 9
-    combined = (mood_normalized * 0.5) + (sleep_score * 0.25) + (workload_score * 0.25)
+    keyword_scores = score_text_keywords(request.free_text)
 
-    if combined >= 0.75:
-        distress_level = "high"
-    elif combined >= 0.45:
-        distress_level = "moderate"
+    resource_votes: dict[str, int] = {}
+
+    def vote(resource_id: str, weight: int):
+        resource_votes[resource_id] = resource_votes.get(resource_id, 0) + weight
+
+    for resource_id, score in keyword_scores.items():
+        vote(resource_id, score * 3)
+
+    for trigger in triggers:
+        if trigger in TRIGGER_TO_RESOURCES:
+            for i, rid in enumerate(TRIGGER_TO_RESOURCES[trigger]):
+                vote(rid, 4 - i)
+
+    if mood <= 3:
+        vote("caps", 5)
+        vote("lets_talk", 4)
+        vote("cornell_health", 3)
+    elif mood <= 5:
+        vote("lets_talk", 4)
+        vote("ears", 3)
+        vote("self_help", 2)
+    elif mood <= 7:
+        vote("headspace", 3)
+        vote("nature", 3)
+        vote("fitness", 2)
     else:
-        distress_level = "low"
+        vote("self_help", 3)
+        vote("headspace", 2)
+        vote("nature", 2)
 
-    if "grief" in triggers:
-        return TriageResult(
-            primary=RESOURCES["bereavement"],
-            secondary=[RESOURCES["caps_individual"], RESOURCES["ears"]],
-            crisis_flag=False,
-            distress_level=distress_level,
-            why="Grief and loss are some of the hardest things to carry alone. CAPS has counselors who specialize in exactly this and can support you through it.",
-            show_peer_connect=True
-        )
+    if sleep in ["under_4", "4_to_6"]:
+        vote("sleep", 4)
+        vote("headspace", 2)
 
-    if "discrimination" in triggers:
-        return TriageResult(
-            primary=RESOURCES["diversity_inclusion"],
-            secondary=[RESOURCES["lgbtq_center"], RESOURCES["student_advocacy"]],
-            crisis_flag=False,
-            distress_level=distress_level,
-            why="Experiencing discrimination is serious and you deserve support. The Office of Diversity and Inclusion has counselors who understand these experiences deeply.",
-            show_peer_connect=True
-        )
+    if workload in ["heavy", "unbearable"]:
+        vote("lets_talk", 3)
+        vote("caps", 2)
+        vote("advocacy", 2)
 
-    if "identity" in triggers:
-        return TriageResult(
-            primary=RESOURCES["diversity_inclusion"],
-            secondary=[RESOURCES["lgbtq_center"], RESOURCES["caps_group"]],
-            crisis_flag=False,
-            distress_level=distress_level,
-            why="Questions of identity and belonging can be deeply personal. The Office of Diversity and Inclusion has counselors who specialize in exactly this.",
-            show_peer_connect=True
-        )
+    if request.wants_to_talk:
+        vote("ears", 3)
+        vote("lets_talk", 2)
 
-    if "financial" in triggers or "housing" in triggers:
-        sec = [RESOURCES["basic_needs"]] if "housing" in triggers else [RESOURCES["lets_talk"]]
-        sec.append(RESOURCES["caps_individual"] if distress_level == "high" else RESOURCES["ears"])
-        return TriageResult(
-            primary=RESOURCES["financial_stress"],
-            secondary=sec,
-            crisis_flag=False,
-            distress_level=distress_level,
-            why="Financial and housing stress are some of the most common but least talked about struggles at Cornell. Real help is available and you do not have to figure this out alone.",
-            show_peer_connect=True
-        )
+    if not resource_votes:
+        vote("self_help", 1)
 
-    if "sleep" in triggers or (sleep == "under_4" and distress_level != "high"):
-        return TriageResult(
-            primary=RESOURCES["sleep_health"],
-            secondary=[RESOURCES["headspace"], RESOURCES["gym"]],
-            crisis_flag=False,
-            distress_level=distress_level,
-            why="Poor sleep affects everything else -- your mood, focus, and ability to cope. Cornell has a dedicated Sleep Health program that can help.",
-            show_peer_connect=True
-        )
+    sorted_resources = sorted(resource_votes.items(), key=lambda x: x[1], reverse=True)
+    primary_id = sorted_resources[0][0]
+    secondary_ids = [rid for rid, _ in sorted_resources[1:4] if rid != primary_id]
 
-    if "future" in triggers or "academics" in triggers:
-        if distress_level == "high":
-            return TriageResult(
-                primary=RESOURCES["caps_individual"],
-                secondary=[RESOURCES["career_advising"], RESOURCES["student_advocacy"]],
-                crisis_flag=False,
-                distress_level=distress_level,
-                why="Academic and career pressure at Cornell can feel overwhelming. A counselor can help you work through the anxiety and figure out next steps.",
-                show_peer_connect=False
-            )
-        else:
-            return TriageResult(
-                primary=RESOURCES["career_advising"],
-                secondary=[RESOURCES["lets_talk"], RESOURCES["ears"]],
-                crisis_flag=False,
-                distress_level=distress_level,
-                why="Uncertainty about the future is one of the most common stressors at Cornell. Career Services can help you work through the anxiety, not just the logistics.",
-                show_peer_connect=True
-            )
+    distress_level = "crisis" if mood <= 2 else "high" if mood <= 4 else "moderate" if mood <= 6 else "low"
 
-    if "health" in triggers:
-        return TriageResult(
-            primary=RESOURCES["gannett_health"],
-            secondary=[RESOURCES["caps_individual"], RESOURCES["lets_talk"]],
-            crisis_flag=False,
-            distress_level=distress_level,
-            why="Physical health concerns can take a serious toll on your mental health too. Cornell Health can address both together.",
-            show_peer_connect=True
-        )
+    why_map = {
+        "caps": "Based on what you shared, connecting with a counselor one-on-one could make a real difference right now.",
+        "lets_talk": "A quick drop-in chat with a counselor might be exactly what you need -- no appointment, no commitment.",
+        "ears": "Talking to another Cornell student who has been through it can be surprisingly helpful.",
+        "cornell_health": "Cornell Health has professionals available around the clock who can help you figure out next steps.",
+        "financial": "Financial stress is real and you do not have to navigate it alone. Emergency support exists.",
+        "basic_needs": "Your basic needs come first. Cornell has resources ready for you right now, no questions asked.",
+        "fitness": "Physical movement is one of the most proven ways to shift how you feel. Even a short gym session helps.",
+        "nature": "Getting outside -- even just a short walk -- can genuinely reset your nervous system.",
+        "sleep": "Sleep affects everything. Cornell has a dedicated program that can actually help fix this.",
+        "headspace": "A few minutes of guided breathing or meditation can take the edge off. Free for all Cornell students.",
+        "identity": "You deserve support from people who truly understand what you are navigating.",
+        "advocacy": "If you are dealing with something systemic or policy-related, an advocate can help you find your footing.",
+        "health": "Physical and mental health are deeply connected. Cornell Health can help with both.",
+        "self_help": "You seem to be managing okay. These tools can help you stay that way.",
+        "crisis_988": "Please reach out right now. You do not have to face this alone.",
+        "crisis_text": "Immediate support is available right now, by text.",
+    }
 
-    if "loneliness" in triggers or "social" in triggers:
-        return TriageResult(
-            primary=RESOURCES["ears"],
-            secondary=[RESOURCES["let_me_help"], RESOURCES["caps_group"]],
-            crisis_flag=False,
-            distress_level=distress_level,
-            why="Feeling disconnected or lonely at Cornell is more common than people admit. Talking to a peer counselor or joining a group can help more than you might expect.",
-            show_peer_connect=True
-        )
-
-    if "family" in triggers:
-        if distress_level == "high":
-            return TriageResult(
-                primary=RESOURCES["caps_individual"],
-                secondary=[RESOURCES["lets_talk"], RESOURCES["ears"]],
-                crisis_flag=False,
-                distress_level=distress_level,
-                why="Family struggles can be especially hard to deal with when you are far from home. A counselor can give you a private space to work through what you are carrying.",
-                show_peer_connect=False
-            )
-        else:
-            return TriageResult(
-                primary=RESOURCES["lets_talk"],
-                secondary=[RESOURCES["ears"], RESOURCES["caps_individual"]],
-                crisis_flag=False,
-                distress_level=distress_level,
-                why="Family struggles can be especially hard to deal with when you are far from home. Talking to someone even informally can help.",
-                show_peer_connect=True
-            )
-
-    if college in ["graduate", "professional"]:
-        if distress_level == "high":
-            return TriageResult(
-                primary=RESOURCES["caps_individual"],
-                secondary=[RESOURCES["graduate_support"], RESOURCES["lets_talk"]],
-                crisis_flag=False,
-                distress_level=distress_level,
-                why="Your responses suggest you are under significant stress. A counselor can help you work through this.",
-                show_peer_connect=False
-            )
-        elif distress_level == "moderate":
-            return TriageResult(
-                primary=RESOURCES["graduate_support"],
-                secondary=[RESOURCES["ears"], RESOURCES["lets_talk"]],
-                crisis_flag=False,
-                distress_level=distress_level,
-                why="It sounds like things are weighing on you. Talking to someone, even informally, can help.",
-                show_peer_connect=True
-            )
-        else:
-            return TriageResult(
-                primary=RESOURCES["self_help"],
-                secondary=[RESOURCES["headspace"], RESOURCES["botanic_gardens"]],
-                crisis_flag=False,
-                distress_level=distress_level,
-                why="You seem to be managing okay. These resources can help you stay that way.",
-                show_peer_connect=True
-            )
-
-    if distress_level == "high":
-        return TriageResult(
-            primary=RESOURCES["caps_individual"],
-            secondary=[RESOURCES["lets_talk"], RESOURCES["cornell_health_phone"]],
-            crisis_flag=False,
-            distress_level=distress_level,
-            why="Your responses suggest you are under significant stress. A counselor can help you work through this.",
-            show_peer_connect=False
-        )
-    elif distress_level == "moderate":
-        if workload in ["heavy", "unbearable"]:
-            return TriageResult(
-                primary=RESOURCES["lets_talk"],
-                secondary=[RESOURCES["ears"], RESOURCES["caps_group"]],
-                crisis_flag=False,
-                distress_level=distress_level,
-                why="It sounds like things are weighing on you. Talking to someone, even informally, can help.",
-                show_peer_connect=True
-            )
-        else:
-            return TriageResult(
-                primary=RESOURCES["ears"],
-                secondary=[RESOURCES["lets_talk"], RESOURCES["caps_group"]],
-                crisis_flag=False,
-                distress_level=distress_level,
-                why="It sounds like things are weighing on you. Talking to someone, even informally, can help.",
-                show_peer_connect=True
-            )
-    else:
-        return TriageResult(
-            primary=RESOURCES["self_help"],
-            secondary=[RESOURCES["headspace"], RESOURCES["gym"]],
-            crisis_flag=False,
-            distress_level=distress_level,
-            why="You seem to be managing okay. These resources can help you stay that way.",
-            show_peer_connect=True
-        )
+    return TriageResult(
+        distress_level=distress_level,
+        crisis_flag=False,
+        why=why_map.get(primary_id, "Based on what you shared, here is what we think could help most."),
+        primary=RESOURCES[primary_id],
+        secondary=[RESOURCES[rid] for rid in secondary_ids if rid in RESOURCES],
+        show_peer_connect=mood <= 6 or bool(request.wants_to_talk),
+    )
