@@ -34,11 +34,14 @@ export default function ProfilePage() {
     try { setHistory(JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")) } catch {}
   }, [])
 
+const [confirmClear, setConfirmClear] = useState(false)
+
   function clearHistory() {
     localStorage.removeItem("cornellpulse_history")
     sessionStorage.removeItem("cornellpulse_result_saved")
     setHistory([])
     setCleared(true)
+    setConfirmClear(false)
   }
 
   function resetOnboarding() {
@@ -59,8 +62,16 @@ export default function ProfilePage() {
           <div style={{ marginBottom: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
               <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em" }}>Check-in history</p>
-              <button onClick={clearHistory} style={{ fontSize: "12px", color: CORAL, fontWeight: 600, backgroundColor: "transparent", border: "none", cursor: "pointer" }}>Clear all</button>
-            </div>
+{confirmClear ? (
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <span style={{ fontSize: "12px", color: "#717171" }}>Are you sure?</span>
+                  <button onClick={clearHistory} style={{ fontSize: "12px", color: "#ffffff", fontWeight: 600, backgroundColor: CORAL, border: "none", cursor: "pointer", padding: "4px 10px", borderRadius: "6px" }}>Yes, clear</button>
+                  <button onClick={() => setConfirmClear(false)} style={{ fontSize: "12px", color: "#717171", fontWeight: 600, backgroundColor: "transparent", border: "none", cursor: "pointer" }}>Cancel</button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmClear(true)} style={{ fontSize: "12px", color: CORAL, fontWeight: 600, backgroundColor: "transparent", border: "none", cursor: "pointer" }}>Clear all</button>
+              )}
+                          </div>
             <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
               {history.slice(0, 10).map((c, idx) => (
                 <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < Math.min(history.length, 10) - 1 ? "1px solid #f5f5f5" : "none" }}>
