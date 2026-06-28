@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
+const [feedback, setFeedback] = useState<string>("")
 
 function PeerConnectSuggestion() {
   const navigate = useNavigate()
@@ -191,7 +192,38 @@ export default function ResultCard(props: any) {
         </div>
       )}
 
-      <button onClick={() => { sessionStorage.removeItem("cornellpulse_result_saved"); props.onRestart() }} style={{ marginTop: "20px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
+      {!feedback && (
+        <div style={{ marginTop: "20px", backgroundColor: "#ffffff", borderRadius: "16px", padding: "16px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "10px" }}>
+          <p style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "12px", textAlign: "center" }}>Was this recommendation helpful?</p>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button onClick={() => setFeedback("helpful")} style={{ flex: 1, padding: "12px", backgroundColor: "#FFF0F0", color: CORAL, border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
+              Yes
+            </button>
+            <button onClick={() => setFeedback("not_helpful")} style={{ flex: 1, padding: "12px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/></svg>
+              Not really
+            </button>
+          </div>
+        </div>
+      )}
+
+      {feedback === "helpful" && (
+        <div style={{ marginTop: "10px", backgroundColor: "#FFF0F0", borderRadius: "16px", padding: "16px", textAlign: "center", marginBottom: "10px" }}>
+          <p style={{ fontSize: "14px", fontWeight: 700, color: CORAL }}>Glad it helped</p>
+          <p style={{ fontSize: "12px", color: "#717171", marginTop: "4px" }}>Thank you for the feedback.</p>
+        </div>
+      )}
+
+      {feedback === "not_helpful" && (
+        <div style={{ marginTop: "10px", backgroundColor: "#f9f9f9", borderRadius: "16px", padding: "16px", marginBottom: "10px" }}>
+          <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222", marginBottom: "8px" }}>Sorry about that. Try one of these instead:</p>
+          <Link to="/resources" style={{ display: "block", padding: "12px", border: "2px solid #ebebeb", borderRadius: "12px", textAlign: "center", fontSize: "14px", fontWeight: 600, color: CORAL, marginBottom: "8px" }}>Browse all resources</Link>
+          <Link to="/peer" style={{ display: "block", padding: "12px", border: "2px solid #ebebeb", borderRadius: "12px", textAlign: "center", fontSize: "14px", fontWeight: 600, color: "#717171" }}>Talk to a peer supporter</Link>
+        </div>
+      )}
+
+      <button onClick={() => { sessionStorage.removeItem("cornellpulse_result_saved"); props.onRestart() }} style={{ marginTop: "4px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
         Check in again
       </button>
       <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "12px" }}>Your responses were not saved to our servers.</p>
