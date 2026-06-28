@@ -85,7 +85,9 @@ export default function OnboardingPage() {
 
         {i < slides.length - 1 ? (
           <div style={{ display: "flex", gap: "12px" }}>
-            <button onClick={finish} style={{ flex: 1, padding: "16px", backgroundColor: isLight ? "#f5f5f5" : "rgba(255,255,255,0.2)", color: isLight ? "#717171" : "rgba(255,255,255,0.8)", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600 }}>Skip</button>
+            {i < slides.length - 2 && (
+              <button onClick={finish} style={{ flex: 1, padding: "16px", backgroundColor: isLight ? "#f5f5f5" : "rgba(255,255,255,0.2)", color: isLight ? "#717171" : "rgba(255,255,255,0.8)", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600 }}>Skip</button>
+            )}
             <button onClick={() => setI(i + 1)} style={{ flex: 2, padding: "16px", backgroundColor: isLight ? CORAL : "#ffffff", color: isLight ? "#ffffff" : CORAL, border: "none", borderRadius: "14px", fontSize: "15px", fontWeight: 700 }}>Next</button>
           </div>
         ) : (
