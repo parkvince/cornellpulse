@@ -4,6 +4,9 @@ const PINK = "#e8a0b4"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
 const ADMIN_PASSWORD = "q"
 
+const [searchQuery, setSearchQuery] = useState("")
+const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("all")
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState("")
@@ -122,7 +125,18 @@ export default function AdminPage() {
       {tab === "signups" && !selectedSignup && (
         <div>
           {signups.length === 0 && <p style={{ fontSize: "15px", color: "#4a4a4a", textAlign: "center", padding: "40px 0" }}>No applications yet.</p>}
-          {signups.map((s, i) => (
+          <div style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
+            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by name..." style={{ flex: 1, padding: "10px 14px", border: "1px solid #2a2a2a", borderRadius: "8px", backgroundColor: "#1a1a1a", color: "#fff", fontSize: "14px", fontFamily: "DM Sans, sans-serif" }} />
+            {["all", "pending", "approved"].map(f => (
+              <button key={f} onClick={() => setStatusFilter(f as any)} style={{ padding: "10px 12px", border: "none", borderRadius: "8px", backgroundColor: statusFilter === f ? PINK : "#1a1a1a", color: statusFilter === f ? "#0f0f0f" : "#a0a0a0", fontSize: "12px", fontWeight: 600, cursor: "pointer", textTransform: "capitalize" as const }}>{f}</button>
+            ))}
+          </div>
+
+          {signups.filter(s => {
+            const matchSearch = !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.email.toLowerCase().includes(searchQuery.toLowerCase())
+            const matchStatus = statusFilter === "all" || (statusFilter === "approved" ? s.approved : !s.approved)
+            return matchSearch && matchStatus
+          }).map(s => (
             <div key={i} style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "16px", marginBottom: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                 <div>
