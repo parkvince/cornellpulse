@@ -296,6 +296,8 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
 }
 
 function SignupForm() {
+  const [step, setStep] = useState(1)
+  const TOTAL = 3
   const [submitted, setSubmitted] = useState(false)
   const [locationSearch, setLocationSearch] = useState("")
   const [majorSearch, setMajorSearch] = useState("")
@@ -308,12 +310,10 @@ function SignupForm() {
   })
 
   function update(field: string, value: string | string[]) { setForm(prev => ({ ...prev, [field]: value })) }
-
   function toggleArray(field: string, value: string) {
     const arr = form[field as keyof typeof form] as string[]
     update(field, arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value])
   }
-
   function addMajor(m: string) {
     if (form.majors.includes(m) || form.majors.length >= 2) return
     update("majors", [...form.majors, m])
@@ -325,7 +325,10 @@ function SignupForm() {
   const emailValid = isCornellEmail(form.email)
   const refEmailValid = isCornellEmail(form.refEmail)
   const sameEmail = form.email.trim().toLowerCase() === form.refEmail.trim().toLowerCase() && form.email !== ""
-  const canSubmit = form.name && emailValid && form.phone && form.year && form.locations.length > 0 && form.refName && form.refPhone && refEmailValid && !sameEmail
+
+  const step1Valid = form.name && emailValid && form.phone && form.year
+  const step2Valid = form.locations.length > 0
+  const step3Valid = form.refName && form.refPhone && refEmailValid && !sameEmail
 
   async function handleSubmit() {
     try {
@@ -359,105 +362,131 @@ function SignupForm() {
 
   return (
     <div style={{ paddingBottom: "40px" }}>
-      <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6, marginBottom: "28px" }}>Sign up to be someone students can reach out to when they just want to talk, grab food, or not be alone.</p>
-
-      <section style={{ marginBottom: "28px" }}>
-        <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: "16px" }}>Your info</p>
-        <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Full name <span style={{ color: CORAL }}>*</span></label><input value={form.name} onChange={e => update("name", e.target.value)} placeholder="Your name" style={inputStyle} /></div>
-        <div style={{ marginBottom: "14px" }}>
-          <label style={labelStyle}>Cornell email <span style={{ color: CORAL }}>*</span></label>
-          <input value={form.email} onChange={e => update("email", e.target.value)} placeholder="netid@cornell.edu" type="email" style={{ ...inputStyle, borderColor: form.email && !emailValid ? CORAL : "#ebebeb" }} />
-          {form.email && !emailValid && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Must be a valid @cornell.edu email.</p>}
+      <div style={{ marginBottom: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171" }}>Step {step} of {TOTAL}</p>
+          <p style={{ fontSize: "12px", color: "#b0b0b0" }}>{Math.round((step / TOTAL) * 100)}% complete</p>
         </div>
-        <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Phone number <span style={{ color: CORAL }}>*</span></label><input value={form.phone} onChange={e => update("phone", e.target.value)} placeholder="Your phone" type="tel" style={inputStyle} /></div>
-        <div style={{ marginBottom: "14px" }}>
-          <label style={labelStyle}>Year <span style={{ color: CORAL }}>*</span></label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
-            {YEARS.map((y, idx) => <PillBtn key={y} label={y} selected={form.year === y} onClick={() => update("year", y)} />)}
-          </div>
+        <div style={{ height: "6px", backgroundColor: "#f0f0f0", borderRadius: "6px" }}>
+          <div style={{ height: "6px", backgroundColor: CORAL, borderRadius: "6px", width: ((step / TOTAL) * 100) + "%", transition: "width 0.4s ease" }} />
         </div>
-        <div style={{ marginBottom: "14px", position: "relative" }}>
-          <label style={labelStyle}>Major <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(up to 2)</span></label>
-          {form.majors.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
-              {form.majors.map(m => (
-                <span key={m} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "8px", fontSize: "12px", fontWeight: 600 }}>
-                  {m}
-                  <button onClick={() => update("majors", form.majors.filter(x => x !== m))} style={{ background: "transparent", border: "none", color: CORAL, fontSize: "14px", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
-                </span>
-              ))}
-            </div>
-          )}
-          {form.majors.length < 2 && (
-            <input value={majorSearch} onChange={e => { setMajorSearch(e.target.value); setShowMajorList(true) }} onFocus={() => setShowMajorList(true)} placeholder="Search majors..." style={inputStyle} />
-          )}
-          {showMajorList && filteredMajors.length > 0 && (
-            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, backgroundColor: "#ffffff", borderRadius: "12px", marginTop: "4px", zIndex: 10, maxHeight: "220px", overflowY: "auto", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid #f0f0f0" }}>
-              {filteredMajors.map(m => (
-                <button key={m} onClick={() => addMajor(m)} style={{ display: "block", width: "100%", textAlign: "left", padding: "12px 16px", color: "#222222", fontSize: "14px", backgroundColor: "transparent", border: "none", borderBottom: "1px solid #f5f5f5", cursor: "pointer", fontFamily: "DM Sans, sans-serif" }}>{m}</button>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section style={{ marginBottom: "28px" }}>
-        <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: "10px" }}>Where you can meet <span style={{ color: CORAL }}>*</span></p>
-        <input value={locationSearch} onChange={e => setLocationSearch(e.target.value)} placeholder="Search locations..." style={{ ...inputStyle, marginBottom: "10px" }} />
-        <div style={{ maxHeight: "260px", overflowY: "auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-          {filteredLocations.map(loc => <PillBtn key={loc} label={loc} selected={form.locations.includes(loc)} onClick={() => toggleArray("locations", loc)} />)}
-        </div>
-        {form.locations.length > 0 && <p style={{ fontSize: "12px", color: "#717171", marginTop: "8px" }}>{form.locations.length} location{form.locations.length !== 1 ? "s" : ""} selected</p>}
-      </section>
-
-      <section style={{ marginBottom: "28px" }}>
-        <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: "10px" }}>Which days work</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginBottom: "16px" }}>
-          {DAYS.map((d, idx) => (
-            <button key={d} onClick={() => toggleArray("availability", d)} style={{ padding: "10px 8px", border: `2px solid ${form.availability.includes(d) ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.availability.includes(d) ? "#FFF0F0" : "#ffffff", color: form.availability.includes(d) ? CORAL : "#717171", fontSize: "12px", fontWeight: 600, cursor: "pointer", gridColumn: idx === DAYS.length - 1 ? "1 / -1" : "auto" }}>{d}</button>
-          ))}
-        </div>
-        <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: "10px" }}>What times work</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-          {TIME_BLOCKS.map(t => <PillBtn key={t} label={t} selected={form.availability.includes(t)} onClick={() => toggleArray("availability", t)} />)}
-        </div>
-      </section>
-
-      <section style={{ marginBottom: "28px" }}>
-        <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: "10px" }}>Interests <span style={{ color: "#b0b0b0", fontWeight: 400, fontSize: "11px", textTransform: "none" as const }}>(helps with matching)</span></p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
-          {INTERESTS.map(i => <PillBtn key={i} label={i} selected={form.interests.includes(i)} onClick={() => toggleArray("interests", i)} />)}
-        </div>
-      </section>
-
-      <section style={{ marginBottom: "28px" }}>
-        <label style={{ ...labelStyle, marginBottom: "10px" }}>About you <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(optional)</span></label>
-        <textarea value={form.about} onChange={e => update("about", e.target.value)} maxLength={300} placeholder="A sentence or two. This is what students see when choosing who to reach out to." rows={4} style={{ ...inputStyle, resize: "none" as const }} />
-        <p style={{ fontSize: "12px", color: "#b0b0b0", textAlign: "right" as const, marginTop: "4px" }}>{form.about.length}/300</p>
-      </section>
-
-      <section style={{ marginBottom: "28px", backgroundColor: "#fff8f7", borderRadius: "16px", padding: "20px", border: "1px solid #f0f0f0" }}>
-        <p style={{ fontSize: "15px", fontWeight: 800, color: "#222222", marginBottom: "6px" }}>Reference <span style={{ color: CORAL }}>*</span></p>
-        <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "16px" }}>We require one reference who can speak to your character. Reference email must be a Cornell email.</p>
-        <div style={{ marginBottom: "12px" }}><label style={labelStyle}>Reference name <span style={{ color: CORAL }}>*</span></label><input value={form.refName} onChange={e => update("refName", e.target.value)} placeholder="Their full name" style={inputStyle} /></div>
-        <div style={{ marginBottom: "12px" }}><label style={labelStyle}>Reference phone <span style={{ color: CORAL }}>*</span></label><input value={form.refPhone} onChange={e => update("refPhone", e.target.value)} placeholder="Their phone" type="tel" style={inputStyle} /></div>
-        <div style={{ marginBottom: "12px" }}>
-          <label style={labelStyle}>Reference Cornell email <span style={{ color: CORAL }}>*</span></label>
-          <input value={form.refEmail} onChange={e => update("refEmail", e.target.value)} placeholder="netid@cornell.edu" type="email" style={{ ...inputStyle, borderColor: form.refEmail && (!refEmailValid || sameEmail) ? CORAL : "#ebebeb" }} />
-          {form.refEmail && !refEmailValid && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Must be a valid @cornell.edu email.</p>}
-          {sameEmail && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Reference must be a different person.</p>}
-        </div>
-        <div><label style={labelStyle}>How do they know you <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(optional)</span></label><input value={form.refRelationship} onChange={e => update("refRelationship", e.target.value)} placeholder="e.g. My RA, my friend, my professor" style={inputStyle} /></div>
-      </section>
-
-      <div style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "14px", marginBottom: "20px", border: "1px solid #f0f0f0" }}>
-        <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6 }}>By submitting you agree that CornellPulse may contact you and your reference. Your info will never be shared publicly.</p>
       </div>
 
-      <button onClick={handleSubmit} disabled={!canSubmit} style={{ width: "100%", padding: "18px", backgroundColor: canSubmit ? CORAL : "#ebebeb", color: canSubmit ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: canSubmit ? "pointer" : "default" }}>
-        Submit application
-      </button>
-      {!canSubmit && <p style={{ fontSize: "12px", color: "#b0b0b0", textAlign: "center", marginTop: "10px" }}>Fill in all required fields with valid Cornell emails to submit.</p>}
+      {step === 1 && (
+        <div>
+          <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#222222", marginBottom: "6px" }}>Basic info</h3>
+          <p style={{ fontSize: "14px", color: "#717171", marginBottom: "20px" }}>Tell us a little about yourself.</p>
+
+          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Full name <span style={{ color: CORAL }}>*</span></label><input value={form.name} onChange={e => update("name", e.target.value)} placeholder="Your name" style={inputStyle} /></div>
+          <div style={{ marginBottom: "14px" }}>
+            <label style={labelStyle}>Cornell email <span style={{ color: CORAL }}>*</span></label>
+            <input value={form.email} onChange={e => update("email", e.target.value)} placeholder="netid@cornell.edu" type="email" style={{ ...inputStyle, borderColor: form.email && !emailValid ? CORAL : "#ebebeb" }} />
+            {form.email && !emailValid && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Must be a valid @cornell.edu email.</p>}
+          </div>
+          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Phone number <span style={{ color: CORAL }}>*</span></label><input value={form.phone} onChange={e => update("phone", e.target.value)} placeholder="Your phone" type="tel" style={inputStyle} /></div>
+          <div style={{ marginBottom: "14px" }}>
+            <label style={labelStyle}>Year <span style={{ color: CORAL }}>*</span></label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
+              {YEARS.map(y => <PillBtn key={y} label={y} selected={form.year === y} onClick={() => update("year", y)} />)}
+            </div>
+          </div>
+          <div style={{ marginBottom: "20px", position: "relative" }}>
+            <label style={labelStyle}>Major <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(up to 2, optional)</span></label>
+            {form.majors.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
+                {form.majors.map(m => (
+                  <span key={m} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "8px", fontSize: "12px", fontWeight: 600 }}>
+                    {m}
+                    <button onClick={() => update("majors", form.majors.filter(x => x !== m))} style={{ background: "transparent", border: "none", color: CORAL, fontSize: "14px", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {form.majors.length < 2 && (
+              <input value={majorSearch} onChange={e => { setMajorSearch(e.target.value); setShowMajorList(true) }} onFocus={() => setShowMajorList(true)} placeholder="Search majors..." style={inputStyle} />
+            )}
+            {showMajorList && filteredMajors.length > 0 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, backgroundColor: "#ffffff", borderRadius: "12px", marginTop: "4px", zIndex: 10, maxHeight: "200px", overflowY: "auto", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid #f0f0f0" }}>
+                {filteredMajors.map(m => (
+                  <button key={m} onClick={() => addMajor(m)} style={{ display: "block", width: "100%", textAlign: "left", padding: "12px 16px", color: "#222222", fontSize: "14px", backgroundColor: "transparent", border: "none", borderBottom: "1px solid #f5f5f5", cursor: "pointer", fontFamily: "DM Sans, sans-serif" }}>{m}</button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div style={{ marginBottom: "20px" }}>
+            <label style={labelStyle}>About you <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(optional)</span></label>
+            <textarea value={form.about} onChange={e => update("about", e.target.value)} maxLength={300} placeholder="A sentence or two. This is what students see when choosing who to reach out to." rows={3} style={{ ...inputStyle, resize: "none" as const }} />
+            <p style={{ fontSize: "12px", color: "#b0b0b0", textAlign: "right" as const, marginTop: "4px" }}>{form.about.length}/300</p>
+          </div>
+          <button onClick={() => setStep(2)} disabled={!step1Valid} style={{ width: "100%", padding: "18px", backgroundColor: step1Valid ? CORAL : "#ebebeb", color: step1Valid ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: step1Valid ? "pointer" : "default" }}>
+            Continue →
+          </button>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div>
+          <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#222222", marginBottom: "6px" }}>Availability</h3>
+          <p style={{ fontSize: "14px", color: "#717171", marginBottom: "20px" }}>Where and when can you meet up?</p>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label style={{ ...labelStyle, marginBottom: "10px" }}>Where you can meet <span style={{ color: CORAL }}>*</span></label>
+            <input value={locationSearch} onChange={e => setLocationSearch(e.target.value)} placeholder="Search locations..." style={{ ...inputStyle, marginBottom: "10px" }} />
+            <div style={{ maxHeight: "240px", overflowY: "auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+              {filteredLocations.map(loc => <PillBtn key={loc} label={loc} selected={form.locations.includes(loc)} onClick={() => toggleArray("locations", loc)} />)}
+            </div>
+            {form.locations.length > 0 && <p style={{ fontSize: "12px", color: "#717171", marginTop: "8px" }}>{form.locations.length} location{form.locations.length !== 1 ? "s" : ""} selected</p>}
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <p style={{ ...labelStyle, marginBottom: "10px" }}>Which days work</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginBottom: "14px" }}>
+              {DAYS.map((d, idx) => (
+                <button key={d} onClick={() => toggleArray("availability", d)} style={{ padding: "10px 8px", border: `2px solid ${form.availability.includes(d) ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.availability.includes(d) ? "#FFF0F0" : "#ffffff", color: form.availability.includes(d) ? CORAL : "#717171", fontSize: "12px", fontWeight: 600, cursor: "pointer", gridColumn: idx === DAYS.length - 1 ? "1 / -1" : "auto" }}>{d}</button>
+              ))}
+            </div>
+            <p style={{ ...labelStyle, marginBottom: "10px" }}>What times work</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "20px" }}>
+              {TIME_BLOCKS.map(t => <PillBtn key={t} label={t} selected={form.availability.includes(t)} onClick={() => toggleArray("availability", t)} />)}
+            </div>
+            <p style={{ ...labelStyle, marginBottom: "10px" }}>Interests <span style={{ color: "#b0b0b0", fontWeight: 400, fontSize: "12px" }}>(optional, helps with matching)</span></p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
+              {INTERESTS.map(i => <PillBtn key={i} label={i} selected={form.interests.includes(i)} onClick={() => toggleArray("interests", i)} />)}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button onClick={() => setStep(1)} style={{ flex: 1, padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Back</button>
+            <button onClick={() => setStep(3)} disabled={!step2Valid} style={{ flex: 2, padding: "16px", backgroundColor: step2Valid ? CORAL : "#ebebeb", color: step2Valid ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: step2Valid ? "pointer" : "default" }}>Continue →</button>
+          </div>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div>
+          <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#222222", marginBottom: "6px" }}>Reference</h3>
+          <p style={{ fontSize: "14px", color: "#717171", marginBottom: "20px", lineHeight: 1.6 }}>We require one Cornell reference who can speak to your character. This is how we keep the program safe.</p>
+
+          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Reference name <span style={{ color: CORAL }}>*</span></label><input value={form.refName} onChange={e => update("refName", e.target.value)} placeholder="Their full name" style={inputStyle} /></div>
+          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Reference phone <span style={{ color: CORAL }}>*</span></label><input value={form.refPhone} onChange={e => update("refPhone", e.target.value)} placeholder="Their phone" type="tel" style={inputStyle} /></div>
+          <div style={{ marginBottom: "14px" }}>
+            <label style={labelStyle}>Reference Cornell email <span style={{ color: CORAL }}>*</span></label>
+            <input value={form.refEmail} onChange={e => update("refEmail", e.target.value)} placeholder="netid@cornell.edu" type="email" style={{ ...inputStyle, borderColor: form.refEmail && (!refEmailValid || sameEmail) ? CORAL : "#ebebeb" }} />
+            {form.refEmail && !refEmailValid && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Must be a valid @cornell.edu email.</p>}
+            {sameEmail && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Reference must be a different person.</p>}
+          </div>
+          <div style={{ marginBottom: "24px" }}><label style={labelStyle}>How do they know you <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(optional)</span></label><input value={form.refRelationship} onChange={e => update("refRelationship", e.target.value)} placeholder="e.g. My RA, my friend, my professor" style={inputStyle} /></div>
+
+          <div style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "14px", marginBottom: "20px", border: "1px solid #f0f0f0" }}>
+            <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6 }}>By submitting you agree that CornellPulse may contact you and your reference. Your info will never be shared publicly without your approval.</p>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button onClick={() => setStep(2)} style={{ flex: 1, padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Back</button>
+            <button onClick={handleSubmit} disabled={!step3Valid} style={{ flex: 2, padding: "16px", backgroundColor: step3Valid ? CORAL : "#ebebeb", color: step3Valid ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: step3Valid ? "pointer" : "default" }}>Submit application</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
