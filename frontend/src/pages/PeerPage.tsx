@@ -279,6 +279,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         <div style={{ marginBottom: "20px" }}>
           <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Anything you want them to know <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(optional)</span></label>
           <textarea value={form.message} onChange={e => update("message", e.target.value)} maxLength={300} placeholder="Whatever feels right to share." rows={3} style={{ width: "100%", padding: "12px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", resize: "none", fontFamily: "DM Sans, sans-serif" }} />
+          <p style={{ fontSize: "12px", color: "#b0b0b0", textAlign: "right", marginTop: "4px" }}>{form.message.length}/300</p>
         </div>
 
         <div style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "12px 14px", marginBottom: "20px" }}>
