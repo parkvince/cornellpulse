@@ -110,8 +110,18 @@ export default function ResourcesPage() {
               <span style={{ fontSize: "10px", fontWeight: 600, color: r.cat === "Crisis" ? CORAL : "#717171", backgroundColor: r.cat === "Crisis" ? "#FFF0F0" : "#f5f5f5", padding: "3px 8px", borderRadius: "6px", whiteSpace: "nowrap", flexShrink: 0 }}>{r.cat.toUpperCase()}</span>
             </div>
             <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.55, marginBottom: "10px" }}>{r.desc}</p>
-            {r.loc && <p style={{ fontSize: "11px", color: "#b0b0b0", marginBottom: "2px" }}>{r.loc}</p>}
-            {r.hours && <p style={{ fontSize: "11px", color: "#b0b0b0", marginBottom: "10px" }}>{r.hours}</p>}
+            {r.loc && (
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "2px" }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <p style={{ fontSize: "11px", color: "#b0b0b0" }}>{r.loc}</p>
+              </div>
+            )}
+            {r.hours && (
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "10px" }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <p style={{ fontSize: "11px", color: "#b0b0b0" }}>{r.hours}</p>
+              </div>
+            )}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
               {r.tags.slice(0, 3).map(tag => (
                 <span key={tag} style={{ padding: "3px 8px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "6px", fontSize: "11px", fontWeight: 500, textTransform: "capitalize" }}>{tag}</span>
