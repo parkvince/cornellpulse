@@ -106,12 +106,16 @@ return <ResultCard result={result} moodScore={mood} triggers={triggers} wantsToT
 
   return (
     <div>
-      <div style={{ marginBottom: "36px" }}>
-        <div style={{ height: "2px", backgroundColor: "#1a1a1a", borderRadius: "2px" }}>
+      <div style={{ marginBottom: "28px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171" }}>Step {step} of {TOTAL_STEPS}</p>
+          <p style={{ fontSize: "12px", color: "#b0b0b0" }}>{Math.round((step / TOTAL_STEPS) * 100)}% complete</p>
+        </div>
+        <div style={{ height: "6px", backgroundColor: "#f0f0f0", borderRadius: "6px" }}>
           <div style={{
-            height: "2px",
-            backgroundColor: "#e8a0b4",
-            borderRadius: "2px",
+            height: "6px",
+            backgroundColor: "#FF5A5F",
+            borderRadius: "6px",
             width: ((step / TOTAL_STEPS) * 100) + "%",
             transition: "width 0.4s ease",
           }} />
