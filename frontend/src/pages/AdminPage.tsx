@@ -4,9 +4,6 @@ const PINK = "#e8a0b4"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
 const ADMIN_PASSWORD = "q"
 
-const [searchQuery, setSearchQuery] = useState("")
-const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("all")
-
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState("")
@@ -17,6 +14,8 @@ export default function AdminPage() {
   const [requests, setRequests] = useState<any[]>([])
   const [selectedSignup, setSelectedSignup] = useState<any>(null)
   const [approving, setApproving] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("all")
 
   function login() {
     if (password === ADMIN_PASSWORD) {
@@ -80,6 +79,12 @@ export default function AdminPage() {
     { id: "requests", label: `Requests (${requests.length})` },
   ]
 
+  const filteredSignups = signups.filter(s => {
+    const matchSearch = !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.email.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchStatus = statusFilter === "all" || (statusFilter === "approved" ? s.approved : !s.approved)
+    return matchSearch && matchStatus
+  })
+
   return (
     <div style={{ padding: "52px 20px 24px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
@@ -125,19 +130,16 @@ export default function AdminPage() {
       {tab === "signups" && !selectedSignup && (
         <div>
           {signups.length === 0 && <p style={{ fontSize: "15px", color: "#4a4a4a", textAlign: "center", padding: "40px 0" }}>No applications yet.</p>}
+
           <div style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
             <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by name..." style={{ flex: 1, padding: "10px 14px", border: "1px solid #2a2a2a", borderRadius: "8px", backgroundColor: "#1a1a1a", color: "#fff", fontSize: "14px", fontFamily: "DM Sans, sans-serif" }} />
-            {["all", "pending", "approved"].map(f => (
-              <button key={f} onClick={() => setStatusFilter(f as any)} style={{ padding: "10px 12px", border: "none", borderRadius: "8px", backgroundColor: statusFilter === f ? PINK : "#1a1a1a", color: statusFilter === f ? "#0f0f0f" : "#a0a0a0", fontSize: "12px", fontWeight: 600, cursor: "pointer", textTransform: "capitalize" as const }}>{f}</button>
+            {(["all", "pending", "approved"] as const).map(f => (
+              <button key={f} onClick={() => setStatusFilter(f)} style={{ padding: "10px 12px", border: "none", borderRadius: "8px", backgroundColor: statusFilter === f ? PINK : "#1a1a1a", color: statusFilter === f ? "#0f0f0f" : "#a0a0a0", fontSize: "12px", fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>{f}</button>
             ))}
           </div>
 
-          {signups.filter(s => {
-            const matchSearch = !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.email.toLowerCase().includes(searchQuery.toLowerCase())
-            const matchStatus = statusFilter === "all" || (statusFilter === "approved" ? s.approved : !s.approved)
-            return matchSearch && matchStatus
-          }).map(s => (
-            <div key={i} style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "16px", marginBottom: "10px" }}>
+          {filteredSignups.map(s => (
+            <div key={s.id} style={{ backgroundColor: "#1a1a1a", borderRadius: "10px", padding: "16px", marginBottom: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                 <div>
                   <p style={{ fontSize: "16px", fontWeight: 800, color: "#fff", marginBottom: "2px" }}>{s.name}</p>
@@ -163,7 +165,7 @@ export default function AdminPage() {
 
       {tab === "signups" && selectedSignup && (
         <div>
-          <button onClick={() => setSelectedSignup(null)} style={{ fontSize: "14px", color: "#4a4a4a", marginBottom: "20px", backgroundColor: "transparent", border: "none" }}>Back to list</button>
+          <button onClick={() => setSelectedSignup(null)} style={{ fontSize: "14px", color: "#4a4a4a", marginBottom: "20px", backgroundColor: "transparent", border: "none" }}>← Back to list</button>
           <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#fff", marginBottom: "4px" }}>{selectedSignup.name}</h2>
           <p style={{ fontSize: "14px", color: "#4a4a4a", marginBottom: "20px" }}>{selectedSignup.year}{selectedSignup.major ? ` · ${selectedSignup.major}` : ""}</p>
 
@@ -200,7 +202,7 @@ export default function AdminPage() {
             <div style={{ marginBottom: "16px" }}>
               <p style={{ fontSize: "11px", fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Interests</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {selectedSignup.interests.map((i: string) => <span key={i} style={{ padding: "5px 10px", backgroundColor: "#242424", borderRadius: "20px", fontSize: "12px", color: "#a0a0a0" }}>{i}</span>)}
+                {selectedSignup.interests.map((interest: string) => <span key={interest} style={{ padding: "5px 10px", backgroundColor: "#242424", borderRadius: "20px", fontSize: "12px", color: "#a0a0a0" }}>{interest}</span>)}
               </div>
             </div>
           )}
