@@ -130,6 +130,25 @@ export default function HomePage() {
               <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
               </div>
+              <div style={{ marginBottom: "24px" }}>
+          <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222", marginBottom: "3px" }}>Know someone who needs this?</p>
+              <p style={{ fontSize: "12px", color: "#717171" }}>Share CornellPulse with a friend.</p>
+            </div>
+            <button onClick={() => {
+              if (navigator.share) {
+                navigator.share({ title: "CornellPulse", text: "A free anonymous mental health navigator for Cornell students.", url: window.location.origin })
+              } else {
+                navigator.clipboard.writeText(window.location.origin)
+                alert("Link copied to clipboard")
+              }
+            }} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 16px", backgroundColor: "#FFF0F0", color: "#FF5A5F", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF5A5F" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Share
+            </button>
+          </div>
+        </div>
               <div>
                 <p style={{ fontSize: "14px", fontWeight: 700, color: "#ffffff" }}>Crisis support</p>
                 <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)" }}>Available 24/7</p>
