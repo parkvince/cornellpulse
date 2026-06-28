@@ -62,6 +62,88 @@ const colleges = [
     { value: "other", label: "Prefer not to say" },
   ]
 
+  const FALLBACK_RESULT = {
+    triage_result: {
+      distress_level: "moderate",
+      crisis_flag: mood <= 2,
+      why: "We could not reach our servers right now. Here are the most important resources for Cornell students.",
+      primary: {
+        resource_id: "cornell_health",
+        name: "Cornell Health 24/7",
+        tagline: "Talk to a health professional any time. Press 2 for mental health support.",
+        phone: "607-255-5155",
+        hours: "24/7 including holidays",
+        how_to_access: "Call 607-255-5155 any time and press 2 for mental health support.",
+        url: "https://health.cornell.edu",
+        tags: ["24/7", "free"],
+      },
+      secondary: [
+        {
+          resource_id: "ears",
+          name: "EARS Peer Counseling",
+          tagline: "Confidential peer counseling with trained Cornell students. Sun-Thu 9pm-1am.",
+          phone: "607-255-4050",
+          hours: "Sun-Thu 9pm-1am",
+          how_to_access: "Call or walk into 305 Willard Straight Hall Sunday through Thursday 9pm-1am.",
+          url: "https://ears.cornell.edu",
+          tags: ["peer", "free"],
+        },
+        {
+          resource_id: "crisis_988",
+          name: "988 Suicide and Crisis Lifeline",
+          tagline: "Call or text 988. Free, confidential, 24/7.",
+          phone: "988",
+          hours: "24/7",
+          how_to_access: "Call or text 988 from any phone.",
+          url: "https://988lifeline.org",
+          tags: ["crisis", "24/7", "free"],
+        },
+      ],
+      show_peer_connect: false,
+    }
+  }
+
+  const FALLBACK_RESULT = {
+    triage_result: {
+      distress_level: "moderate",
+      crisis_flag: mood <= 2,
+      why: "We could not reach our servers right now. Here are the most important resources for Cornell students.",
+      primary: {
+        resource_id: "cornell_health",
+        name: "Cornell Health 24/7",
+        tagline: "Talk to a health professional any time. Press 2 for mental health support.",
+        phone: "607-255-5155",
+        hours: "24/7 including holidays",
+        how_to_access: "Call 607-255-5155 any time and press 2 for mental health support.",
+        url: "https://health.cornell.edu",
+        tags: ["24/7", "free"],
+      },
+      secondary: [
+        {
+          resource_id: "ears",
+          name: "EARS Peer Counseling",
+          tagline: "Confidential peer counseling with trained Cornell students. Sun-Thu 9pm-1am.",
+          phone: "607-255-4050",
+          hours: "Sun-Thu 9pm-1am",
+          how_to_access: "Call or walk into 305 Willard Straight Hall Sunday through Thursday 9pm-1am.",
+          url: "https://ears.cornell.edu",
+          tags: ["peer", "free"],
+        },
+        {
+          resource_id: "crisis_988",
+          name: "988 Suicide and Crisis Lifeline",
+          tagline: "Call or text 988. Free, confidential, 24/7.",
+          phone: "988",
+          hours: "24/7",
+          how_to_access: "Call or text 988 from any phone.",
+          url: "https://988lifeline.org",
+          tags: ["crisis", "24/7", "free"],
+        },
+      ],
+      show_peer_connect: false,
+    }
+  }
+
   async function handleSubmit() {
     setLoading(true)
     setError("")
@@ -80,7 +162,8 @@ const colleges = [
       setResult(data)
       sessionStorage.removeItem("cornellpulse_checkin_draft")
     } catch (e) {
-      setError("Something went wrong. Please try again.")
+      setResult(FALLBACK_RESULT)
+      sessionStorage.removeItem("cornellpulse_checkin_draft")
     } finally {
       setLoading(false)
     }
