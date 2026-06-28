@@ -1,8 +1,15 @@
 import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
 
+const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
-const [feedback, setFeedback] = useState<string>("")
+
+function moodColor(m: number) {
+  if (m >= 7) return "#00A699"
+  if (m >= 5) return "#FC642D"
+  if (m >= 3) return "#FF5A5F"
+  return "#c0392b"
+}
 
 function PeerConnectSuggestion() {
   const navigate = useNavigate()
@@ -65,15 +72,6 @@ function PeerConnectSuggestion() {
   )
 }
 
-const CORAL = "#FF5A5F"
-
-function moodColor(m: number) {
-  if (m >= 7) return "#00A699"
-  if (m >= 5) return "#FC642D"
-  if (m >= 3) return "#FF5A5F"
-  return "#c0392b"
-}
-
 function ResourceItem(props: any) {
   const r = props.resource
   const primary = props.primary
@@ -127,6 +125,7 @@ function ResourceItem(props: any) {
 export default function ResultCard(props: any) {
   const tr = props.result.triage_result
   const [toast, setToast] = useState("")
+  const [feedback, setFeedback] = useState("")
   const moodScore = props.moodScore || 5
 
   useEffect(() => {
@@ -226,9 +225,9 @@ export default function ResultCard(props: any) {
       <button onClick={() => { sessionStorage.removeItem("cornellpulse_result_saved"); props.onRestart() }} style={{ marginTop: "4px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
         Check in again
       </button>
-<Link to="/" style={{ display: "block", textAlign: "center", fontSize: "13px", fontWeight: 600, color: "#717171", marginTop: "12px", padding: "8px", textDecoration: "none" }}>← Back to home</Link>
+      <Link to="/" style={{ display: "block", textAlign: "center", fontSize: "13px", fontWeight: 600, color: "#717171", marginTop: "12px", padding: "8px", textDecoration: "none" }}>← Back to home</Link>
       <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "6px" }}>Your responses were not saved to our servers.</p>
-      
+
       {toast && (
         <div style={{ position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)", backgroundColor: CORAL, color: "#ffffff", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" }}>
           {toast}
