@@ -36,6 +36,20 @@ export default function HomePage() {
     } catch {}
   }, [])
 
+  function handleShare() {
+    if (navigator.share) {
+      navigator.share({
+        title: "CornellPulse",
+        text: "A free anonymous mental health navigator for Cornell students.",
+        url: window.location.origin,
+      }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(window.location.origin).then(() => {
+        alert("Link copied to clipboard")
+      }).catch(() => {})
+    }
+  }
+
   return (
     <div style={{ backgroundColor: "#fff8f7" }}>
       <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
@@ -109,6 +123,7 @@ export default function HomePage() {
 
         <div style={{ marginBottom: "24px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Quick access</p>
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
             <Link to="/peer" style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 16px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", textDecoration: "none" }}>
               <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
@@ -125,30 +140,12 @@ export default function HomePage() {
               <p style={{ fontSize: "11px", color: "#717171" }}>Find a peer supporter</p>
             </Link>
           </div>
-          <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", borderRadius: "20px", padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+
+          <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", borderRadius: "20px", padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
               </div>
-              <div style={{ marginBottom: "24px" }}>
-          <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222", marginBottom: "3px" }}>Know someone who needs this?</p>
-              <p style={{ fontSize: "12px", color: "#717171" }}>Share CornellPulse with a friend.</p>
-            </div>
-            <button onClick={() => {
-              if (navigator.share) {
-                navigator.share({ title: "CornellPulse", text: "A free anonymous mental health navigator for Cornell students.", url: window.location.origin })
-              } else {
-                navigator.clipboard.writeText(window.location.origin)
-                alert("Link copied to clipboard")
-              }
-            }} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 16px", backgroundColor: "#FFF0F0", color: "#FF5A5F", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF5A5F" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-              Share
-            </button>
-          </div>
-        </div>
               <div>
                 <p style={{ fontSize: "14px", fontWeight: 700, color: "#ffffff" }}>Crisis support</p>
                 <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)" }}>Available 24/7</p>
@@ -156,6 +153,14 @@ export default function HomePage() {
             </div>
             <a href="tel:988" style={{ backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700 }}>Call 988</a>
           </div>
+
+          <button onClick={handleShare} style={{ width: "100%", padding: "14px 20px", backgroundColor: "#ffffff", borderRadius: "16px", border: "1px solid #f0f0f0", boxShadow: "0 2px 12px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222" }}>Know someone who needs this?</p>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "#FFF0F0", padding: "8px 14px", borderRadius: "10px", flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: CORAL }}>Share</span>
+            </div>
+          </button>
         </div>
       </div>
     </div>
