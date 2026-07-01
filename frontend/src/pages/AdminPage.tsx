@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 
 const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
-const ADMIN_PASSWORD = "q"
+const ADMIN_PASSWORD = "cornellpulse2026"
 
 const AVATAR_COLORS = ["#FF5A5F", "#00A699", "#FC642D", "#7B68EE", "#20B2AA", "#FF6B6B", "#4ECDC4"]
 function avatarColor(name: string) {
@@ -80,6 +80,23 @@ export default function AdminPage() {
     } catch {}
   }
 
+  async function resolveRequest(id: number) {
+    try {
+      await fetch(`${API_URL}/peer-requests/${id}/resolve`, { method: "POST" })
+      await loadData()
+      if (selectedRequest?.id === id) setSelectedRequest((prev: any) => ({ ...prev, status: "resolved" }))
+    } catch {}
+  }
+
+  async function deleteRequest(id: number) {
+    if (!confirm("Delete this request? This cannot be undone.")) return
+    try {
+      await fetch(`${API_URL}/peer-requests/${id}`, { method: "DELETE" })
+      await loadData()
+      setSelectedRequest(null)
+    } catch {}
+  }
+
   const filteredSignups = signups.filter(s => {
     const matchSearch = !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.email.toLowerCase().includes(searchQuery.toLowerCase())
     const matchStatus = statusFilter === "all" || (statusFilter === "approved" ? s.approved : !s.approved)
@@ -88,6 +105,7 @@ export default function AdminPage() {
 
   const pendingCount = signups.filter(s => !s.approved).length
   const approvedCount = signups.filter(s => s.approved).length
+  const pendingRequestCount = requests.filter(r => r.status === "pending").length
 
   if (!authed) {
     return (
@@ -111,7 +129,6 @@ export default function AdminPage() {
   }
 
   if (selectedSignup) {
-    const color = avatarColor(selectedSignup.name)
     return (
       <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
         <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
@@ -253,6 +270,15 @@ export default function AdminPage() {
         </div>
 
         <div style={{ padding: "24px 20px" }}>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+            <span style={{ padding: "6px 14px", borderRadius: "20px", backgroundColor: selectedRequest.status === "resolved" ? "#E8F8F5" : "#FFF0F0", color: selectedRequest.status === "resolved" ? "#00A699" : CORAL, fontSize: "12px", fontWeight: 700, textTransform: "capitalize" }}>
+              {selectedRequest.status}
+            </span>
+            {selectedRequest.requested_at && (
+              <span style={{ padding: "6px 14px", borderRadius: "20px", backgroundColor: "#f5f5f5", color: "#717171", fontSize: "12px", fontWeight: 600 }}>{timeAgo(selectedRequest.requested_at)}</span>
+            )}
+          </div>
+
           <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", marginBottom: "12px" }}>
             <p style={{ fontSize: "11px", fontWeight: 700, color: "#b0b0b0", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "14px" }}>Contact requester</p>
             <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
@@ -278,8 +304,8 @@ export default function AdminPage() {
               { label: "Location", value: selectedRequest.preferred_location },
               { label: "Time", value: selectedRequest.preferred_time },
               { label: "Submitted", value: selectedRequest.requested_at ? new Date(selectedRequest.requested_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "Unknown" },
-            ].map(f => (
-              <div key={f.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "10px", marginBottom: "10px", borderBottom: "1px solid #f5f5f5" }}>
+            ].map((f, idx, arr) => (
+              <div key={f.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "10px", marginBottom: "10px", borderBottom: idx < arr.length - 1 ? "1px solid #f5f5f5" : "none" }}>
                 <p style={{ fontSize: "13px", color: "#717171", fontWeight: 600 }}>{f.label}</p>
                 <p style={{ fontSize: "13px", color: "#222222", fontWeight: 600, textAlign: "right", maxWidth: "60%" }}>{f.value}</p>
               </div>
@@ -287,11 +313,29 @@ export default function AdminPage() {
           </div>
 
           {selectedRequest.message && (
-            <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", marginBottom: "12px" }}>
+            <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", marginBottom: "20px" }}>
               <p style={{ fontSize: "11px", fontWeight: 700, color: "#b0b0b0", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Message</p>
               <p style={{ fontSize: "14px", color: "#222222", lineHeight: 1.6, fontStyle: "italic" }}>"{selectedRequest.message}"</p>
             </div>
           )}
+
+          <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+            {selectedRequest.status === "pending" && (
+              <button onClick={() => resolveRequest(selectedRequest.id)} style={{ flex: 2, padding: "14px", backgroundColor: "#E8F8F5", color: "#00A699", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00A699" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Mark as handled
+              </button>
+            )}
+            {selectedRequest.status === "resolved" && (
+              <div style={{ flex: 2, padding: "14px", backgroundColor: "#E8F8F5", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00A699" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <p style={{ fontSize: "14px", fontWeight: 700, color: "#00A699" }}>Handled</p>
+              </div>
+            )}
+            <button onClick={() => deleteRequest(selectedRequest.id)} style={{ flex: 1, padding: "14px", backgroundColor: "transparent", border: "2px solid #ebebeb", borderRadius: "14px", fontSize: "14px", fontWeight: 600, color: "#717171", cursor: "pointer" }}>
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -317,7 +361,7 @@ export default function AdminPage() {
         <div style={{ display: "flex", gap: "4px", marginBottom: "20px", backgroundColor: "#ffffff", padding: "4px", borderRadius: "14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "10px 6px", border: "none", borderRadius: "10px", backgroundColor: tab === t.id ? CORAL : "transparent", color: tab === t.id ? "#ffffff" : "#717171", fontSize: "13px", fontWeight: tab === t.id ? 700 : 500, cursor: "pointer" }}>
-              {t.label}{t.id === "signups" && pendingCount > 0 ? ` (${pendingCount})` : ""}
+              {t.id === "signups" && pendingCount > 0 ? `Applications (${pendingCount})` : t.id === "requests" && pendingRequestCount > 0 ? `Requests (${pendingRequestCount})` : t.label}
             </button>
           ))}
         </div>
@@ -330,7 +374,7 @@ export default function AdminPage() {
             </div>
             <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
               <StatCard label="Applications" value={signups.length} sub={`${pendingCount} pending`} color={pendingCount > 0 ? CORAL : "#222222"} />
-              <StatCard label="Requests" value={requests.length} sub={`${requests.filter(r => r.status === "pending").length} pending`} />
+              <StatCard label="Requests" value={requests.length} sub={`${pendingRequestCount} pending`} />
             </div>
 
             {pendingCount > 0 && (
@@ -340,6 +384,16 @@ export default function AdminPage() {
                   <p style={{ fontSize: "12px", color: "#FF8A8A" }}>Approve to make them live on the app</p>
                 </div>
                 <button onClick={() => setTab("signups")} style={{ padding: "8px 16px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Review</button>
+              </div>
+            )}
+
+            {pendingRequestCount > 0 && (
+              <div style={{ backgroundColor: "#FFF8F0", border: "1px solid #FFE0C0", borderRadius: "16px", padding: "16px 18px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <p style={{ fontSize: "14px", fontWeight: 700, color: "#FC642D", marginBottom: "2px" }}>{pendingRequestCount} connect request{pendingRequestCount !== 1 ? "s" : ""} need follow-up</p>
+                  <p style={{ fontSize: "12px", color: "#FCA06A" }}>Email both students to make the introduction</p>
+                </div>
+                <button onClick={() => setTab("requests")} style={{ padding: "8px 16px", backgroundColor: "#FC642D", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>View</button>
               </div>
             )}
 
@@ -356,7 +410,7 @@ export default function AdminPage() {
               {signups.slice(0, 4).map(s => {
                 const color = avatarColor(s.name)
                 return (
-                  <button key={s.id} onClick={() => { setSelectedSignup(s); setTab("signups") }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "12px", padding: "14px 20px", borderBottom: "1px solid #f5f5f5", backgroundColor: "transparent", border: "none", cursor: "pointer", textAlign: "left", borderBottom: "1px solid #f5f5f5" } as any}>
+                  <button key={s.id} onClick={() => { setSelectedSignup(s); setTab("signups") }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "12px", padding: "14px 20px", borderBottom: "1px solid #f5f5f5", backgroundColor: "transparent", border: "none", cursor: "pointer", textAlign: "left" } as any}>
                     <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: color + "15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <span style={{ fontSize: "16px", fontWeight: 800, color }}>{s.name.charAt(0)}</span>
                     </div>
@@ -444,13 +498,13 @@ export default function AdminPage() {
               </div>
             )}
             {requests.map((r, i) => (
-              <div key={i} style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
+              <div key={i} style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: r.status === "resolved" ? "1px solid #f0f0f0" : "1px solid #FFE8E8" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
                   <div>
                     <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "2px" }}>{r.requester_name}</p>
                     <p style={{ fontSize: "12px", color: "#717171" }}>Wants to meet <strong style={{ color: CORAL }}>{r.supporter_name}</strong></p>
                   </div>
-                  <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: "#FFF0F0", color: CORAL, flexShrink: 0 }}>{r.status}</span>
+                  <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: r.status === "resolved" ? "#E8F8F5" : "#FFF0F0", color: r.status === "resolved" ? "#00A699" : CORAL, flexShrink: 0, textTransform: "capitalize" }}>{r.status}</span>
                 </div>
 
                 <div style={{ display: "flex", gap: "14px", marginBottom: "10px" }}>
@@ -476,8 +530,16 @@ export default function AdminPage() {
                   <button onClick={() => setSelectedRequest(r)} style={{ flex: 1, padding: "10px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: "#717171", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Details</button>
                   <a href={`mailto:${r.requester_email}?subject=Your CornellPulse peer connect request`} style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "10px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                    Email them
+                    Email
                   </a>
+                  {r.status === "pending" && (
+                    <button onClick={() => resolveRequest(r.id)} style={{ flex: 2, padding: "10px", backgroundColor: "#E8F8F5", color: "#00A699", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
+                      Handled
+                    </button>
+                  )}
+                  <button onClick={() => deleteRequest(r.id)} style={{ padding: "10px 12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", cursor: "pointer" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  </button>
                 </div>
               </div>
             ))}

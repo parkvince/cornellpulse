@@ -334,7 +334,7 @@ async def get_reports(db: AsyncSession = Depends(get_db)):
         for r in reports
     ]
 
-    @router.post("/peer-requests/{request_id}/resolve")
+@router.post("/peer-requests/{request_id}/resolve")
 async def resolve_request(request_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.id == request_id))
     req = result.scalar_one_or_none()
