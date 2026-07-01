@@ -333,3 +333,23 @@ async def get_reports(db: AsyncSession = Depends(get_db)):
         }
         for r in reports
     ]
+
+    @router.post("/peer-requests/{request_id}/resolve")
+async def resolve_request(request_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.id == request_id))
+    req = result.scalar_one_or_none()
+    if not req:
+        return {"error": "Not found"}
+    req.status = "resolved"
+    await db.commit()
+    return {"status": "resolved"}
+
+@router.delete("/peer-requests/{request_id}")
+async def delete_request(request_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.id == request_id))
+    req = result.scalar_one_or_none()
+    if not req:
+        return {"error": "Not found"}
+    await db.delete(req)
+    await db.commit()
+    return {"status": "deleted"}
