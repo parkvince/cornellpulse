@@ -127,7 +127,10 @@ const [confirmClear, setConfirmClear] = useState(false)
         <div style={{ marginBottom: "24px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>About</p>
           <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
-            <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>CornellPulse</p>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <img src="/logo.png" alt="" width={20} height={20} />
+              <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222" }}>CornellPulse</p>
+            </div>
             <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>Built independently by Cornell students. Not affiliated with or endorsed by Cornell University. Not a clinical service.</p>
             <p style={{ fontSize: "12px", color: "#b0b0b0" }}>In an emergency call 911 or Cornell Police at 607-255-1111.</p>
           </div>

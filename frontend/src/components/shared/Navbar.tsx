@@ -20,7 +20,8 @@ export default function Navbar() {
       justifyContent: "space-between",
       height: "56px",
     }}>
-      <Link to="/" style={{ fontWeight: 600, fontSize: "17px", color: "#1a1a1a" }}>
+      <Link to="/" style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, fontSize: "17px", color: "#1a1a1a" }}>
+        <img src="/logo.png" alt="" width={24} height={24} />
         CornellPulse
       </Link>
       <div style={{ display: "flex", gap: "8px" }}>
