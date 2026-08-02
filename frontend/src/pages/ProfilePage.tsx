@@ -106,7 +106,7 @@ const [confirmClear, setConfirmClear] = useState(false)
             ) : (
               <>
                 <p style={{ fontSize: "16px", fontWeight: 700, color: "#222222", marginBottom: "8px" }}>No check-ins yet</p>
-                <p style={{ fontSize: "13px", color: "#717171", marginBottom: "20px" }}>Your check-in history will appear here after your first check-in.</p>
+                <p style={{ fontSize: "13px", color: "#717171", marginBottom: "20px" }}>A check-in plan will appear here only after you choose an option and save it on this device.</p>
               </>
             )}
             <Link to="/checkin" style={{ display: "inline-block", backgroundColor: CORAL, color: "#ffffff", padding: "12px 24px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, textDecoration: "none" }}>Start a check-in</Link>
@@ -118,7 +118,7 @@ const [confirmClear, setConfirmClear] = useState(false)
           <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #f5f5f5" }}>
               <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>Local check-in history</p>
-              <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Up to 20 result summaries can be stored on this device until you clear them or remove browser/app data.</p>
+              <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>When you explicitly save a plan, up to 20 summaries can be stored on this device until you clear them or remove browser/app data.</p>
             </div>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #f5f5f5" }}>
               <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>On-device recommendations and optional contribution</p>

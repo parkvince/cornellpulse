@@ -16,7 +16,12 @@ export interface SafetyAssessment {
   reason: "explicit-language" | "ambiguous-language" | "low-mood" | "none"
 }
 
-const RECOMMENDATION_RESOURCE_IDS = ["cornell_health_247", "ears", "learning_strategies", "basic_needs", "identity_support"] as const
+export interface QualifiedResourceOption {
+  resource: ResourceRecord
+  why: string
+}
+
+const RECOMMENDATION_RESOURCE_IDS = ["emergency_911", "988_lifeline", "cornell_health_247", "caps_access", "lets_talk", "ears", "learning_strategies", "basic_needs", "identity_support", "financial_aid_emergency_fund"] as const
 const recommendationResources = Object.fromEntries(RECOMMENDATION_RESOURCE_IDS.map(id => [id, getResource(id)])) as Record<typeof RECOMMENDATION_RESOURCE_IDS[number], ResourceRecord>
 
 const EXPLICIT_SAFETY_PATTERNS = [
@@ -54,20 +59,57 @@ export function assessSafetySignal(freeText: string, mood: number): SafetyAssess
 
 export function buildLocalRecommendation(input: LocalCheckInInput) {
   const safety = assessSafetySignal(input.freeText, input.mood)
-  let primary = recommendationResources.cornell_health_247
+  let options: QualifiedResourceOption[]
 
-  if (input.triggers.includes("financial") || input.triggers.includes("housing")) primary = recommendationResources.basic_needs
-  else if (input.triggers.includes("identity") || input.triggers.includes("discrimination")) primary = recommendationResources.identity_support
-  else if (input.triggers.includes("academics") || input.workload === "unbearable") primary = recommendationResources.learning_strategies
-  else if (input.wantsToTalk || input.triggers.includes("loneliness") || input.triggers.includes("social")) primary = recommendationResources.ears
+  if (safety.signal === "urgent") {
+    options = [
+      { resource: recommendationResources.emergency_911, why: "May fit if there is an immediate threat to life or you cannot stay safe. CornellPulse cannot dispatch emergency help." },
+      { resource: recommendationResources["988_lifeline"], why: "May fit for immediate crisis support by call or text when emergency dispatch is not needed." },
+      { resource: recommendationResources.cornell_health_247, why: "May fit for 24/7 consultation with a Cornell Health provider if you are a Cornell student in the United States." },
+    ]
+  } else if (safety.signal === "check-in") {
+    options = [
+      { resource: recommendationResources["988_lifeline"], why: "May fit if talking with a crisis counselor now would help, even if you are unsure whether the situation is a crisis." },
+      { resource: recommendationResources.cornell_health_247, why: "May fit for 24/7 consultation with a Cornell Health provider about what to do next." },
+      { resource: recommendationResources.caps_access, why: "May fit as a non-urgent next step for exploring Cornell mental-health support options." },
+    ]
+  } else if (input.triggers.includes("financial") || input.triggers.includes("housing")) {
+    options = [
+      { resource: recommendationResources.basic_needs, why: "May fit because you selected a financial or housing concern and want practical basic-needs support." },
+      { resource: recommendationResources.financial_aid_emergency_fund, why: "May fit if an urgent, unexpected expense could interrupt your Cornell education; eligibility and funding are not guaranteed." },
+      { resource: recommendationResources.cornell_health_247, why: "May fit if the situation is also affecting your wellbeing and you want to discuss support options with a provider." },
+    ]
+  } else if (input.triggers.includes("identity") || input.triggers.includes("discrimination")) {
+    options = [
+      { resource: recommendationResources.identity_support, why: "May fit because you selected an identity or discrimination concern and want community, advocacy, or support information." },
+      { resource: recommendationResources.ears, why: "May fit if you would prefer informal student-to-student listening rather than clinical care." },
+      { resource: recommendationResources.caps_access, why: "May fit if you want to explore professional mental-health support through Cornell Health." },
+    ]
+  } else if (input.triggers.includes("academics") || input.workload === "unbearable") {
+    options = [
+      { resource: recommendationResources.learning_strategies, why: "May fit because you selected academic pressure or a workload that feels difficult to manage." },
+      { resource: recommendationResources.lets_talk, why: "May fit if you want a brief, informal conversation with a counselor without starting ongoing counseling." },
+      { resource: recommendationResources.caps_access, why: "May fit if you want to discuss broader mental-health support options with Cornell Health." },
+    ]
+  } else if (input.wantsToTalk || input.triggers.includes("loneliness") || input.triggers.includes("social")) {
+    options = [
+      { resource: recommendationResources.ears, why: "May fit because you indicated that talking or social connection could be useful, and this is informal peer support." },
+      { resource: recommendationResources.lets_talk, why: "May fit if you prefer a brief, informal conversation with a Cornell Health counselor." },
+      { resource: recommendationResources.caps_access, why: "May fit if you want to explore professional mental-health support options." },
+    ]
+  } else {
+    options = [
+      { resource: recommendationResources.lets_talk, why: "May fit if a brief, informal conversation would help you sort through what is going on." },
+      { resource: recommendationResources.caps_access, why: "May fit if you want to explore Cornell Health mental-health support options." },
+      { resource: recommendationResources.ears, why: "May fit if you would rather talk informally with a trained student peer mentor." },
+    ]
+  }
 
-  const secondary = Object.values(recommendationResources).filter(resource => resource.id !== primary.id).slice(0, 2)
   return {
     safety,
     recommendation: {
-      why: "Based on the non-clinical choices you entered, these are resources you may want to explore.",
-      primary,
-      secondary,
+      why: "These options are based only on the non-clinical choices you entered. They are not a diagnosis, assessment, or guarantee that a resource will be suitable or available.",
+      options,
       show_peer_connect: false,
     },
   }

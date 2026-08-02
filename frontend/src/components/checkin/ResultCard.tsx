@@ -1,158 +1,25 @@
-import { useState, useEffect } from "react"
-import { useNavigate, Link } from "react-router-dom"
-import { featureFlags } from "../../config/featureFlags"
-import type { SafetyAssessment } from "../../checkin/localRecommendations"
-import type { ResourceRecord } from "../../resources/registry.ts"
+import { useState } from "react"
+import { Link } from "react-router-dom"
+import type { QualifiedResourceOption, SafetyAssessment } from "../../checkin/localRecommendations"
+import { bookingHref, directionsHref, prepareResultOptions, saveLocalPlan } from "../../checkin/resultPlan"
 import { callHref, resourcePath, textHref } from "../../resources/directory.ts"
-import { CrisisContactActions, EmergencyActions } from "../shared/EmergencyHelp"
+import { useOnlineStatus } from "../../resources/useOnlineStatus"
+import { CrisisContactActions } from "../shared/EmergencyHelp"
 
 const CORAL = "#FF5A5F"
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
 
-function moodColor(m: number) {
-  if (m >= 7) return "#00A699"
-  if (m >= 5) return "#FC642D"
-  if (m >= 3) return "#FF5A5F"
+function moodColor(mood: number) {
+  if (mood >= 7) return "#00A699"
+  if (mood >= 5) return "#FC642D"
+  if (mood >= 3) return "#FF5A5F"
   return "#c0392b"
-}
-
-interface PeerSupporter {
-  name: string
-  year: string
-  major?: string
-  about?: string
-  interests?: string[]
-}
-
-function PeerConnectSuggestion() {
-  const navigate = useNavigate()
-  const [supporter, setSupporter] = useState<PeerSupporter | null>(null)
-
-  useEffect(() => {
-    fetch(`${API_URL}/peer-supporters`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          const random = data[Math.floor(Math.random() * data.length)]
-          setSupporter(random)
-        }
-      })
-      .catch(() => {})
-  }, [])
-
-  const AVATAR_COLORS = ["#FF5A5F", "#00A699", "#FC642D", "#7B68EE", "#20B2AA"]
-  const color = supporter ? AVATAR_COLORS[supporter.name.charCodeAt(0) % AVATAR_COLORS.length] : CORAL
-
-  return (
-    <div style={{ borderRadius: "16px", overflow: "hidden", marginBottom: "10px", backgroundColor: "#ffffff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
-      <div style={{ padding: "18px 18px 14px" }}>
-        <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>Want to talk to another student?</p>
-        <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Sometimes the best thing is sitting with someone who gets it.</p>
-      </div>
-
-      {supporter && (
-        <div style={{ margin: "0 18px 14px", backgroundColor: "#fff8f7", borderRadius: "12px", padding: "14px" }}>
-          <p style={{ fontSize: "10px", fontWeight: 700, color: "#b0b0b0", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Suggested for you</p>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "10px" }}>
-            <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: color + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <span style={{ fontSize: "16px", fontWeight: 800, color }}>{supporter.name.charAt(0)}</span>
-            </div>
-            <div>
-              <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222" }}>{supporter.name}</p>
-              <p style={{ fontSize: "12px", color: "#717171" }}>{supporter.year}{supporter.major ? ` · ${supporter.major}` : ""}</p>
-            </div>
-          </div>
-          {supporter.about && <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5, marginBottom: "10px" }}>{supporter.about}</p>}
-          {supporter.interests && supporter.interests.length > 0 && (
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-              {supporter.interests.slice(0, 3).map((i: string) => (
-                <span key={i} style={{ padding: "3px 8px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "6px", fontSize: "11px", fontWeight: 500 }}>{i}</span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div style={{ display: "flex", gap: "8px", padding: "0 18px 18px" }}>
-        <button onClick={() => navigate("/peer")} style={{ flex: 2, padding: "13px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
-          {supporter ? `Meet ${supporter.name.split(" ")[0]}` : "Find a supporter"}
-        </button>
-        <button onClick={() => navigate("/peer")} style={{ flex: 1, padding: "13px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-          See all
-        </button>
-      </div>
-    </div>
-  )
-}
-
-interface ResourceItemProps {
-  resource: ResourceRecord
-  primary?: boolean
-  onSaved?: () => void
-}
-
-function ResourceItem(props: ResourceItemProps) {
-  const r = props.resource
-  const primary = props.primary
-
-  function saveResource() {
-    const text = [r.officialName, r.description, r.phone ? "Phone: " + r.phone : null, "Hours: " + r.hours, r.accessInstructions, r.url].filter(Boolean).join("\n")
-    if (navigator.share) {
-      navigator.share({ title: r.officialName, text }).catch(() => {})
-    } else {
-      navigator.clipboard.writeText(text).then(() => { if (props.onSaved) props.onSaved() }).catch(() => {})
-    }
-  }
-
-  if (primary) {
-    return (
-      <div style={{ borderRadius: "20px", overflow: "hidden", marginBottom: "12px", boxShadow: "0 8px 32px rgba(255,90,95,0.25)" }}>
-        <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "24px 20px 20px" }}>
-          <p style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>One option to explore</p>
-          <p style={{ fontSize: "22px", fontWeight: 800, color: "#ffffff", marginBottom: "6px" }}>{r.officialName}</p>
-          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", lineHeight: 1.5, marginBottom: "16px" }}>{r.description}</p>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          {callHref(r) && (
-            <a href={callHref(r)} style={{ display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontWeight: 700, fontSize: "15px", textDecoration: "none" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
-              {r.phone}
-            </a>
-          )}
-          {textHref(r) && <a href={textHref(r)} style={{ display: "inline-flex", alignItems: "center", backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontWeight: 700, fontSize: "15px", textDecoration: "none" }}>Text {r.textAction?.number}</a>}
-          </div>
-        </div>
-        <div style={{ backgroundColor: "#ffffff", padding: "16px 20px" }}>
-          <p style={{ fontSize: "13px", color: "#717171", marginBottom: "8px" }}><span style={{ fontWeight: 600, color: "#222222" }}>Hours: </span>{r.hours} ({r.timezone})</p>
-          <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>{r.accessInstructions}</p>
-          <p style={{ fontSize: "11px", color: "#b0b0b0", marginBottom: "10px" }}>{r.verificationDate ? `Last verified ${r.verificationDate} by ${r.verifier}` : `Verification pending · ${r.verifier}`}</p>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <Link to={resourcePath(r)} style={{ fontSize: "13px", color: CORAL, fontWeight: 700 }}>Details</Link>
-            {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: CORAL, fontWeight: 600, textDecoration: "underline" }}>Visit website</a>}
-            <button onClick={saveResource} style={{ fontSize: "13px", color: "#717171", backgroundColor: "transparent", border: "none", textDecoration: "underline", padding: 0, cursor: "pointer" }}>Save</button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ borderRadius: "16px", padding: "18px", backgroundColor: "#ffffff", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
-      <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>{r.officialName}</p>
-      <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5, marginBottom: "10px" }}>{r.description}</p>
-      {callHref(r) && <a href={callHref(r)} style={{ fontSize: "14px", fontWeight: 700, color: CORAL, display: "block", marginBottom: "6px" }}>Call {r.phone}</a>}
-      {textHref(r) && <a href={textHref(r)} style={{ fontSize: "14px", fontWeight: 700, color: CORAL, display: "block", marginBottom: "6px" }}>Text {r.textAction?.number}</a>}
-      <p style={{ fontSize: "12px", color: "#b0b0b0", marginBottom: "8px" }}>{r.hours} · {r.verificationDate ? `Verified ${r.verificationDate}` : "Verification pending"}</p>
-      <div style={{ display: "flex", gap: "12px" }}><Link to={resourcePath(r)} style={{ fontSize: "13px", color: CORAL, fontWeight: 700 }}>Details</Link>{r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: CORAL, fontWeight: 600, textDecoration: "underline" }}>Visit website</a>}</div>
-    </div>
-  )
 }
 
 interface ResultCardProps {
   result: {
     safety: SafetyAssessment
     recommendation: {
-      primary: ResourceRecord
-      secondary: ResourceRecord[]
+      options: QualifiedResourceOption[]
       why: string
       show_peer_connect: boolean
     }
@@ -164,130 +31,151 @@ interface ResultCardProps {
   aggregateNotice: string
   onRestart: () => void
   onDelete: () => void
+  onlineOverride?: boolean
+}
+
+interface ResourceOptionProps {
+  option: QualifiedResourceOption
+  selected: boolean
+  online: boolean
+  onSelect: () => void
+}
+
+function ExternalAction(props: { href: string; label: string; online: boolean }) {
+  const style = { fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", textDecoration: "none", border: "1px solid #ebebeb" }
+  if (!props.online) return <span aria-disabled="true" title="Requires an internet connection" style={{ ...style, color: "#9b9b9b", backgroundColor: "#f5f5f5" }}>{props.label}</span>
+  return <a href={props.href} target="_blank" rel="noopener noreferrer" style={{ ...style, color: CORAL, backgroundColor: "#ffffff" }}>{props.label}</a>
+}
+
+function ResourceOptionCard({ option, selected, online, onSelect }: ResourceOptionProps) {
+  const resource = option.resource
+  const call = callHref(resource)
+  const text = textHref(resource)
+  const book = bookingHref(resource)
+  const directions = directionsHref(resource)
+
+  return (
+    <article style={{ borderRadius: "18px", padding: "18px", backgroundColor: "#ffffff", marginBottom: "12px", boxShadow: selected ? "0 6px 24px rgba(255,90,95,0.16)" : "0 2px 12px rgba(0,0,0,0.06)", border: selected ? `2px solid ${CORAL}` : "1px solid #f0f0f0" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "7px" }}>
+        <h3 style={{ fontSize: "17px", fontWeight: 800, color: "#222222", lineHeight: 1.3 }}>{resource.officialName}</h3>
+        {selected && <span style={{ backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "999px", padding: "4px 8px", fontSize: "10px", fontWeight: 800, whiteSpace: "nowrap" }}>Your next step</span>}
+      </div>
+      <p style={{ fontSize: "13px", color: "#222222", lineHeight: 1.55, marginBottom: "9px" }}><strong>Why it may fit: </strong>{option.why}</p>
+      <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.55, marginBottom: "12px" }}>{resource.description}</p>
+
+      <dl style={{ display: "grid", gridTemplateColumns: "minmax(72px, auto) 1fr", gap: "6px 10px", fontSize: "12px", lineHeight: 1.45, marginBottom: "13px" }}>
+        <dt style={{ fontWeight: 700, color: "#222222" }}>Cost</dt><dd style={{ color: "#717171" }}>{resource.cost}</dd>
+        <dt style={{ fontWeight: 700, color: "#222222" }}>Eligibility</dt><dd style={{ color: "#717171" }}>{resource.eligibility}</dd>
+        <dt style={{ fontWeight: 700, color: "#222222" }}>Hours</dt><dd style={{ color: "#717171" }}>{resource.hours} ({resource.timezone})</dd>
+        <dt style={{ fontWeight: 700, color: "#222222" }}>Last verified</dt><dd style={{ color: "#717171" }}>{resource.verificationDate} by {resource.verifier}</dd>
+      </dl>
+
+      <div aria-label={`Actions for ${resource.officialName}`} style={{ display: "flex", gap: "7px", flexWrap: "wrap", marginBottom: "13px" }}>
+        {call && <a href={call} style={{ fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, textDecoration: "none" }}>Call</a>}
+        {text && <a href={text} style={{ fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, textDecoration: "none" }}>Text</a>}
+        {book && <ExternalAction href={book} label="Book / access" online={online} />}
+        {directions && <ExternalAction href={directions} label="Directions" online={online} />}
+        <ExternalAction href={resource.officialSourceUrl} label="Official website" online={online} />
+        <Link to={resourcePath(resource)} style={{ fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", color: "#717171", textDecoration: "none", border: "1px solid #ebebeb" }}>Full details</Link>
+      </div>
+
+      <button type="button" aria-pressed={selected} onClick={onSelect} style={{ width: "100%", padding: "12px", borderRadius: "12px", border: selected ? `2px solid ${CORAL}` : "2px solid #ebebeb", backgroundColor: selected ? "#FFF0F0" : "#ffffff", color: selected ? CORAL : "#717171", fontSize: "13px", fontWeight: 800, cursor: "pointer" }}>
+        {selected ? "Chosen as my next step" : "Choose this as my next step"}
+      </button>
+    </article>
+  )
 }
 
 export default function ResultCard(props: ResultCardProps) {
-  const tr = props.result.recommendation
+  const detectedOnline = useOnlineStatus()
+  const online = props.onlineOverride ?? detectedOnline
   const safety = props.result.safety
-  const [toast, setToast] = useState("")
-  const [feedback, setFeedback] = useState("")
-  const moodScore = props.moodScore || 5
+  const options = prepareResultOptions(props.result.recommendation.options)
+  const [selectedId, setSelectedId] = useState("")
+  const [saveStatus, setSaveStatus] = useState("")
+  const [feedback, setFeedback] = useState<"" | "helpful" | "not_helpful">("")
+  const moodScore = props.moodScore
+  const cleanTriggers = props.triggers.filter(trigger => trigger !== "nothing_specific").map(trigger => trigger.replace(/_/g, " "))
 
-  useEffect(() => {
+  function savePlan() {
+    const selected = options.find(option => option.resource.id === selectedId)
+    if (!selected) return
     try {
-      const h = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
-      if (h.some((entry: { id?: string }) => entry.id === props.checkinId)) return
-      const entry = { id: props.checkinId, date: new Date().toISOString(), mood: moodScore, resource: tr.primary.officialName }
-      localStorage.setItem("cornellpulse_history", JSON.stringify([entry, ...h].slice(0, 20)))
+      saveLocalPlan(props.checkinId, moodScore, selected.resource)
+      setSaveStatus("Plan saved on this device. It is available in your local check-in history.")
     } catch {
-      return
+      setSaveStatus("This browser could not save the plan. Check storage permissions and try again.")
     }
-  }, [moodScore, props.checkinId, tr.primary.officialName])
-
-  function showToast(msg: string) {
-    setToast(msg)
-    setTimeout(() => setToast(""), 2200)
   }
-
-  const cleanTriggers = (props.triggers || []).filter((t: string) => t !== "nothing_specific").map((t: string) => t.replace(/_/g, " "))
 
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh", padding: "24px 20px 32px" }}>
       {safety.signal === "urgent" && (
-        <div style={{ backgroundColor: "#FFF0F0", border: "2px solid #FF5A5F", borderRadius: "16px", padding: "20px", marginBottom: "24px" }}>
+        <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "2px solid #FF5A5F", borderRadius: "16px", padding: "20px", marginBottom: "20px" }}>
           <p style={{ fontSize: "15px", fontWeight: 800, color: CORAL, marginBottom: "8px" }}>Some words you entered may point to an immediate safety concern</p>
-          <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6, marginBottom: "16px" }}>This automated check can be wrong and is not a diagnosis or clinical assessment. If you may act now or cannot stay safe, call 911. Otherwise, 988 can provide crisis support.</p>
-          <EmergencyActions />
+          <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>This automated check can be wrong and is not a diagnosis or clinical assessment. Call 911 if you may act now or cannot stay safe. The options below are separate crisis pathways, not ordinary recommendations.</p>
         </div>
       )}
 
       {safety.signal === "check-in" && (
-        <div style={{ backgroundColor: "#FFF0F0", border: "1.5px solid #FF5A5F", borderRadius: "16px", padding: "18px", marginBottom: "20px" }}>
+        <div role="status" style={{ backgroundColor: "#FFF0F0", border: "1.5px solid #FF5A5F", borderRadius: "16px", padding: "18px", marginBottom: "20px" }}>
           <p style={{ fontSize: "14px", fontWeight: 800, color: CORAL, marginBottom: "6px" }}>Would immediate support be useful?</p>
-          <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "12px" }}>A low mood selection or ambiguous wording prompted this check-in. The system cannot determine whether you are in danger. Call or text 988 for crisis support, or call 911 if there is an immediate safety threat.</p>
+          <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6 }}>A low mood selection or ambiguous wording prompted this check-in. CornellPulse cannot determine whether you are in danger. The immediate-support options below are separate from ordinary resource suggestions.</p>
+        </div>
+      )}
+
+      {!online && <div role="status" style={{ backgroundColor: "#fff4d6", color: "#765500", borderRadius: "14px", padding: "13px 15px", fontSize: "13px", lineHeight: 1.5, marginBottom: "16px" }}>You’re offline. This plan and verified resource details remain available. Calling, texting, and saving may still work; booking, directions, and websites require a connection.</div>}
+
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "18px" }}>
+        <div style={{ width: "52px", height: "52px", borderRadius: "16px", backgroundColor: moodColor(moodScore) + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ fontSize: "22px", fontWeight: 800, color: moodColor(moodScore) }}>{moodScore}</span>
+        </div>
+        <div>
+          <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "2px" }}>{safety.signal === "none" ? "Your results" : "Immediate support"}</p>
+          <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{safety.signal === "none" ? "Choose a next step that feels workable" : "Choose the support that fits right now"}</h2>
+        </div>
+      </div>
+
+      {cleanTriggers.length > 0 && safety.signal === "none" && <p style={{ backgroundColor: "#FFF0F0", borderRadius: "12px", padding: "14px 16px", fontSize: "14px", color: "#222222", lineHeight: 1.6, marginBottom: "14px" }}>You selected <strong style={{ color: CORAL }}>{cleanTriggers.slice(0, 2).join(" and ")}</strong>. Those choices help narrow these options but do not establish what support you need.</p>}
+      <p style={{ fontSize: "14px", color: "#717171", marginBottom: "18px", lineHeight: 1.65 }}>{props.result.recommendation.why}</p>
+
+      {options.length > 0 ? (
+        <section aria-label="Qualified resource options">
+          {options.map(option => <ResourceOptionCard key={option.resource.id} option={option} selected={selectedId === option.resource.id} online={online} onSelect={() => { setSelectedId(option.resource.id); setSaveStatus("") }} />)}
+        </section>
+      ) : (
+        <div role="alert" style={{ backgroundColor: "#ffffff", borderRadius: "18px", padding: "20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", marginBottom: "16px" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#222222", marginBottom: "7px" }}>No verified result options are available</h3>
+          <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.55, marginBottom: "12px" }}>A resource record was missing or could not be verified. Browse the directory instead, or use the crisis contacts below if you need immediate support.</p>
+          <Link to="/resources" style={{ display: "inline-block", color: CORAL, fontSize: "13px", fontWeight: 800, marginBottom: "14px" }}>Browse verified resources</Link>
           <CrisisContactActions />
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-        <div style={{ width: "52px", height: "52px", borderRadius: "16px", backgroundColor: moodColor(moodScore) + "20", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: "22px", fontWeight: 800, color: moodColor(moodScore) }}>{moodScore}</span>
-        </div>
-        <div>
-          <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "2px" }}>Your results</p>
-          <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", letterSpacing: "-0.01em" }}>Resources you may want to explore</h2>
-        </div>
-      </div>
-
-      {cleanTriggers.length > 0 && (
-        <div style={{ backgroundColor: "#FFF0F0", borderRadius: "12px", padding: "14px 16px", marginBottom: "16px" }}>
-          <p style={{ fontSize: "14px", color: "#222222", lineHeight: 1.6 }}>
-            You selected <strong style={{ color: CORAL }}>{cleanTriggers.slice(0, 2).join(" and ")}</strong>. These choices help narrow the resource list, but they are not a clinical assessment.
-          </p>
+      {selectedId && (
+        <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "16px", margin: "16px 0 10px", border: "1px solid #f0f0f0" }}>
+          <button type="button" onClick={savePlan} style={{ width: "100%", padding: "13px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 800, cursor: "pointer" }}>Save this plan on this device</button>
+          <p style={{ fontSize: "11px", color: "#717171", lineHeight: 1.5, marginTop: "8px", textAlign: "center" }}>Saving stores the date, mood number, and chosen resource in local browser/app storage. It is not copied, shared, or sent.</p>
+          {saveStatus && <p role="status" style={{ fontSize: "12px", color: saveStatus.startsWith("Plan saved") ? "#00796f" : "#b42318", lineHeight: 1.5, marginTop: "8px", textAlign: "center" }}>{saveStatus}</p>}
         </div>
       )}
 
-      {tr.why && <p style={{ fontSize: "14px", color: "#717171", marginBottom: "20px", lineHeight: 1.65 }}>{tr.why}</p>}
-
-      <ResourceItem resource={tr.primary} primary={true} onSaved={() => showToast("Copied to clipboard")} />
-
-      {featureFlags.peerConnect && (tr.show_peer_connect || props.wantsToTalk) && (
-        <PeerConnectSuggestion />
-      )}
-
-      {tr.secondary.length > 0 && (
-        <div style={{ marginTop: "16px" }}>
-          <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Other resources to explore</p>
-          {tr.secondary.map(r => <ResourceItem key={r.id} resource={r} />)}
-        </div>
-      )}
-
-      {!feedback && (
-        <div style={{ marginTop: "20px", backgroundColor: "#ffffff", borderRadius: "16px", padding: "16px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "10px" }}>
-          <p style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "12px", textAlign: "center" }}>Were these resource options useful?</p>
+      {!feedback ? (
+        <div style={{ marginTop: "18px", backgroundColor: "#ffffff", borderRadius: "16px", padding: "16px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "10px" }}>
+          <p style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "4px", textAlign: "center" }}>Were these options useful?</p>
+          <p style={{ fontSize: "11px", color: "#717171", lineHeight: 1.45, marginBottom: "12px", textAlign: "center" }}>Your answer stays only in this open page’s memory. It is not saved or sent.</p>
           <div style={{ display: "flex", gap: "8px" }}>
-            <button onClick={() => setFeedback("helpful")} style={{ flex: 1, padding: "12px", backgroundColor: "#FFF0F0", color: CORAL, border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
-              Yes
-            </button>
-            <button onClick={() => setFeedback("not_helpful")} style={{ flex: 1, padding: "12px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/></svg>
-              Not really
-            </button>
+            <button type="button" onClick={() => setFeedback("helpful")} style={{ flex: 1, padding: "12px", backgroundColor: "#FFF0F0", color: CORAL, border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Yes</button>
+            <button type="button" onClick={() => setFeedback("not_helpful")} style={{ flex: 1, padding: "12px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Not really</button>
           </div>
         </div>
-      )}
-
-      {feedback === "helpful" && (
-        <div style={{ marginTop: "10px", backgroundColor: "#FFF0F0", borderRadius: "16px", padding: "16px", textAlign: "center", marginBottom: "10px" }}>
-          <p style={{ fontSize: "14px", fontWeight: 700, color: CORAL }}>Glad it helped</p>
-          <p style={{ fontSize: "12px", color: "#717171", marginTop: "4px" }}>Thank you for the feedback.</p>
-        </div>
-      )}
-
-      {feedback === "not_helpful" && (
-        <div style={{ marginTop: "10px", backgroundColor: "#f9f9f9", borderRadius: "16px", padding: "16px", marginBottom: "10px" }}>
-          <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222", marginBottom: "8px" }}>Sorry about that. Try one of these instead:</p>
-          <Link to="/resources" style={{ display: "block", padding: "12px", border: "2px solid #ebebeb", borderRadius: "12px", textAlign: "center", fontSize: "14px", fontWeight: 600, color: CORAL, marginBottom: "8px" }}>Browse all resources</Link>
-          {featureFlags.peerConnect && <Link to="/peer" style={{ display: "block", padding: "12px", border: "2px solid #ebebeb", borderRadius: "12px", textAlign: "center", fontSize: "14px", fontWeight: 600, color: "#717171" }}>Talk to a peer supporter</Link>}
-        </div>
-      )}
+      ) : <p role="status" style={{ margin: "14px 0", backgroundColor: feedback === "helpful" ? "#FFF0F0" : "#f9f9f9", borderRadius: "14px", padding: "14px", fontSize: "13px", color: "#717171", textAlign: "center" }}>{feedback === "helpful" ? "Thanks. This feedback remains only on this page." : "Thanks. This feedback remains only on this page. You can also browse all verified resources."}</p>}
 
       <p role="status" style={{ fontSize: "12px", color: "#717171", textAlign: "center", margin: "12px 0 8px" }}>{props.aggregateNotice}</p>
-      <button onClick={props.onDelete} style={{ width: "100%", padding: "12px", backgroundColor: "transparent", color: CORAL, border: "2px solid #ebebeb", borderRadius: "14px", fontSize: "13px", fontWeight: 700, cursor: "pointer", marginBottom: "8px" }}>
-        Delete this check-in
-      </button>
-      <button onClick={props.onRestart} style={{ marginTop: "4px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
-        Check in again
-      </button>
+      <button type="button" onClick={props.onDelete} style={{ width: "100%", padding: "12px", backgroundColor: "transparent", color: CORAL, border: "2px solid #ebebeb", borderRadius: "14px", fontSize: "13px", fontWeight: 700, cursor: "pointer", marginBottom: "8px" }}>Delete this check-in</button>
+      <button type="button" onClick={props.onRestart} style={{ marginTop: "4px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Check in again</button>
       <Link to="/" style={{ display: "block", textAlign: "center", fontSize: "13px", fontWeight: 600, color: "#717171", marginTop: "12px", padding: "8px", textDecoration: "none" }}>← Back to home</Link>
-      <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "6px" }}>Your recommendation was generated on this device. Only an optional four-field aggregate is sent when you have enabled that choice.</p>
-
-      {toast && (
-        <div style={{ position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)", backgroundColor: CORAL, color: "#ffffff", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" }}>
-          {toast}
-        </div>
-      )}
+      <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "6px" }}>Options were generated on this device. Only an optional four-field aggregate is sent when you have enabled that choice.</p>
     </div>
   )
 }
