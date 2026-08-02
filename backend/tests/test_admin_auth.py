@@ -45,6 +45,8 @@ def reset_login_attempts():
         ("post", "/api/v1/peer-requests/1/resolve"),
         ("delete", "/api/v1/peer-requests/1"),
         ("get", "/api/v1/reports"),
+        ("post", "/api/v1/reports/1/resolve"),
+        ("delete", "/api/v1/reports/1"),
         ("get", "/api/v1/click-stats"),
     ],
 )

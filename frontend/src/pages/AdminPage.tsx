@@ -1,4 +1,5 @@
-import { useCallback, useState, useEffect } from "react"
+import { type FormEvent, type KeyboardEvent, useCallback, useState, useEffect } from "react"
+import { AdminApiError, adminRequest } from "../api/admin"
 
 const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
@@ -38,15 +39,26 @@ interface PeerRequest {
   requester_phone?: string; preferred_location: string; preferred_time: string
   message?: string; status: string; requested_at?: string
 }
+interface SupporterReport {
+  id: number; supporter_name: string; reporter_email?: string; reason: string
+  reported_at?: string; resolved: boolean
+}
+type AuthState = "checking" | "unauthenticated" | "authenticated"
 
 export default function AdminPage() {
-  const [authed, setAuthed] = useState<boolean | null>(null)
+  const [authState, setAuthState] = useState<AuthState>("checking")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [loginError, setLoginError] = useState("")
+  const [pageError, setPageError] = useState("")
+  const [loadingData, setLoadingData] = useState(false)
+  const [dataReady, setDataReady] = useState(false)
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [actionKey, setActionKey] = useState("")
   const [tab, setTab] = useState("overview")
   const [summary, setSummary] = useState<AdminSummary | null>(null)
   const [signups, setSignups] = useState<PeerSignup[]>([])
   const [requests, setRequests] = useState<PeerRequest[]>([])
+  const [reports, setReports] = useState<SupporterReport[]>([])
   const [selectedSignup, setSelectedSignup] = useState<PeerSignup | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<PeerRequest | null>(null)
   const [approving, setApproving] = useState<number | null>(null)
@@ -54,14 +66,27 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("all")
 
   const adminFetch = useCallback(async (path: string, options: RequestInit = {}) => {
-    const response = await fetch(`${API_URL}${path}`, { ...options, credentials: "include" })
-    if (response.status === 401 || response.status === 403) setAuthed(false)
-    if (!response.ok) throw new Error(`Admin request failed: ${response.status}`)
-    return response
+    try {
+      return await adminRequest(API_URL, path, options)
+    } catch (requestError) {
+      if (requestError instanceof AdminApiError && requestError.kind === "unauthorized") {
+        setAuthState("unauthenticated")
+        setLoginError(requestError.message)
+      }
+      throw requestError
+    }
   }, [])
 
-  async function login() {
-    setError("")
+  const showApiError = useCallback((requestError: unknown, fallback: string) => {
+    const message = requestError instanceof AdminApiError ? requestError.message : fallback
+    setPageError(message)
+  }, [])
+
+  async function login(event?: FormEvent) {
+    event?.preventDefault()
+    if (!password || loginLoading) return
+    setLoginError("")
+    setLoginLoading(true)
     try {
       await adminFetch("/admin/auth/login", {
         method: "POST",
@@ -69,91 +94,150 @@ export default function AdminPage() {
         body: JSON.stringify({ password }),
       })
       setPassword("")
-      setAuthed(true)
+      setAuthState("authenticated")
       await loadData()
-    } catch {
-      setError("Incorrect password or too many attempts. Please try again later.")
+    } catch (requestError) {
+      if (requestError instanceof AdminApiError && requestError.kind !== "unauthorized") {
+        setLoginError(requestError.message)
+      } else if (!(requestError instanceof AdminApiError)) {
+        setLoginError("Unable to sign in. Please try again.")
+      }
+    } finally {
+      setLoginLoading(false)
     }
   }
 
   async function logout() {
     try {
       await adminFetch("/admin/auth/logout", { method: "POST" })
-    } catch {
-      // The local session is cleared even if the server is unavailable.
+    } catch (requestError) {
+      setLoginError(requestError instanceof AdminApiError ? `Signed out locally. ${requestError.message}` : "Signed out locally, but the server could not be reached.")
     }
-    setAuthed(false)
+    setAuthState("unauthenticated")
     setSummary(null)
     setSignups([])
     setRequests([])
+    setReports([])
+    setDataReady(false)
   }
 
   const loadData = useCallback(async () => {
+    setLoadingData(true)
+    setPageError("")
     try {
-      const [s, sg, r] = await Promise.all([
+      const [s, sg, r, rp] = await Promise.all([
         adminFetch("/campus/summary").then(res => res.json()),
         adminFetch("/peer-signups").then(res => res.json()),
         adminFetch("/peer-requests").then(res => res.json()),
+        adminFetch("/reports").then(res => res.json()),
       ])
       setSummary(s as AdminSummary)
       setSignups(Array.isArray(sg) ? sg as PeerSignup[] : [])
       setRequests(Array.isArray(r) ? r as PeerRequest[] : [])
-    } catch {
-      // adminFetch already clears authentication for unauthorized responses.
+      setReports(Array.isArray(rp) ? rp as SupporterReport[] : [])
+      setDataReady(true)
+    } catch (requestError) {
+      showApiError(requestError, "Unable to load administrator data.")
+    } finally {
+      setLoadingData(false)
     }
-  }, [adminFetch])
+  }, [adminFetch, showApiError])
 
   useEffect(() => {
-    fetch(`${API_URL}/admin/auth/session`, { credentials: "include" })
-      .then(response => {
-        if (!response.ok) throw new Error("No active administrator session")
-        setAuthed(true)
+    adminRequest(API_URL, "/admin/auth/session")
+      .then(() => {
+        setAuthState("authenticated")
         void loadData()
       })
-      .catch(() => setAuthed(false))
+      .catch(requestError => {
+        setAuthState("unauthenticated")
+        if (requestError instanceof AdminApiError && requestError.kind === "network") setLoginError(requestError.message)
+      })
   }, [loadData])
 
   async function approveSignup(id: number) {
     setApproving(id)
+    setActionKey(`approve-signup-${id}`)
+    setPageError("")
     try {
       await adminFetch(`/peer-signups/${id}/approve`, { method: "POST" })
       await loadData()
       if (selectedSignup?.id === id) setSelectedSignup(prev => prev ? ({ ...prev, approved: true }) : prev)
-    } catch {
-      // adminFetch handles expired or unauthorized sessions.
+    } catch (requestError) {
+      showApiError(requestError, "Unable to approve this application.")
     }
     setApproving(null)
+    setActionKey("")
   }
 
   async function deleteSignup(id: number) {
     if (!confirm("Remove this application? This cannot be undone.")) return
+    setActionKey(`delete-signup-${id}`)
+    setPageError("")
     try {
       await adminFetch(`/peer-signups/${id}`, { method: "DELETE" })
       await loadData()
       setSelectedSignup(null)
-    } catch {
-      // adminFetch handles expired or unauthorized sessions.
+    } catch (requestError) {
+      showApiError(requestError, "Unable to delete this application.")
+    } finally {
+      setActionKey("")
     }
   }
 
   async function resolveRequest(id: number) {
+    setActionKey(`resolve-request-${id}`)
+    setPageError("")
     try {
       await adminFetch(`/peer-requests/${id}/resolve`, { method: "POST" })
       await loadData()
       if (selectedRequest?.id === id) setSelectedRequest(prev => prev ? ({ ...prev, status: "resolved" }) : prev)
-    } catch {
-      // adminFetch handles expired or unauthorized sessions.
+    } catch (requestError) {
+      showApiError(requestError, "Unable to update this connection request.")
+    } finally {
+      setActionKey("")
     }
   }
 
   async function deleteRequest(id: number) {
     if (!confirm("Delete this request? This cannot be undone.")) return
+    setActionKey(`delete-request-${id}`)
+    setPageError("")
     try {
       await adminFetch(`/peer-requests/${id}`, { method: "DELETE" })
       await loadData()
       setSelectedRequest(null)
-    } catch {
-      // adminFetch handles expired or unauthorized sessions.
+    } catch (requestError) {
+      showApiError(requestError, "Unable to delete this connection request.")
+    } finally {
+      setActionKey("")
+    }
+  }
+
+  async function resolveReport(id: number) {
+    setActionKey(`resolve-report-${id}`)
+    setPageError("")
+    try {
+      await adminFetch(`/reports/${id}/resolve`, { method: "POST" })
+      setReports(current => current.map(report => report.id === id ? { ...report, resolved: true } : report))
+    } catch (requestError) {
+      showApiError(requestError, "Unable to update this report.")
+    } finally {
+      setActionKey("")
+    }
+  }
+
+  async function deleteReport(id: number) {
+    if (!confirm("Delete this report? This cannot be undone.")) return
+    setActionKey(`delete-report-${id}`)
+    setPageError("")
+    try {
+      await adminFetch(`/reports/${id}`, { method: "DELETE" })
+      setReports(current => current.filter(report => report.id !== id))
+    } catch (requestError) {
+      showApiError(requestError, "Unable to delete this report.")
+    } finally {
+      setActionKey("")
     }
   }
 
@@ -166,24 +250,26 @@ export default function AdminPage() {
   const pendingCount = signups.filter(s => !s.approved).length
   const approvedCount = signups.filter(s => s.approved).length
   const pendingRequestCount = requests.filter(r => r.status === "pending").length
+  const unresolvedReportCount = reports.filter(report => !report.resolved).length
 
-  if (!authed) {
+  if (authState !== "authenticated") {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "#fff8f7", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
         <div style={{ width: "56px", height: "56px", borderRadius: "16px", backgroundColor: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "20px" }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
         </div>
         <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#222222", marginBottom: "6px", letterSpacing: "-0.02em" }}>Admin access</h1>
-        <p style={{ fontSize: "14px", color: "#717171", marginBottom: "32px" }}>CornellPulse staff only.</p>
-        <div style={{ width: "100%", maxWidth: "320px" }}>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && login()} placeholder="Password" style={{ width: "100%", padding: "14px 16px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", marginBottom: "12px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }} />
-          {error && (
-            <div style={{ backgroundColor: "#FFF0F0", border: "1px solid #FF5A5F", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}>
-              <p style={{ fontSize: "13px", color: CORAL }}>{error}</p>
+        <p style={{ fontSize: "14px", color: "#717171", marginBottom: "32px" }}>{authState === "checking" ? "Checking secure session..." : "CornellPulse staff only."}</p>
+        {authState === "unauthenticated" && <form onSubmit={login} style={{ width: "100%", maxWidth: "320px" }} aria-busy={loginLoading}>
+          <label htmlFor="admin-password" style={{ position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 }}>Administrator password</label>
+          <input id="admin-password" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" disabled={loginLoading} aria-describedby={loginError ? "admin-login-error" : undefined} style={{ width: "100%", padding: "14px 16px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", marginBottom: "12px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }} />
+          {loginError && (
+            <div id="admin-login-error" role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #FF5A5F", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}>
+              <p style={{ fontSize: "13px", color: CORAL }}>{loginError}</p>
             </div>
           )}
-          <button onClick={login} style={{ width: "100%", padding: "16px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer" }}>Sign in</button>
-        </div>
+          <button type="submit" disabled={!password || loginLoading} style={{ width: "100%", padding: "16px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer" }}>{loginLoading ? "Signing in..." : "Sign in"}</button>
+        </form>}
       </div>
     )
   }
@@ -208,6 +294,7 @@ export default function AdminPage() {
         </div>
 
         <div style={{ padding: "24px 20px" }}>
+          {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #FF5A5F", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p></div>}
           <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
             <span style={{ padding: "6px 14px", borderRadius: "20px", backgroundColor: selectedSignup.approved ? "#E8F8F5" : "#FFF0F0", color: selectedSignup.approved ? "#00A699" : CORAL, fontSize: "12px", fontWeight: 700 }}>
               {selectedSignup.approved ? "Approved" : "Pending review"}
@@ -308,8 +395,8 @@ export default function AdminPage() {
             </div>
           )}
 
-          <button onClick={() => deleteSignup(selectedSignup.id)} style={{ width: "100%", padding: "16px", backgroundColor: "transparent", border: "2px solid #ebebeb", borderRadius: "14px", fontSize: "14px", fontWeight: 600, color: "#717171", cursor: "pointer" }}>
-            Remove application
+          <button onClick={() => deleteSignup(selectedSignup.id)} disabled={actionKey === `delete-signup-${selectedSignup.id}`} style={{ width: "100%", padding: "16px", backgroundColor: "transparent", border: "2px solid #ebebeb", borderRadius: "14px", fontSize: "14px", fontWeight: 600, color: "#717171", cursor: "pointer" }}>
+            {actionKey === `delete-signup-${selectedSignup.id}` ? "Removing..." : "Remove application"}
           </button>
         </div>
       </div>
@@ -330,6 +417,7 @@ export default function AdminPage() {
         </div>
 
         <div style={{ padding: "24px 20px" }}>
+          {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #FF5A5F", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p></div>}
           <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
             <span style={{ padding: "6px 14px", borderRadius: "20px", backgroundColor: selectedRequest.status === "resolved" ? "#E8F8F5" : "#FFF0F0", color: selectedRequest.status === "resolved" ? "#00A699" : CORAL, fontSize: "12px", fontWeight: 700, textTransform: "capitalize" }}>
               {selectedRequest.status}
@@ -381,9 +469,9 @@ export default function AdminPage() {
 
           <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
             {selectedRequest.status === "pending" && (
-              <button onClick={() => resolveRequest(selectedRequest.id)} style={{ flex: 2, padding: "14px", backgroundColor: "#E8F8F5", color: "#00A699", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+              <button onClick={() => resolveRequest(selectedRequest.id)} disabled={actionKey === `resolve-request-${selectedRequest.id}`} style={{ flex: 2, padding: "14px", backgroundColor: "#E8F8F5", color: "#00A699", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00A699" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                Mark as handled
+                {actionKey === `resolve-request-${selectedRequest.id}` ? "Updating..." : "Mark as handled"}
               </button>
             )}
             {selectedRequest.status === "resolved" && (
@@ -392,8 +480,8 @@ export default function AdminPage() {
                 <p style={{ fontSize: "14px", fontWeight: 700, color: "#00A699" }}>Handled</p>
               </div>
             )}
-            <button onClick={() => deleteRequest(selectedRequest.id)} style={{ flex: 1, padding: "14px", backgroundColor: "transparent", border: "2px solid #ebebeb", borderRadius: "14px", fontSize: "14px", fontWeight: 600, color: "#717171", cursor: "pointer" }}>
-              Delete
+            <button onClick={() => deleteRequest(selectedRequest.id)} disabled={actionKey === `delete-request-${selectedRequest.id}`} style={{ flex: 1, padding: "14px", backgroundColor: "transparent", border: "2px solid #ebebeb", borderRadius: "14px", fontSize: "14px", fontWeight: 600, color: "#717171", cursor: "pointer" }}>
+              {actionKey === `delete-request-${selectedRequest.id}` ? "Deleting..." : "Delete"}
             </button>
           </div>
         </div>
@@ -405,7 +493,21 @@ export default function AdminPage() {
     { id: "overview", label: "Overview" },
     { id: "signups", label: "Applications" },
     { id: "requests", label: "Requests" },
+    { id: "reports", label: "Reports" },
   ]
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex: number | null = null
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length
+    if (event.key === "ArrowLeft") nextIndex = (index - 1 + tabs.length) % tabs.length
+    if (event.key === "Home") nextIndex = 0
+    if (event.key === "End") nextIndex = tabs.length - 1
+    if (nextIndex === null) return
+    event.preventDefault()
+    const nextTab = tabs[nextIndex]
+    setTab(nextTab.id)
+    document.getElementById(`admin-tab-${nextTab.id}`)?.focus()
+  }
 
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
@@ -418,16 +520,22 @@ export default function AdminPage() {
       </div>
 
       <div style={{ padding: "20px 20px 0" }}>
-        <div style={{ display: "flex", gap: "4px", marginBottom: "20px", backgroundColor: "#ffffff", padding: "4px", borderRadius: "14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "10px 6px", border: "none", borderRadius: "10px", backgroundColor: tab === t.id ? CORAL : "transparent", color: tab === t.id ? "#ffffff" : "#717171", fontSize: "13px", fontWeight: tab === t.id ? 700 : 500, cursor: "pointer" }}>
-              {t.id === "signups" && pendingCount > 0 ? `Applications (${pendingCount})` : t.id === "requests" && pendingRequestCount > 0 ? `Requests (${pendingRequestCount})` : t.label}
+        <div role="tablist" aria-label="Administrator sections" style={{ display: "flex", gap: "4px", marginBottom: "20px", backgroundColor: "#ffffff", padding: "4px", borderRadius: "14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+          {tabs.map((t, index) => (
+            <button id={`admin-tab-${t.id}`} role="tab" aria-selected={tab === t.id} aria-controls={`admin-panel-${t.id}`} tabIndex={tab === t.id ? 0 : -1} key={t.id} onKeyDown={event => handleTabKeyDown(event, index)} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "10px 6px", border: "none", borderRadius: "10px", backgroundColor: tab === t.id ? CORAL : "transparent", color: tab === t.id ? "#ffffff" : "#717171", fontSize: "13px", fontWeight: tab === t.id ? 700 : 500, cursor: "pointer" }}>
+              {t.id === "signups" && pendingCount > 0 ? `Applications (${pendingCount})` : t.id === "requests" && pendingRequestCount > 0 ? `Requests (${pendingRequestCount})` : t.id === "reports" && unresolvedReportCount > 0 ? `Reports (${unresolvedReportCount})` : t.label}
             </button>
           ))}
         </div>
 
-        {tab === "overview" && (
-          <div>
+        {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #FF5A5F", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+          <p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p>
+          <button onClick={() => void loadData()} style={{ color: CORAL, backgroundColor: "transparent", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Retry</button>
+        </div>}
+        {loadingData && <div role="status" aria-live="polite" style={{ textAlign: "center", padding: "24px 0" }}><p style={{ fontSize: "14px", color: "#b0b0b0" }}>Loading administrator data...</p></div>}
+
+        {!loadingData && dataReady && tab === "overview" && (
+          <div id="admin-panel-overview" role="tabpanel" aria-labelledby="admin-tab-overview">
             <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
               <StatCard label="Campus mood" value={summary?.avg_mood !== null && summary?.avg_mood !== undefined ? summary.avg_mood + "/10" : "N/A"} sub="Today" />
               <StatCard label="Check-ins" value={summary?.count ?? 0} sub="Today" />
@@ -488,11 +596,12 @@ export default function AdminPage() {
           </div>
         )}
 
-        {tab === "signups" && (
-          <div>
+        {!loadingData && dataReady && tab === "signups" && (
+          <div id="admin-panel-signups" role="tabpanel" aria-labelledby="admin-tab-signups">
             <div style={{ position: "relative", marginBottom: "12px" }}>
               <svg style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by name or email..." style={{ width: "100%", padding: "12px 14px 12px 40px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }} />
+              <label htmlFor="application-search" style={{ position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 }}>Search supporter applications</label>
+              <input id="application-search" type="search" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by name or email..." style={{ width: "100%", padding: "12px 14px 12px 40px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }} />
             </div>
 
             <div style={{ display: "flex", gap: "6px", marginBottom: "16px" }}>
@@ -540,7 +649,7 @@ export default function AdminPage() {
                         {approving === s.id ? "Approving..." : "Approve"}
                       </button>
                     )}
-                    <button onClick={() => deleteSignup(s.id)} style={{ padding: "10px 14px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", cursor: "pointer" }}>
+                    <button aria-label={`Delete application from ${s.name}`} onClick={() => deleteSignup(s.id)} disabled={actionKey === `delete-signup-${s.id}`} style={{ padding: "10px 14px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", cursor: "pointer" }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>
                   </div>
@@ -550,8 +659,8 @@ export default function AdminPage() {
           </div>
         )}
 
-        {tab === "requests" && (
-          <div>
+        {!loadingData && dataReady && tab === "requests" && (
+          <div id="admin-panel-requests" role="tabpanel" aria-labelledby="admin-tab-requests">
             {requests.length === 0 && (
               <div style={{ textAlign: "center", padding: "48px 0" }}>
                 <p style={{ fontSize: "15px", color: "#b0b0b0" }}>No connect requests yet.</p>
@@ -593,13 +702,42 @@ export default function AdminPage() {
                     Email
                   </a>
                   {r.status === "pending" && (
-                    <button onClick={() => resolveRequest(r.id)} style={{ flex: 2, padding: "10px", backgroundColor: "#E8F8F5", color: "#00A699", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
-                      Handled
+                    <button onClick={() => resolveRequest(r.id)} disabled={actionKey === `resolve-request-${r.id}`} style={{ flex: 2, padding: "10px", backgroundColor: "#E8F8F5", color: "#00A699", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
+                      {actionKey === `resolve-request-${r.id}` ? "Updating..." : "Handled"}
                     </button>
                   )}
-                  <button onClick={() => deleteRequest(r.id)} style={{ padding: "10px 12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", cursor: "pointer" }}>
+                  <button aria-label={`Delete connection request from ${r.requester_name}`} onClick={() => deleteRequest(r.id)} disabled={actionKey === `delete-request-${r.id}`} style={{ padding: "10px 12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", cursor: "pointer" }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                   </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loadingData && dataReady && tab === "reports" && (
+          <div id="admin-panel-reports" role="tabpanel" aria-labelledby="admin-tab-reports">
+            {reports.length === 0 && (
+              <div style={{ textAlign: "center", padding: "48px 0" }}>
+                <p style={{ fontSize: "15px", color: "#b0b0b0" }}>No supporter reports yet.</p>
+              </div>
+            )}
+            {reports.map(report => (
+              <div key={report.id} style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: report.resolved ? "1px solid #f0f0f0" : "1px solid #FFE8E8" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
+                  <div>
+                    <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "2px" }}>{report.supporter_name}</p>
+                    <p style={{ fontSize: "12px", color: "#717171" }}>{report.reporter_email || "Reporter contact not provided"}</p>
+                  </div>
+                  <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: report.resolved ? "#E8F8F5" : "#FFF0F0", color: report.resolved ? "#00A699" : CORAL, flexShrink: 0 }}>{report.resolved ? "Resolved" : "Needs review"}</span>
+                </div>
+                <div style={{ backgroundColor: "#fff8f7", borderRadius: "10px", padding: "10px 12px", marginBottom: "12px" }}>
+                  <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>{report.reason}</p>
+                </div>
+                {report.reported_at && <p style={{ fontSize: "11px", color: "#b0b0b0", marginBottom: "12px" }}>Reported {timeAgo(report.reported_at)}</p>}
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {!report.resolved && <button onClick={() => resolveReport(report.id)} disabled={actionKey === `resolve-report-${report.id}`} style={{ flex: 1, padding: "10px", backgroundColor: "#E8F8F5", color: "#00A699", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>{actionKey === `resolve-report-${report.id}` ? "Updating..." : "Mark resolved"}</button>}
+                  <button aria-label={`Delete report about ${report.supporter_name}`} onClick={() => deleteReport(report.id)} disabled={actionKey === `delete-report-${report.id}`} style={{ padding: "10px 14px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: "#717171", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Delete</button>
                 </div>
               </div>
             ))}

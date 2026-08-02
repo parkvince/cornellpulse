@@ -343,6 +343,28 @@ async def get_reports(db: AsyncSession = Depends(get_db), _: None = Depends(requ
         for r in reports
     ]
 
+@router.post("/reports/{report_id}/resolve", dependencies=[Depends(require_admin)])
+async def resolve_report(report_id: int, db: AsyncSession = Depends(get_db), _: None = Depends(require_peer_connect)):
+    from app.models.db_models import SupporterReport
+    result = await db.execute(select(SupporterReport).where(SupporterReport.id == report_id))
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    report.resolved = True
+    await db.commit()
+    return {"status": "resolved"}
+
+@router.delete("/reports/{report_id}", dependencies=[Depends(require_admin)])
+async def delete_report(report_id: int, db: AsyncSession = Depends(get_db), _: None = Depends(require_peer_connect)):
+    from app.models.db_models import SupporterReport
+    result = await db.execute(select(SupporterReport).where(SupporterReport.id == report_id))
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    await db.delete(report)
+    await db.commit()
+    return {"status": "deleted"}
+
 @router.post("/peer-requests/{request_id}/resolve", dependencies=[Depends(require_admin)])
 async def resolve_request(request_id: int, db: AsyncSession = Depends(get_db), _: None = Depends(require_peer_connect)):
     result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.id == request_id))
