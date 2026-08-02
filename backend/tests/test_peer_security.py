@@ -149,7 +149,7 @@ def test_public_supporter_serializer_never_exposes_private_contact(peer_security
     assert public["supporter_id"] == str(supporter_id)
     assert "email" not in public and "phone" not in public and "private" not in public
 
-    with TestClient(peer_app(FakeDb([supporter]))) as client:
+    with TestClient(peer_app(TableDb({"peer_signups": [supporter], "supporter_reference_invitations": [], "peer_connect_requests": []}))) as client:
         response = client.get("/api/v1/peer-supporters")
     assert response.status_code == 200
     assert response.json() == [public]
@@ -205,7 +205,7 @@ def test_supporter_withdrawal_erases_private_fields_and_preserves_tombstone(peer
         ref_relationship="Advisor",
     )
     token = create_peer_token("supporter", str(supporter_id))
-    with TestClient(peer_app(FakeDb([supporter]))) as client:
+    with TestClient(peer_app(TableDb({"peer_signups": [supporter], "supporter_reference_invitations": [], "peer_connect_requests": []}))) as client:
         response = client.post(f"/api/v1/peer/supporters/{supporter_id}/withdraw", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert response.json()["private_data_deleted"] is True
@@ -224,7 +224,7 @@ def test_cross_account_withdrawal_is_forbidden_before_database_access(peer_secur
     assert response.status_code == 403
 
 
-def test_private_requester_contact_is_visible_only_to_addressed_supporter(peer_security_settings):
+def test_requester_contact_is_never_visible_to_addressed_supporter(peer_security_settings):
     supporter_id = uuid.uuid4()
     requester_id = uuid.uuid4()
     connection = SimpleNamespace(
@@ -234,16 +234,22 @@ def test_private_requester_contact_is_visible_only_to_addressed_supporter(peer_s
         status="pending",
         deleted_at=None,
         requested_at=datetime.now(timezone.utc),
-        private_data_encrypted=encrypt_private_data({"display_name": "Requester", "email": "requester@cornell.edu", "phone": "+16075551234", "preferred_location": "Uris", "preferred_time": "Friday", "message": "Hello"}),
+        expires_at=datetime(2027, 1, 1, tzinfo=timezone.utc),
+        requester_consented_at=datetime.now(timezone.utc),
+        supporter_consented_at=None,
+        private_data_encrypted=encrypt_private_data({"location_id": "olin_library_common_area", "meeting_window_id": "weekday_daytime", "message": "Hello"}),
     )
-    supporter = SimpleNamespace(supporter_id=supporter_id)
+    supporter = SimpleNamespace(supporter_id=supporter_id, identity_verified_at=datetime.now(timezone.utc), identity_subject_hash="verified", identity_verification_method="manual_nonproduction_review")
     owner_token = create_peer_token("supporter", str(supporter_id))
     other_token = create_peer_token("supporter", str(uuid.uuid4()))
     with TestClient(peer_app(TableDb({"peer_signups": [supporter], "peer_connect_requests": [connection]}))) as client:
         owner_response = client.get(f"/api/v1/peer/supporters/{supporter_id}/requests", headers={"Authorization": f"Bearer {owner_token}"})
         other_response = client.get(f"/api/v1/peer/supporters/{supporter_id}/requests", headers={"Authorization": f"Bearer {other_token}"})
     assert owner_response.status_code == 200
-    assert owner_response.json()[0]["requester_contact"]["email"] == "requester@cornell.edu"
+    assert owner_response.json()[0]["request"]["location"]["id"] == "olin_library_common_area"
+    assert "requester_contact" not in owner_response.json()[0]
+    assert "requester@cornell.edu" not in owner_response.text
+    assert "+16075551234" not in owner_response.text
     assert other_response.status_code == 403
     assert "requester@cornell.edu" not in other_response.text
 
@@ -317,10 +323,12 @@ def test_supporter_validation_rejects_injection_and_abuse(field, value):
 
 def test_connection_and_report_use_immutable_ids_and_forbid_extra_name_fields():
     supporter_id = uuid.uuid4()
-    connection = peer.ConnectRequest.model_validate({"supporter_id": supporter_id, "preferred_location": "Uris Library", "preferred_time": "Tomorrow at 3", "message": "Hello"})
+    connection = peer.ConnectRequest.model_validate({"supporter_id": supporter_id, "location_id": "olin_library_common_area", "meeting_window_id": "weekday_daytime", "requester_consent": True, "message": "Hello"})
     assert connection.supporter_id == supporter_id
     with pytest.raises(ValidationError):
-        peer.ConnectRequest.model_validate({"supporter_id": supporter_id, "supporter_name": "Mutable Name", "preferred_location": "Uris", "preferred_time": "Tomorrow"})
+        peer.ConnectRequest.model_validate({"supporter_id": supporter_id, "supporter_name": "Mutable Name", "location_id": "olin_library_common_area", "meeting_window_id": "weekday_daytime", "requester_consent": True})
+    with pytest.raises(ValidationError):
+        peer.ConnectRequest.model_validate({"supporter_id": supporter_id, "location_id": "residence_hall", "meeting_window_id": "late_night", "requester_consent": True})
     with pytest.raises(ValidationError):
         peer.ReportRequest.model_validate({"supporter_id": supporter_id, "reason": "<b>unsafe report</b>"})
 

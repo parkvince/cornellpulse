@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     PEER_AUDIT_RETENTION_DAYS: int = 365
     PEER_RATE_LIMIT_WINDOW_SECONDS: int = 3600
     PEER_REFERENCE_INVITATION_DAYS: int = 14
+    PEER_REQUEST_RESPONSE_HOURS: int = 72
+    PEER_RELAY_RETENTION_DAYS: int = 90
+    PEER_BLOCK_RETENTION_DAYS: int = 365
     FRONTEND_URL: str = "http://localhost:5173"
     ENVIRONMENT: str = "dev"
     RESEND_API_KEY: str = ""

@@ -10,6 +10,7 @@ import resend
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import (
@@ -26,7 +27,10 @@ from app.config import settings
 from app.database import get_db
 from app.models.db_models import (
     PeerAuditLog,
+    PeerBlock,
+    PeerConnectionReport,
     PeerConnectRequest,
+    PeerRelayMessage,
     PeerRequester,
     PeerSignup,
     PeerStatusHistory,
@@ -43,6 +47,18 @@ from app.services.peer_security import (
     verify_peer_password,
 )
 from app.services.rate_limits import enforce_persistent_rate_limit
+from app.services.connection_flow import (
+    CONNECTION_STATES,
+    PUBLIC_MEETING_LOCATIONS,
+    PUBLIC_MEETING_LOCATION_IDS,
+    PUBLIC_MEETING_SAFETY_NOTE,
+    SAFE_MEETING_WINDOWS,
+    SAFE_MEETING_WINDOW_IDS,
+    contains_contact_details,
+    public_meeting_location,
+    safe_meeting_window,
+    transition_allowed as connection_transition_allowed,
+)
 from app.services.supporter_onboarding import (
     SUPPORTER_APPLICATION_STATES,
     SUPPORTER_POLICY,
@@ -58,7 +74,7 @@ FROM_EMAIL = "CornellPulse <onboarding@resend.dev>"
 EMAIL_RE = re.compile(r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$")
 PHONE_RE = re.compile(r"^\+?[1-9][0-9]{7,14}$")
 CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-AUDIT_METADATA_KEYS = {"supporter_id", "invitation_id", "from", "to", "reason_code", "supporters", "requesters", "requests", "reports", "reference_invitations", "audit_logs", "status_history", "rate_limit_buckets"}
+AUDIT_METADATA_KEYS = {"supporter_id", "requester_id", "invitation_id", "from", "to", "reason_code", "action", "supporters", "requesters", "requests", "reports", "messages", "blocks", "connection_reports", "reference_invitations", "audit_logs", "status_history", "rate_limit_buckets"}
 
 
 def require_peer_connect() -> None:
@@ -240,7 +256,10 @@ class RequesterRegistrationRequest(StrictPeerModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: str) -> str:
-        return _email(value)
+        normalized = _email(value)
+        if not normalized.endswith("@cornell.edu"):
+            raise ValueError("A Cornell email is required for contact; email-domain validation is not identity verification")
+        return normalized
 
     @field_validator("phone")
     @classmethod
@@ -256,14 +275,34 @@ class PeerLoginRequest(StrictPeerModel):
 
 class ConnectRequest(StrictPeerModel):
     supporter_id: uuid.UUID
-    preferred_location: str = Field(min_length=1, max_length=120)
-    preferred_time: str = Field(min_length=1, max_length=100)
+    location_id: str = Field(min_length=1, max_length=64)
+    meeting_window_id: str = Field(min_length=1, max_length=64)
+    requester_consent: Literal[True]
     message: str | None = Field(default=None, max_length=500)
 
-    @field_validator("preferred_location", "preferred_time", "message")
+    @field_validator("location_id")
     @classmethod
-    def validate_text(cls, value: str | None, info) -> str | None:
-        return _safe_text(value, info.field_name) if value is not None else None
+    def validate_location(cls, value: str) -> str:
+        if value not in PUBLIC_MEETING_LOCATION_IDS:
+            raise ValueError("Choose an approved public meeting location")
+        return value
+
+    @field_validator("meeting_window_id")
+    @classmethod
+    def validate_window(cls, value: str) -> str:
+        if value not in SAFE_MEETING_WINDOW_IDS:
+            raise ValueError("Choose an approved daytime or early-evening meeting window")
+        return value
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = _safe_text(value, "message")
+        if contains_contact_details(value):
+            raise ValueError("Do not include phone numbers, email addresses, links, or social handles; use the in-app relay")
+        return value
 
 
 class ReportRequest(StrictPeerModel):
@@ -277,7 +316,32 @@ class ReportRequest(StrictPeerModel):
 
 
 class StatusRequest(StrictPeerModel):
-    status: Literal["pending", "accepted", "declined", "resolved", "closed"]
+    status: Literal["accepted", "declined", "expired", "unavailable", "canceled", "blocked"]
+
+
+class SupporterConnectionActionRequest(StrictPeerModel):
+    action: Literal["accept", "decline", "expire", "block"]
+
+
+class RelayMessageRequest(StrictPeerModel):
+    body: str = Field(min_length=1, max_length=1000)
+
+    @field_validator("body")
+    @classmethod
+    def validate_body(cls, value: str) -> str:
+        value = _safe_text(value, "body")
+        if contains_contact_details(value):
+            raise ValueError("Do not include phone numbers, email addresses, links, or social handles; use the in-app relay")
+        return value
+
+
+class ConnectionSafetyReportRequest(StrictPeerModel):
+    reason: str = Field(min_length=10, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str) -> str:
+        return _safe_text(value, "reason")
 
 
 def _client_ip(request: Request) -> str:
@@ -376,17 +440,6 @@ def _supporter_private(supporter: PeerSignup) -> dict:
     }
 
 
-def _request_private(connection: PeerConnectRequest) -> dict:
-    return decrypt_private_data(connection.private_data_encrypted) if connection.private_data_encrypted else {
-        "requester_name": connection.requester_name,
-        "requester_email": connection.requester_email,
-        "requester_phone": connection.requester_phone,
-        "preferred_location": connection.preferred_location,
-        "preferred_time": connection.preferred_time,
-        "message": connection.message,
-    }
-
-
 def _protected_hash(scope: str, value: str) -> str:
     key = (settings.PEER_AUTH_SECRET or settings.ADMIN_SESSION_SECRET or "development-peer-key").encode("utf-8")
     return hmac_new(key, f"{scope}:{value}".encode("utf-8"), sha256).hexdigest()
@@ -463,6 +516,13 @@ async def _transition_supporter(
         supporter.suspended_at = None
     elif target == "suspended":
         supporter.suspended_at = now
+        connection_result = await db.execute(select(PeerConnectRequest).where(
+            PeerConnectRequest.supporter_id == supporter.supporter_id,
+            PeerConnectRequest.status.in_(["pending", "accepted"]),
+            PeerConnectRequest.deleted_at.is_(None),
+        ))
+        for connection in connection_result.scalars().all():
+            await _transition_connection(db, connection, actor, "unavailable")
     elif target == "rejected":
         supporter.rejected_at = now
     _status_history(db, actor, "supporter", str(supporter.supporter_id), current, target)
@@ -499,6 +559,97 @@ async def _active_supporter(db: AsyncSession, supporter_id: uuid.UUID, *, approv
     if not supporter:
         raise HTTPException(status_code=403, detail="Supporter account is no longer active.")
     return supporter
+
+
+def _identity_is_verified(record: PeerRequester | PeerSignup) -> bool:
+    if not record.identity_verified_at or not record.identity_subject_hash:
+        return False
+    return not settings.is_production or record.identity_verification_method == "cornell_oidc"
+
+
+async def _verified_requester(db: AsyncSession, requester_id: uuid.UUID) -> PeerRequester:
+    requester = await _active_requester(db, requester_id)
+    if not _identity_is_verified(requester):
+        raise HTTPException(status_code=403, detail="Verified Cornell identity is required for connection requests.")
+    return requester
+
+
+async def _verified_supporter(db: AsyncSession, supporter_id: uuid.UUID) -> PeerSignup:
+    supporter = await _active_supporter(db, supporter_id, approved=True)
+    if not _identity_is_verified(supporter):
+        raise HTTPException(status_code=403, detail="The supporter is unavailable because Cornell identity verification is incomplete.")
+    return supporter
+
+
+def _connection_details(connection: PeerConnectRequest) -> dict:
+    private = decrypt_private_data(connection.private_data_encrypted) if connection.private_data_encrypted else {}
+    location_id = private.get("location_id")
+    meeting_window_id = private.get("meeting_window_id")
+    return {
+        "location": public_meeting_location(location_id) if isinstance(location_id, str) else None,
+        "meeting_window": safe_meeting_window(meeting_window_id) if isinstance(meeting_window_id, str) else None,
+        "message": private.get("message") if isinstance(private.get("message"), str) else None,
+    }
+
+
+def _connection_summary(connection: PeerConnectRequest, *, include_details: bool) -> dict:
+    summary = {
+        "request_id": str(connection.request_id),
+        "supporter_id": str(connection.supporter_id),
+        "requester_id": str(connection.requester_id),
+        "status": connection.status,
+        "requested_at": connection.requested_at.isoformat() if connection.requested_at else None,
+        "expires_at": connection.expires_at.isoformat() if connection.expires_at else None,
+        "requester_consented": bool(connection.requester_consented_at),
+        "supporter_consented": bool(connection.supporter_consented_at),
+        "relay_available": connection.status == "accepted" and bool(connection.requester_consented_at and connection.supporter_consented_at),
+    }
+    if include_details:
+        summary["request"] = _connection_details(connection)
+    return summary
+
+
+async def _expire_connection_if_needed(db: AsyncSession, connection: PeerConnectRequest) -> bool:
+    if connection.status != "pending" or not connection.expires_at:
+        return False
+    expires_at = connection.expires_at if connection.expires_at.tzinfo else connection.expires_at.replace(tzinfo=timezone.utc)
+    if expires_at > datetime.now(timezone.utc):
+        return False
+    previous = connection.status
+    connection.status = "expired"
+    system_actor = PeerPrincipal("system", "administrator")
+    _status_history(db, system_actor, "connection_request", str(connection.request_id), previous, "expired")
+    _audit(db, system_actor, "connection.expired", "connection_request", str(connection.request_id), {"from": previous, "to": "expired"})
+    return True
+
+
+def _assert_connection_participant(connection: PeerConnectRequest, actor: PeerPrincipal) -> None:
+    if actor.role == "requester" and str(connection.requester_id) == actor.subject_id:
+        return
+    if actor.role == "supporter" and str(connection.supporter_id) == actor.subject_id:
+        return
+    raise HTTPException(status_code=403, detail="You are not a participant in this connection request.")
+
+
+async def _transition_connection(db: AsyncSession, connection: PeerConnectRequest, actor: PeerPrincipal, target: str) -> None:
+    await _expire_connection_if_needed(db, connection)
+    current = connection.status
+    if not connection_transition_allowed(current, target):
+        raise HTTPException(status_code=409, detail=f"Connection request cannot move from {current} to {target}.")
+    now = datetime.now(timezone.utc)
+    connection.status = target
+    if target == "accepted":
+        connection.supporter_consented_at = now
+    elif target == "declined":
+        connection.declined_at = now
+    elif target == "canceled":
+        connection.canceled_at = now
+    elif target == "blocked":
+        connection.blocked_at = now
+    elif target == "unavailable":
+        connection.unavailable_at = now
+    _status_history(db, actor, "connection_request", str(connection.request_id), current, target)
+    _audit(db, actor, "connection.status_changed", "connection_request", str(connection.request_id), {"from": current, "to": target})
 
 
 @router.get("/peer/supporter-policy", dependencies=[Depends(require_supporter_signup)])
@@ -716,7 +867,30 @@ async def register_requester(payload: RequesterRegistrationRequest, request: Req
     _audit(db, actor, "requester.registered", "requester", str(requester_id))
     _status_history(db, actor, "requester", str(requester_id), None, "active")
     await db.commit()
-    return {"requester_id": str(requester_id), "access_token": create_peer_token("requester", str(requester_id)), "token_type": "bearer"}
+    return {
+        "requester_id": str(requester_id),
+        "access_token": create_peer_token("requester", str(requester_id)),
+        "token_type": "bearer",
+        "identity_status": "pending",
+    }
+
+
+@router.post("/peer/requesters/{requester_id}/identity-verification")
+async def record_requester_identity_verification(requester_id: uuid.UUID, payload: IdentityVerificationEvidenceRequest, actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    if settings.is_production:
+        raise HTTPException(status_code=503, detail="Cornell OIDC integration is required before production requester verification can be enabled.")
+    requester = await _active_requester(db, requester_id)
+    requester.identity_verified_at = datetime.now(timezone.utc)
+    requester.identity_verification_method = "manual_nonproduction_review"
+    requester.identity_subject_hash = _protected_hash("cornell-requester-identity", payload.verification_reference)
+    requester.identity_verified_by = actor.subject_id
+    _audit(db, actor, "requester.identity.nonproduction_recorded", "requester", str(requester_id))
+    await db.commit()
+    return {
+        "requester_id": str(requester_id),
+        "identity_status": "verified_nonproduction",
+        "production_eligible": False,
+    }
 
 
 @router.post("/peer/auth/login")
@@ -821,28 +995,64 @@ async def approve_signup(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends
 async def peer_connect(payload: ConnectRequest, request: Request, actor: PeerPrincipal = Depends(require_requester), db: AsyncSession = Depends(get_db)):
     await enforce_persistent_rate_limit(db, "peer-connect", actor.subject_id, 5, settings.PEER_RATE_LIMIT_WINDOW_SECONDS)
     requester_id = uuid.UUID(actor.subject_id)
-    requester = await _active_requester(db, requester_id)
-    await _active_supporter(db, payload.supporter_id, approved=True)
+    await _verified_requester(db, requester_id)
+    supporter = await _verified_supporter(db, payload.supporter_id)
+    block_result = await db.execute(select(PeerBlock).where(
+        PeerBlock.supporter_id == payload.supporter_id,
+        PeerBlock.requester_id == requester_id,
+        PeerBlock.active.is_(True),
+        PeerBlock.deleted_at.is_(None),
+        PeerBlock.retention_expires_at > datetime.now(timezone.utc),
+    ))
+    if block_result.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="This connection is unavailable.")
+    existing_result = await db.execute(select(PeerConnectRequest).where(
+        PeerConnectRequest.supporter_id == payload.supporter_id,
+        PeerConnectRequest.requester_id == requester_id,
+        PeerConnectRequest.status.in_(["pending", "accepted"]),
+        PeerConnectRequest.deleted_at.is_(None),
+    ))
+    existing = existing_result.scalar_one_or_none()
+    if existing:
+        await _expire_connection_if_needed(db, existing)
+        if existing.status in {"pending", "accepted"}:
+            raise HTTPException(status_code=409, detail="An active request already exists for this supporter.")
     request_id = uuid.uuid4()
+    now = datetime.now(timezone.utc)
     connection = PeerConnectRequest(
         request_id=request_id,
         supporter_id=payload.supporter_id,
         requester_id=requester_id,
         private_data_encrypted=encrypt_private_data({
-            **decrypt_private_data(requester.private_data_encrypted),
-            "preferred_location": payload.preferred_location,
-            "preferred_time": payload.preferred_time,
+            "location_id": payload.location_id,
+            "meeting_window_id": payload.meeting_window_id,
             "message": payload.message,
         }),
         status="pending",
+        requester_consented_at=now,
+        expires_at=now + timedelta(hours=settings.PEER_REQUEST_RESPONSE_HOURS),
         retention_expires_at=_expires(settings.PEER_REQUEST_RETENTION_DAYS),
     )
     db.add(connection)
     _status_history(db, actor, "connection_request", str(request_id), None, "pending")
     _audit(db, actor, "connection.created", "connection_request", str(request_id), {"supporter_id": str(payload.supporter_id)})
-    await db.commit()
-    _send_email(settings.ADMIN_EMAIL, "connection", str(request_id))
-    return {"request_id": str(request_id), "supporter_id": str(payload.supporter_id), "status": "pending"}
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="An active request already exists for this supporter.") from exc
+    supporter_private = _supporter_private(supporter)
+    _send_email(str(supporter_private.get("email") or ""), "connection", str(request_id))
+    return _connection_summary(connection, include_details=False)
+
+
+@router.get("/peer/public-meeting-options", dependencies=[Depends(require_peer_connect)])
+async def get_public_meeting_options():
+    return {
+        "locations": PUBLIC_MEETING_LOCATIONS,
+        "meeting_windows": SAFE_MEETING_WINDOWS,
+        "safety_note": PUBLIC_MEETING_SAFETY_NOTE,
+    }
 
 
 @router.get("/peer-requests")
@@ -850,10 +1060,8 @@ async def get_requests(actor: PeerPrincipal = Depends(require_peer_staff), _: No
     result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.deleted_at.is_(None)).order_by(PeerConnectRequest.requested_at.desc()))
     response = []
     for connection in result.scalars().all():
-        item = {"request_id": str(connection.request_id), "supporter_id": str(connection.supporter_id), "requester_id": str(connection.requester_id), "status": connection.status, "requested_at": connection.requested_at.isoformat() if connection.requested_at else None}
-        if actor.role == "administrator":
-            item["private"] = _request_private(connection)
-        response.append(item)
+        await _expire_connection_if_needed(db, connection)
+        response.append(_connection_summary(connection, include_details=actor.role == "administrator"))
     _audit(db, actor, "connections.read", "connection_collection", "all")
     await db.commit()
     return response
@@ -863,14 +1071,12 @@ async def get_requests(actor: PeerPrincipal = Depends(require_peer_staff), _: No
 async def get_supporter_requests(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
     authorize_self_or_staff(actor, str(supporter_id))
     if actor.role == "supporter":
-        await _active_supporter(db, supporter_id, approved=True)
+        await _verified_supporter(db, supporter_id)
     result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.supporter_id == supporter_id, PeerConnectRequest.deleted_at.is_(None)).order_by(PeerConnectRequest.requested_at.desc()))
     response = []
     for connection in result.scalars().all():
-        item = {"request_id": str(connection.request_id), "supporter_id": str(connection.supporter_id), "status": connection.status, "requested_at": connection.requested_at.isoformat() if connection.requested_at else None}
-        if actor.role in {"supporter", "administrator"}:
-            item["requester_contact"] = _request_private(connection)
-        response.append(item)
+        await _expire_connection_if_needed(db, connection)
+        response.append(_connection_summary(connection, include_details=actor.role in {"supporter", "administrator"}))
     _audit(db, actor, "supporter.connections.read", "supporter", str(supporter_id))
     await db.commit()
     return response
@@ -880,9 +1086,12 @@ async def get_supporter_requests(supporter_id: uuid.UUID, actor: PeerPrincipal =
 async def get_requester_requests(requester_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
     authorize_self_or_staff(actor, str(requester_id))
     if actor.role == "requester":
-        await _active_requester(db, requester_id)
+        await _verified_requester(db, requester_id)
     result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.requester_id == requester_id, PeerConnectRequest.deleted_at.is_(None)).order_by(PeerConnectRequest.requested_at.desc()))
-    response = [{"request_id": str(connection.request_id), "supporter_id": str(connection.supporter_id), "status": connection.status, "requested_at": connection.requested_at.isoformat() if connection.requested_at else None} for connection in result.scalars().all()]
+    response = []
+    for connection in result.scalars().all():
+        await _expire_connection_if_needed(db, connection)
+        response.append(_connection_summary(connection, include_details=actor.role in {"requester", "administrator"}))
     _audit(db, actor, "requester.connections.read", "requester", str(requester_id))
     await db.commit()
     return response
@@ -890,7 +1099,57 @@ async def get_requester_requests(requester_id: uuid.UUID, actor: PeerPrincipal =
 
 @router.post("/peer-requests/{request_id}/resolve")
 async def resolve_request(request_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
-    return await _change_request_status(request_id, "resolved", actor, db)
+    return await _change_request_status(request_id, "unavailable", actor, db)
+
+
+@router.post("/peer-requests/{request_id}/supporter-action")
+async def supporter_connection_action(request_id: uuid.UUID, payload: SupporterConnectionActionRequest, actor: PeerPrincipal = Depends(require_supporter), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.request_id == request_id, PeerConnectRequest.deleted_at.is_(None)))
+    connection = result.scalar_one_or_none()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection request not found.")
+    if str(connection.supporter_id) != actor.subject_id:
+        raise HTTPException(status_code=403, detail="Supporters may respond only to their own requests.")
+    await _verified_supporter(db, uuid.UUID(actor.subject_id))
+    target = {"accept": "accepted", "decline": "declined", "expire": "expired", "block": "blocked"}[payload.action]
+    if target == "accepted":
+        await _verified_requester(db, connection.requester_id)
+    await _transition_connection(db, connection, actor, target)
+    if target == "blocked":
+        block_result = await db.execute(select(PeerBlock).where(
+            PeerBlock.supporter_id == connection.supporter_id,
+            PeerBlock.requester_id == connection.requester_id,
+        ))
+        block = block_result.scalar_one_or_none()
+        if block:
+            block.active = True
+            block.deleted_at = None
+            block.retention_expires_at = _expires(settings.PEER_BLOCK_RETENTION_DAYS)
+        else:
+            db.add(PeerBlock(
+                supporter_id=connection.supporter_id,
+                requester_id=connection.requester_id,
+                created_by_role="supporter",
+                created_by_id=connection.supporter_id,
+                retention_expires_at=_expires(settings.PEER_BLOCK_RETENTION_DAYS),
+            ))
+        _audit(db, actor, "connection.block.created", "connection_request", str(request_id))
+    await db.commit()
+    return _connection_summary(connection, include_details=False)
+
+
+@router.post("/peer-requests/{request_id}/cancel")
+async def cancel_connection_request(request_id: uuid.UUID, actor: PeerPrincipal = Depends(require_requester), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.request_id == request_id, PeerConnectRequest.deleted_at.is_(None)))
+    connection = result.scalar_one_or_none()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection request not found.")
+    if str(connection.requester_id) != actor.subject_id:
+        raise HTTPException(status_code=403, detail="Requesters may cancel only their own requests.")
+    await _verified_requester(db, uuid.UUID(actor.subject_id))
+    await _transition_connection(db, connection, actor, "canceled")
+    await db.commit()
+    return _connection_summary(connection, include_details=False)
 
 
 @router.post("/peer-requests/{request_id}/status")
@@ -899,14 +1158,16 @@ async def update_request_status(request_id: uuid.UUID, payload: StatusRequest, a
     connection = result.scalar_one_or_none()
     if not connection:
         raise HTTPException(status_code=404, detail="Connection request not found.")
-    if actor.role == "requester" and (str(connection.requester_id) != actor.subject_id or payload.status not in {"closed"}):
-        raise HTTPException(status_code=403, detail="Requester may close only their own request.")
-    if actor.role == "supporter" and (str(connection.supporter_id) != actor.subject_id or payload.status not in {"accepted", "declined"}):
+    if actor.role == "requester" and (str(connection.requester_id) != actor.subject_id or payload.status != "canceled"):
+        raise HTTPException(status_code=403, detail="Requester may cancel only their own request.")
+    if actor.role == "supporter" and (str(connection.supporter_id) != actor.subject_id or payload.status not in {"accepted", "declined", "expired", "blocked"}):
         raise HTTPException(status_code=403, detail="Supporter may respond only to their own request.")
+    if actor.role in {"moderator", "administrator"} and payload.status not in {"expired", "unavailable"}:
+        raise HTTPException(status_code=403, detail="Staff may mark requests only expired or unavailable.")
     if actor.role == "requester":
-        await _active_requester(db, uuid.UUID(actor.subject_id))
+        await _verified_requester(db, uuid.UUID(actor.subject_id))
     if actor.role == "supporter":
-        await _active_supporter(db, uuid.UUID(actor.subject_id), approved=True)
+        await _verified_supporter(db, uuid.UUID(actor.subject_id))
     if actor.role not in {"requester", "supporter", "moderator", "administrator"}:
         raise HTTPException(status_code=403, detail="Not authorized to update this request.")
     return await _change_request_status(request_id, payload.status, actor, db, connection)
@@ -918,12 +1179,131 @@ async def _change_request_status(request_id: uuid.UUID, new_status: str, actor: 
         connection = result.scalar_one_or_none()
     if not connection:
         raise HTTPException(status_code=404, detail="Connection request not found.")
-    previous = connection.status
-    connection.status = new_status
-    _status_history(db, actor, "connection_request", str(request_id), previous, new_status)
-    _audit(db, actor, "connection.status_changed", "connection_request", str(request_id), {"from": previous, "to": new_status})
+    await _transition_connection(db, connection, actor, new_status)
     await db.commit()
-    return {"request_id": str(request_id), "status": new_status}
+    return _connection_summary(connection, include_details=False)
+
+
+@router.post("/peer-requests/{request_id}/messages", status_code=201)
+async def send_relay_message(request_id: uuid.UUID, payload: RelayMessageRequest, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.request_id == request_id, PeerConnectRequest.deleted_at.is_(None)))
+    connection = result.scalar_one_or_none()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection request not found.")
+    _assert_connection_participant(connection, actor)
+    if actor.role not in {"requester", "supporter"}:
+        raise HTTPException(status_code=403, detail="Only connection participants may send relay messages.")
+    if actor.role == "requester":
+        await _verified_requester(db, uuid.UUID(actor.subject_id))
+    else:
+        await _verified_supporter(db, uuid.UUID(actor.subject_id))
+    if connection.status != "accepted" or not connection.requester_consented_at or not connection.supporter_consented_at:
+        raise HTTPException(status_code=409, detail="The in-app relay opens only after both people consent.")
+    message_id = uuid.uuid4()
+    message = PeerRelayMessage(
+        message_id=message_id,
+        request_id=request_id,
+        sender_role=actor.role,
+        sender_id=uuid.UUID(actor.subject_id),
+        body_encrypted=encrypt_private_data({"body": payload.body}),
+        retention_expires_at=_expires(settings.PEER_RELAY_RETENTION_DAYS),
+    )
+    db.add(message)
+    connection.last_relay_at = datetime.now(timezone.utc)
+    _audit(db, actor, "connection.relay.sent", "connection_request", str(request_id))
+    await db.commit()
+    return {"message_id": str(message_id), "request_id": str(request_id), "status": "sent"}
+
+
+@router.get("/peer-requests/{request_id}/messages")
+async def get_relay_messages(request_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.request_id == request_id, PeerConnectRequest.deleted_at.is_(None)))
+    connection = result.scalar_one_or_none()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection request not found.")
+    _assert_connection_participant(connection, actor)
+    if actor.role not in {"requester", "supporter"}:
+        raise HTTPException(status_code=403, detail="Staff cannot read private relay messages.")
+    message_result = await db.execute(select(PeerRelayMessage).where(
+        PeerRelayMessage.request_id == request_id,
+        PeerRelayMessage.deleted_at.is_(None),
+        PeerRelayMessage.retention_expires_at > datetime.now(timezone.utc),
+    ).order_by(PeerRelayMessage.created_at.asc()).limit(200))
+    response = []
+    for message in message_result.scalars().all():
+        private = decrypt_private_data(message.body_encrypted)
+        response.append({"message_id": str(message.message_id), "sender_role": message.sender_role, "body": private.get("body"), "created_at": message.created_at.isoformat() if message.created_at else None})
+    _audit(db, actor, "connection.relay.read", "connection_request", str(request_id), {"messages": len(response)})
+    await db.commit()
+    return response
+
+
+@router.post("/peer-requests/{request_id}/report", status_code=201)
+async def report_connection(request_id: uuid.UUID, payload: ConnectionSafetyReportRequest, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    await enforce_persistent_rate_limit(db, "connection-report", actor.subject_id, 3, settings.PEER_RATE_LIMIT_WINDOW_SECONDS)
+    result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.request_id == request_id, PeerConnectRequest.deleted_at.is_(None)))
+    connection = result.scalar_one_or_none()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection request not found.")
+    _assert_connection_participant(connection, actor)
+    if actor.role not in {"requester", "supporter"}:
+        raise HTTPException(status_code=403, detail="Only connection participants may submit a safety report.")
+    if actor.role == "requester":
+        target_role, target_id = "supporter", connection.supporter_id
+    else:
+        target_role, target_id = "requester", connection.requester_id
+    report_id = uuid.uuid4()
+    db.add(PeerConnectionReport(
+        connection_report_id=report_id,
+        request_id=request_id,
+        reporter_role=actor.role,
+        reporter_id=uuid.UUID(actor.subject_id),
+        target_role=target_role,
+        target_id=target_id,
+        reason_encrypted=encrypt_private_data({"reason": payload.reason}),
+        retention_expires_at=_expires(settings.PEER_REPORT_RETENTION_DAYS),
+    ))
+    _status_history(db, actor, "connection_report", str(report_id), None, "open")
+    _audit(db, actor, "connection.report.created", "connection_report", str(report_id), {"requester_id": str(connection.requester_id), "supporter_id": str(connection.supporter_id)})
+    await db.commit()
+    _send_email(settings.ADMIN_EMAIL, "report", str(report_id))
+    return {"connection_report_id": str(report_id), "request_id": str(request_id), "status": "open"}
+
+
+@router.get("/peer/connection-reports")
+async def get_connection_reports(actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.deleted_at.is_(None)).order_by(PeerConnectionReport.reported_at.desc()))
+    response = []
+    for report in result.scalars().all():
+        private = decrypt_private_data(report.reason_encrypted)
+        response.append({
+            "connection_report_id": str(report.connection_report_id),
+            "request_id": str(report.request_id),
+            "reporter_role": report.reporter_role,
+            "target_role": report.target_role,
+            "status": report.status,
+            "reason": private.get("reason"),
+            "reported_at": report.reported_at.isoformat() if report.reported_at else None,
+        })
+    _audit(db, actor, "connection.reports.read", "connection_report_collection", "all", {"connection_reports": len(response)})
+    await db.commit()
+    return response
+
+
+@router.post("/peer/connection-reports/{report_id}/resolve")
+async def resolve_connection_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.connection_report_id == report_id, PeerConnectionReport.deleted_at.is_(None)))
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Connection report not found.")
+    if report.status != "open":
+        raise HTTPException(status_code=409, detail="Connection report is no longer open.")
+    report.status = "resolved"
+    report.resolved_at = datetime.now(timezone.utc)
+    _status_history(db, actor, "connection_report", str(report_id), "open", "resolved")
+    _audit(db, actor, "connection.report.resolved", "connection_report", str(report_id))
+    await db.commit()
+    return {"connection_report_id": str(report_id), "status": "resolved"}
 
 
 @router.post("/report-supporter", dependencies=[Depends(require_peer_connect)], status_code=201)
@@ -1006,6 +1386,13 @@ async def withdraw_supporter(supporter_id: uuid.UUID, actor: PeerPrincipal = Dep
         invitation.invitee_email_encrypted = encrypt_private_data({"revoked": True})
         invitation.response_encrypted = None
         invitation.deleted_at = datetime.now(timezone.utc)
+    connection_result = await db.execute(select(PeerConnectRequest).where(
+        PeerConnectRequest.supporter_id == supporter_id,
+        PeerConnectRequest.status.in_(["pending", "accepted"]),
+        PeerConnectRequest.deleted_at.is_(None),
+    ))
+    for connection in connection_result.scalars().all():
+        await _transition_connection(db, connection, actor, "unavailable")
     _status_history(db, actor, "supporter", str(supporter_id), previous, "withdrawn")
     _audit(db, actor, "supporter.withdrawn", "supporter", str(supporter_id))
     await db.commit()
@@ -1023,6 +1410,17 @@ async def withdraw_requester(requester_id: uuid.UUID, actor: PeerPrincipal = Dep
     requester.withdrawn_at = datetime.now(timezone.utc)
     requester.private_data_encrypted = encrypt_private_data({"withdrawn": True})
     requester.credential_hash = hash_peer_password(uuid.uuid4().hex + uuid.uuid4().hex)
+    requester.identity_subject_hash = None
+    requester.identity_verified_at = None
+    requester.identity_verification_method = None
+    requester.identity_verified_by = None
+    connection_result = await db.execute(select(PeerConnectRequest).where(
+        PeerConnectRequest.requester_id == requester_id,
+        PeerConnectRequest.status.in_(["pending", "accepted"]),
+        PeerConnectRequest.deleted_at.is_(None),
+    ))
+    for connection in connection_result.scalars().all():
+        await _transition_connection(db, connection, actor, "canceled")
     _status_history(db, actor, "requester", str(requester_id), "active", "withdrawn")
     _audit(db, actor, "requester.withdrawn", "requester", str(requester_id))
     await db.commit()
@@ -1073,6 +1471,15 @@ async def delete_request(request_id: uuid.UUID, actor: PeerPrincipal = Depends(r
     connection.status = "deleted"
     connection.private_data_encrypted = None
     connection.requester_name = connection.requester_email = connection.requester_phone = connection.preferred_location = connection.preferred_time = connection.message = None
+    relay_result = await db.execute(select(PeerRelayMessage).where(PeerRelayMessage.request_id == request_id, PeerRelayMessage.deleted_at.is_(None)))
+    for relay_message in relay_result.scalars().all():
+        relay_message.body_encrypted = encrypt_private_data({"deleted": True})
+        relay_message.deleted_at = datetime.now(timezone.utc)
+    connection_report_result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.request_id == request_id, PeerConnectionReport.deleted_at.is_(None)))
+    for connection_report in connection_report_result.scalars().all():
+        connection_report.reason_encrypted = encrypt_private_data({"deleted": True})
+        connection_report.deleted_at = datetime.now(timezone.utc)
+        connection_report.status = "deleted"
     _status_history(db, actor, "connection_request", str(request_id), None, "deleted")
     _audit(db, actor, "connection.deleted", "connection_request", str(request_id))
     await db.commit()
@@ -1098,7 +1505,7 @@ async def delete_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(req
 @router.post("/peer/retention/purge")
 async def purge_expired_peer_data(actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)
-    purged = {"supporters": 0, "requesters": 0, "requests": 0, "reports": 0, "reference_invitations": 0}
+    purged = {"supporters": 0, "requesters": 0, "requests": 0, "reports": 0, "messages": 0, "blocks": 0, "connection_reports": 0, "reference_invitations": 0}
     model_fields = (
         (PeerSignup, "supporters"),
         (PeerRequester, "requesters"),
@@ -1125,6 +1532,10 @@ async def purge_expired_peer_data(actor: PeerPrincipal = Depends(require_peer_ad
             elif isinstance(record, PeerRequester):
                 record.private_data_encrypted = encrypt_private_data({"expired": True})
                 record.credential_hash = None
+                record.identity_subject_hash = None
+                record.identity_verified_at = None
+                record.identity_verification_method = None
+                record.identity_verified_by = None
             elif isinstance(record, PeerConnectRequest):
                 record.private_data_encrypted = None
                 record.requester_name = record.requester_email = record.requester_phone = record.preferred_location = record.preferred_time = record.message = None
@@ -1132,6 +1543,22 @@ async def purge_expired_peer_data(actor: PeerPrincipal = Depends(require_peer_ad
                 record.private_data_encrypted = None
                 record.reporter_email = record.reason = None
             purged[label] += 1
+    relay_result = await db.execute(select(PeerRelayMessage).where(PeerRelayMessage.retention_expires_at <= now, PeerRelayMessage.deleted_at.is_(None)))
+    for relay_message in relay_result.scalars().all():
+        relay_message.body_encrypted = encrypt_private_data({"expired": True})
+        relay_message.deleted_at = now
+        purged["messages"] += 1
+    block_result = await db.execute(select(PeerBlock).where(PeerBlock.retention_expires_at <= now, PeerBlock.deleted_at.is_(None)))
+    for block in block_result.scalars().all():
+        block.active = False
+        block.deleted_at = now
+        purged["blocks"] += 1
+    connection_report_result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.retention_expires_at <= now, PeerConnectionReport.deleted_at.is_(None)))
+    for connection_report in connection_report_result.scalars().all():
+        connection_report.reason_encrypted = encrypt_private_data({"expired": True})
+        connection_report.status = "expired"
+        connection_report.deleted_at = now
+        purged["connection_reports"] += 1
     invitation_result = await db.execute(select(SupporterReferenceInvitation).where(
         SupporterReferenceInvitation.expires_at <= now,
         SupporterReferenceInvitation.deleted_at.is_(None),

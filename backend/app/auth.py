@@ -52,6 +52,9 @@ def validate_security_settings() -> None:
             settings.PEER_AUDIT_RETENTION_DAYS,
             settings.PEER_RATE_LIMIT_WINDOW_SECONDS,
             settings.PEER_REFERENCE_INVITATION_DAYS,
+            settings.PEER_REQUEST_RESPONSE_HOURS,
+            settings.PEER_RELAY_RETENTION_DAYS,
+            settings.PEER_BLOCK_RETENTION_DAYS,
         )
         if any(value < 1 for value in retention_values):
             errors.append("Peer retention and rate-limit settings must be positive")

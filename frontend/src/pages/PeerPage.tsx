@@ -69,7 +69,10 @@ const INTERESTS = [
 
 const YEARS = ["Freshman", "Sophomore", "Junior", "Senior", "Masters", "PhD", "Other"]
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-const TIME_BLOCKS = ["Mornings", "Afternoons", "Evenings", "Late nights"]
+const TIME_BLOCKS = ["Mornings", "Afternoons", "Early evenings"]
+
+interface MeetingOption { id: string; name: string; rule: string }
+type ConnectionState = "pending" | "failed" | "declined" | "expired" | "accepted" | "unavailable" | "canceled" | "blocked"
 
 interface Supporter {
   supporter_id: string
@@ -132,30 +135,76 @@ function SupporterCard({ supporter, onRequest }: { supporter: Supporter, onReque
 }
 
 function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, onClose: () => void, onSubmit: () => void }) {
-  const [form, setForm] = useState({ requester_name: "", requester_email: "", requester_phone: "", preferred_location: "", preferred_times: [] as string[], message: "" })
+  const [form, setForm] = useState({ requester_id: "", password: "", location_id: "", meeting_window_id: "", message: "", requester_consent: false })
+  const [meetingOptions, setMeetingOptions] = useState<{ locations: MeetingOption[]; meeting_windows: MeetingOption[]; safety_note: string } | null>(null)
   const [loading, setLoading] = useState(false)
-  const [done, setDone] = useState(false)
+  const [connectionState, setConnectionState] = useState<ConnectionState | null>(null)
+  const [requestId, setRequestId] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(null)
+  const [error, setError] = useState("")
   const [showReport, setShowReport] = useState(false)
   const [reportReason, setReportReason] = useState("")
 
-  function update(field: string, value: string) { setForm(prev => ({ ...prev, [field]: value })) }
+  useEffect(() => {
+    let active = true
+    fetch(`${API_URL}/peer/public-meeting-options`)
+      .then(async response => {
+        if (!response.ok) throw new Error("Safe meeting options are unavailable.")
+        const data = await response.json()
+        if (active) setMeetingOptions(data)
+      })
+      .catch(() => { if (active) setError("Peer Connect is unavailable while the safety review is in progress.") })
+    return () => { active = false }
+  }, [])
 
-  const emailValid = isCornellEmail(form.requester_email)
-  const canSubmit = form.requester_name && emailValid && form.preferred_location && form.preferred_times.length > 0
+  function update(field: string, value: string | boolean) { setForm(prev => ({ ...prev, [field]: value })) }
+
+  const canSubmit = Boolean(form.requester_id && form.password && form.location_id && form.meeting_window_id && form.requester_consent && meetingOptions)
 
   async function handleSubmit() {
     setLoading(true)
+    setError("")
+    setConnectionState(null)
     try {
-      await fetch(`${API_URL}/peer-connect`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ supporter_id: supporter.supporter_id, preferred_location: form.preferred_location, preferred_time: form.preferred_times.join(", "), message: form.message }),
+      const loginResponse = await fetch(`${API_URL}/peer/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "requester", subject_id: form.requester_id, password: form.password }),
       })
-    } catch { /* Peer Connect remains feature-gated during safety review. */ }
-    setLoading(false)
-    setDone(true)
+      if (!loginResponse.ok) throw new Error(loginResponse.status === 401 ? "Sign-in failed. Check your requester ID and password." : "Requester sign-in is unavailable.")
+      const login = await loginResponse.json() as { access_token?: string }
+      if (!login.access_token) throw new Error("The server did not confirm sign-in.")
+      const response = await fetch(`${API_URL}/peer-connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${login.access_token}` },
+        body: JSON.stringify({ supporter_id: supporter.supporter_id, location_id: form.location_id, meeting_window_id: form.meeting_window_id, requester_consent: true, message: form.message || null }),
+      })
+      const data = await response.json().catch(() => ({})) as { request_id?: string; status?: ConnectionState; detail?: string }
+      if (!response.ok || data.status !== "pending" || !data.request_id) throw new Error(data.detail || "The server did not confirm your request.")
+      setToken(login.access_token)
+      setRequestId(data.request_id)
+      setConnectionState("pending")
+    } catch (cause) {
+      setConnectionState("failed")
+      setError(cause instanceof Error ? cause.message : "We could not confirm the request. It has not been shown as submitted.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const color = avatarColor(supporter.display_name)
+
+  async function submitReport() {
+    if (!token || !requestId || reportReason.trim().length < 10) return
+    setLoading(true); setError("")
+    try {
+      const response = await fetch(`${API_URL}/peer-requests/${requestId}/report`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ reason: reportReason }) })
+      const data = await response.json().catch(() => ({})) as { status?: string; detail?: string }
+      if (!response.ok || data.status !== "open") throw new Error(data.detail || "The server did not confirm the safety report.")
+      setShowReport(false); setReportReason("")
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "The safety report was not confirmed.") }
+    finally { setLoading(false) }
+  }
 
   if (showReport) {
     return (
@@ -164,10 +213,8 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
           <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#222222", marginBottom: "8px" }}>Report a concern</h3>
           <p style={{ fontSize: "13px", color: "#717171", marginBottom: "16px" }}>This goes directly to our team and is kept confidential.</p>
           <textarea value={reportReason} onChange={e => setReportReason(e.target.value)} placeholder="What happened?" rows={4} style={{ width: "100%", padding: "12px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", resize: "none", marginBottom: "16px", fontFamily: "DM Sans, sans-serif" }} />
-          <button onClick={async () => {
-            try { await fetch(`${API_URL}/report-supporter`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ supporter_id: supporter.supporter_id, reason: reportReason }) }) } catch { /* Peer Connect remains feature-gated during safety review. */ }
-            setShowReport(false); onSubmit()
-          }} disabled={!reportReason.trim()} style={{ width: "100%", padding: "14px", backgroundColor: reportReason.trim() ? CORAL : "#ebebeb", color: reportReason.trim() ? "#fff" : "#b0b0b0", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: reportReason.trim() ? "pointer" : "default" }}>
+          {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+          <button onClick={submitReport} disabled={reportReason.trim().length < 10 || loading} style={{ width: "100%", padding: "14px", backgroundColor: reportReason.trim().length >= 10 ? CORAL : "#ebebeb", color: reportReason.trim().length >= 10 ? "#fff" : "#b0b0b0", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: reportReason.trim().length >= 10 ? "pointer" : "default" }}>
             Submit report
           </button>
         </div>
@@ -175,7 +222,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
     )
   }
 
-  if (done) {
+  if (connectionState && connectionState !== "failed") {
     return (
       <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "430px", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "flex-end" }}>
         <div style={{ backgroundColor: "#ffffff", borderRadius: "24px 24px 0 0", padding: "32px 24px 48px", width: "100%" }}>
@@ -183,8 +230,16 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
             <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <h3 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", marginBottom: "8px" }}>Request submitted</h3>
-            <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>The protected workflow records your request without displaying {supporter.display_name}'s private contact information.</p>
+            <h3 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", marginBottom: "8px" }}>{connectionState === "accepted" ? "Both people opted in" : connectionState === "pending" ? "Request pending" : `Request ${connectionState}`}</h3>
+            <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>
+              {connectionState === "pending" && `The server confirmed your request. ${supporter.display_name} still needs to choose whether to accept.`}
+              {connectionState === "accepted" && "The in-app relay is now available. Neither person's email address or phone number is revealed."}
+              {connectionState === "declined" && "The supporter declined this request. No contact information was shared."}
+              {connectionState === "expired" && "The response window ended before both people opted in."}
+              {connectionState === "unavailable" && "This connection is no longer available."}
+              {connectionState === "canceled" && "You canceled this request."}
+              {connectionState === "blocked" && "This connection is unavailable."}
+            </p>
           </div>
 
           <div style={{ backgroundColor: "#fff8f7", borderRadius: "16px", padding: "16px", marginBottom: "16px" }}>
@@ -197,8 +252,32 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
             <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>No phone number or email address is returned by the public supporter API.</p>
           </div>
 
+          {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+          {connectionState === "pending" && <button onClick={async () => {
+            if (!token || !requestId) return
+            setLoading(true); setError("")
+            try {
+              const response = await fetch(`${API_URL}/peer/requesters/${form.requester_id}/requests`, { headers: { Authorization: `Bearer ${token}` } })
+              const data = await response.json().catch(() => []) as Array<{ request_id: string; status: ConnectionState }>
+              const current = data.find(item => item.request_id === requestId)
+              if (!response.ok || !current) throw new Error("The server could not confirm the current request state.")
+              setConnectionState(current.status)
+            } catch (cause) { setError(cause instanceof Error ? cause.message : "Status could not be refreshed.") }
+            finally { setLoading(false) }
+          }} disabled={loading} style={{ width: "100%", padding: "14px", backgroundColor: "#FFF0F0", color: CORAL, border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, marginBottom: "10px", cursor: "pointer" }}>Refresh status</button>}
+          {(connectionState === "pending" || connectionState === "accepted") && <button onClick={async () => {
+            if (!token || !requestId) return
+            setLoading(true); setError("")
+            try {
+              const response = await fetch(`${API_URL}/peer-requests/${requestId}/cancel`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+              const data = await response.json().catch(() => ({})) as { status?: ConnectionState; detail?: string }
+              if (!response.ok || data.status !== "canceled") throw new Error(data.detail || "The server did not confirm cancellation.")
+              setConnectionState("canceled")
+            } catch (cause) { setError(cause instanceof Error ? cause.message : "Cancellation was not confirmed.") }
+            finally { setLoading(false) }
+          }} disabled={loading} style={{ width: "100%", padding: "12px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 600, marginBottom: "10px", cursor: "pointer" }}>Cancel request</button>}
           <button onClick={onSubmit} style={{ width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 600, marginBottom: "10px", cursor: "pointer" }}>Done</button>
-          <button onClick={() => setShowReport(true)} style={{ width: "100%", padding: "10px", backgroundColor: "transparent", border: "none", color: "#b0b0b0", fontSize: "12px", cursor: "pointer" }}>Report a concern about this supporter</button>
+          <button onClick={() => setShowReport(true)} style={{ width: "100%", padding: "10px", backgroundColor: "transparent", border: "none", color: "#b0b0b0", fontSize: "12px", cursor: "pointer" }}>Report a safety concern</button>
         </div>
       </div>
     )
@@ -210,7 +289,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <div>
             <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#222222", marginBottom: "2px" }}>Meet with {supporter.display_name}</h3>
-            <p style={{ fontSize: "13px", color: "#717171" }}>We will send them your details</p>
+            <p style={{ fontSize: "13px", color: "#717171" }}>Sign in to the protected request flow</p>
           </div>
           <button onClick={onClose} style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#f5f5f5", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -218,56 +297,41 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         </div>
 
         {[
-          { field: "requester_name", label: "Your name", placeholder: "First name is fine", type: "text", required: true },
-          { field: "requester_email", label: "Your Cornell email", placeholder: "netid@cornell.edu", type: "email", required: true },
-          { field: "requester_phone", label: "Your phone", placeholder: "So we can text you", type: "tel", required: false },
+          { field: "requester_id", label: "Requester ID", placeholder: "Your requester ID", type: "text" },
+          { field: "password", label: "Password", placeholder: "Your requester password", type: "password" },
         ].map(f => (
           <div key={f.field} style={{ marginBottom: "14px" }}>
             <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>
-              {f.label} {f.required ? <span style={{ color: CORAL }}>*</span> : <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(optional)</span>}
+              {f.label} <span style={{ color: CORAL }}>*</span>
             </label>
             <input
               value={form[f.field as keyof typeof form] as string}
               onChange={e => update(f.field, e.target.value)}
               placeholder={f.placeholder}
               type={f.type}
-              style={{ width: "100%", padding: "13px 14px", border: `2px solid ${f.field === "requester_email" && form.requester_email && !emailValid ? CORAL : "#ebebeb"}`, borderRadius: "12px", fontSize: "15px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }}
+              autoComplete={f.field === "password" ? "current-password" : "username"}
+              style={{ width: "100%", padding: "13px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }}
             />
-            {f.field === "requester_email" && form.requester_email && !emailValid && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Must be a valid @cornell.edu email.</p>}
           </div>
         ))}
 
-        <div style={{ marginBottom: "14px" }}>
-          <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "8px" }}>Preferred meetup spot <span style={{ color: CORAL }}>*</span></label>
+        <fieldset style={{ margin: "0 0 14px", padding: 0, border: 0 }}>
+          <legend style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "8px" }}>Public meetup area <span style={{ color: CORAL }}>*</span></legend>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-            {[...supporter.locations, "Not sure yet, we will figure it out"].map((loc: string, idx: number) => (
-              <button key={loc} onClick={() => update("preferred_location", loc)} style={{ padding: "12px 8px", border: `2px solid ${form.preferred_location === loc ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.preferred_location === loc ? "#FFF0F0" : "#ffffff", color: form.preferred_location === loc ? CORAL : "#717171", fontSize: "12px", fontWeight: 600, textAlign: "center", gridColumn: idx === supporter.locations.length ? "1 / -1" : "auto" }}>
-                {loc}
+            {(meetingOptions?.locations || []).map(location => (
+              <button key={location.id} type="button" role="radio" aria-checked={form.location_id === location.id} onClick={() => update("location_id", location.id)} style={{ padding: "12px 8px", border: `2px solid ${form.location_id === location.id ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.location_id === location.id ? "#FFF0F0" : "#ffffff", color: form.location_id === location.id ? CORAL : "#717171", fontSize: "12px", fontWeight: 600, textAlign: "center" }}>
+                {location.name}
               </button>
             ))}
           </div>
-        </div>
+        </fieldset>
 
-        <div style={{ marginBottom: "20px" }}>
-          <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "8px" }}>When works for you <span style={{ color: CORAL }}>*</span> <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(select all that apply)</span></label>
+        <fieldset style={{ margin: "0 0 20px", padding: 0, border: 0 }}>
+          <legend style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "8px" }}>Safe meeting window <span style={{ color: CORAL }}>*</span></legend>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-            {[...supporter.availability, "Not sure yet, we will figure it out"].map((a: string, idx: number) => {
-              const sel = form.preferred_times.includes(a)
-              return (
-                <button key={a} onClick={() => {
-                  const times = a === "Not sure yet, we will figure it out"
-                    ? [a]
-                    : form.preferred_times.includes(a)
-                      ? form.preferred_times.filter(t => t !== a)
-                      : [...form.preferred_times.filter(t => t !== "Not sure yet, we will figure it out"), a]
-                  setForm(prev => ({ ...prev, preferred_times: times }))
-                }} style={{ padding: "12px 8px", border: `2px solid ${sel ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: sel ? "#FFF0F0" : "#ffffff", color: sel ? CORAL : "#717171", fontSize: "12px", fontWeight: 600, textAlign: "center", gridColumn: idx === supporter.availability.length ? "1 / -1" : "auto" }}>
-                  {a}
-                </button>
-              )
-            })}
+            {(meetingOptions?.meeting_windows || []).map(window => <button key={window.id} type="button" role="radio" aria-checked={form.meeting_window_id === window.id} onClick={() => update("meeting_window_id", window.id)} style={{ padding: "12px 8px", border: `2px solid ${form.meeting_window_id === window.id ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.meeting_window_id === window.id ? "#FFF0F0" : "#ffffff", color: form.meeting_window_id === window.id ? CORAL : "#717171", fontSize: "12px", fontWeight: 600, textAlign: "center" }}>{window.name}</button>)}
           </div>
-        </div>
+        </fieldset>
 
         <div style={{ marginBottom: "20px" }}>
           <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Anything you want them to know <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(optional)</span></label>
@@ -276,8 +340,14 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         </div>
 
         <div style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "12px 14px", marginBottom: "20px" }}>
-          <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6 }}>Submitting a request does not share this supporter's private phone number or email. Contact is handled only through the protected workflow.</p>
+          <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6 }}>{meetingOptions?.safety_note || "Loading safe meeting options..."}</p>
+          <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginTop: "10px", fontSize: "12px", color: "#717171", lineHeight: 1.5 }}>
+            <input type="checkbox" checked={form.requester_consent} onChange={event => update("requester_consent", event.target.checked)} />
+            I choose to send this request. My contact information stays private; the in-app relay opens only if the supporter also accepts.
+          </label>
         </div>
+
+        {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
 
         <button onClick={handleSubmit} disabled={!canSubmit || loading} style={{ width: "100%", padding: "16px", backgroundColor: canSubmit && !loading ? CORAL : "#ebebeb", color: canSubmit && !loading ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: canSubmit && !loading ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
           {loading && <span style={{ width: "14px", height: "14px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#ffffff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />}
@@ -287,6 +357,115 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
       </div>
     </div>
   )
+}
+
+interface ManagedConnection {
+  request_id: string
+  supporter_id: string
+  requester_id: string
+  status: ConnectionState
+  expires_at: string | null
+  requester_consented: boolean
+  supporter_consented: boolean
+  relay_available: boolean
+  request?: { location?: MeetingOption; meeting_window?: MeetingOption; message?: string | null }
+}
+
+function ConnectionManager() {
+  const [role, setRole] = useState<"supporter" | "requester">("supporter")
+  const [subjectId, setSubjectId] = useState("")
+  const [password, setPassword] = useState("")
+  const [token, setToken] = useState("")
+  const [connections, setConnections] = useState<ManagedConnection[]>([])
+  const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({})
+  const [reportDrafts, setReportDrafts] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  async function loadConnections(activeToken = token) {
+    const path = role === "supporter" ? `supporters/${subjectId}` : `requesters/${subjectId}`
+    const response = await fetch(`${API_URL}/peer/${path}/requests`, { headers: { Authorization: `Bearer ${activeToken}` } })
+    const data = await response.json().catch(() => [])
+    if (!response.ok || !Array.isArray(data)) throw new Error(data.detail || "The server could not load requests.")
+    setConnections(data)
+  }
+
+  async function login() {
+    setLoading(true); setError("")
+    try {
+      const response = await fetch(`${API_URL}/peer/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role, subject_id: subjectId, password }) })
+      const data = await response.json().catch(() => ({})) as { access_token?: string; detail?: string }
+      if (!response.ok || !data.access_token) throw new Error(data.detail || "The server did not confirm sign-in.")
+      setToken(data.access_token)
+      await loadConnections(data.access_token)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Sign-in failed.") }
+    finally { setLoading(false) }
+  }
+
+  async function supporterAction(requestId: string, action: "accept" | "decline" | "expire" | "block") {
+    setLoading(true); setError("")
+    try {
+      const response = await fetch(`${API_URL}/peer-requests/${requestId}/supporter-action`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action }) })
+      const data = await response.json().catch(() => ({})) as { status?: ConnectionState; detail?: string }
+      const expected = action === "accept" ? "accepted" : action === "decline" ? "declined" : action === "expire" ? "expired" : "blocked"
+      if (!response.ok || data.status !== expected) throw new Error(data.detail || `The server did not confirm ${expected}.`)
+      await loadConnections()
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "The action was not confirmed.") }
+    finally { setLoading(false) }
+  }
+
+  async function confirmedAction(path: string, expected: string, body?: object) {
+    setLoading(true); setError("")
+    try {
+      const response = await fetch(`${API_URL}/${path}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, ...(body ? { body: JSON.stringify(body) } : {}) })
+      const data = await response.json().catch(() => ({})) as { status?: string; detail?: string }
+      if (!response.ok || data.status !== expected) throw new Error(data.detail || `The server did not confirm ${expected}.`)
+      await loadConnections()
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "The action was not confirmed.") }
+    finally { setLoading(false) }
+  }
+
+  if (!token) return <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
+    <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#222222", marginBottom: "6px" }}>Manage connection requests</h3>
+    <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5, marginBottom: "16px" }}>Credentials stay in this page's memory and are exchanged only for a short-lived server token.</p>
+    <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Role</label>
+    <select value={role} onChange={event => setRole(event.target.value as "supporter" | "requester")} style={{ width: "100%", padding: "13px", border: "2px solid #ebebeb", borderRadius: "12px", marginBottom: "12px", backgroundColor: "#fff" }}><option value="supporter">Supporter</option><option value="requester">Requester</option></select>
+    <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Account ID</label>
+    <input value={subjectId} onChange={event => setSubjectId(event.target.value)} autoComplete="username" style={{ width: "100%", padding: "13px", border: "2px solid #ebebeb", borderRadius: "12px", marginBottom: "12px" }} />
+    <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Password</label>
+    <input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" style={{ width: "100%", padding: "13px", border: "2px solid #ebebeb", borderRadius: "12px", marginBottom: "12px" }} />
+    {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+    <button onClick={login} disabled={!subjectId || !password || loading} style={{ width: "100%", padding: "14px", border: 0, borderRadius: "12px", backgroundColor: subjectId && password ? CORAL : "#ebebeb", color: subjectId && password ? "#fff" : "#b0b0b0", fontWeight: 700 }}>{loading ? "Signing in..." : "Sign in"}</button>
+  </div>
+
+  return <div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: "#717171" }}>{connections.length} request{connections.length === 1 ? "" : "s"}</p><button onClick={() => { setToken(""); setConnections([]); setPassword("") }} style={{ border: 0, background: "transparent", color: CORAL, fontWeight: 600 }}>Sign out</button></div>
+    {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+    {connections.length === 0 && <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "24px", textAlign: "center" }}><p style={{ color: "#717171", fontSize: "14px" }}>No connection requests.</p></div>}
+    {connections.map(connection => <div key={connection.request_id} style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px", marginBottom: "12px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}><p style={{ fontSize: "14px", fontWeight: 700, color: "#222" }}>Connection request</p><span style={{ fontSize: "12px", color: CORAL, textTransform: "capitalize" }}>{connection.status}</span></div>
+      {connection.request?.location && <p style={{ fontSize: "13px", color: "#717171", marginBottom: "4px" }}>{connection.request.location.name}</p>}
+      {connection.request?.meeting_window && <p style={{ fontSize: "13px", color: "#717171", marginBottom: "10px" }}>{connection.request.meeting_window.name}</p>}
+      <p style={{ fontSize: "12px", color: "#b0b0b0", lineHeight: 1.5, marginBottom: "12px" }}>{connection.status === "pending" ? "The requester opted in. No contact details are shown; the relay opens only after acceptance." : connection.relay_available ? "Both people opted in. Use the in-app relay; contact details remain private." : "This request is no longer awaiting a response."}</p>
+      {role === "supporter" && connection.status === "pending" && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+        <button onClick={() => supporterAction(connection.request_id, "accept")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: CORAL, color: "#fff", fontWeight: 700 }}>Accept</button>
+        <button onClick={() => supporterAction(connection.request_id, "decline")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#717171", fontWeight: 700 }}>Decline</button>
+        <button onClick={() => supporterAction(connection.request_id, "expire")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#717171", fontWeight: 700 }}>Expire</button>
+        <button onClick={() => window.confirm("Block this requester? This ends the request and prevents another request while the block is active.") && supporterAction(connection.request_id, "block")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, fontWeight: 700 }}>Block</button>
+      </div>}
+      {role === "requester" && (connection.status === "pending" || connection.status === "accepted") && <button onClick={() => window.confirm("Cancel this connection request?") && confirmedAction(`peer-requests/${connection.request_id}/cancel`, "canceled")} disabled={loading} style={{ width: "100%", padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#717171", fontWeight: 700 }}>Cancel request</button>}
+      {connection.relay_available && <div style={{ marginTop: "12px" }}>
+        <label htmlFor={`relay-${connection.request_id}`} style={{ fontSize: "12px", fontWeight: 600, color: "#222", display: "block", marginBottom: "6px" }}>In-app relay message</label>
+        <textarea id={`relay-${connection.request_id}`} value={messageDrafts[connection.request_id] || ""} onChange={event => setMessageDrafts(current => ({ ...current, [connection.request_id]: event.target.value }))} maxLength={1000} placeholder="Do not include email, phone, links, or social handles." rows={2} style={{ width: "100%", padding: "10px", border: "2px solid #ebebeb", borderRadius: "10px", resize: "vertical", marginBottom: "6px" }} />
+        <button onClick={() => confirmedAction(`peer-requests/${connection.request_id}/messages`, "sent", { body: messageDrafts[connection.request_id] })} disabled={loading || !messageDrafts[connection.request_id]?.trim()} style={{ width: "100%", padding: "10px", border: 0, borderRadius: "10px", backgroundColor: CORAL, color: "#fff", fontWeight: 700 }}>Send through relay</button>
+      </div>}
+      <details style={{ marginTop: "12px" }}><summary style={{ fontSize: "12px", color: "#717171", cursor: "pointer" }}>Report a safety concern</summary>
+        <label htmlFor={`report-${connection.request_id}`} style={{ fontSize: "12px", color: "#717171", display: "block", margin: "8px 0 4px" }}>Describe the concern (at least 10 characters)</label>
+        <textarea id={`report-${connection.request_id}`} value={reportDrafts[connection.request_id] || ""} onChange={event => setReportDrafts(current => ({ ...current, [connection.request_id]: event.target.value }))} maxLength={500} rows={2} style={{ width: "100%", padding: "10px", border: "2px solid #ebebeb", borderRadius: "10px", resize: "vertical", marginBottom: "6px" }} />
+        <button onClick={() => confirmedAction(`peer-requests/${connection.request_id}/report`, "open", { reason: reportDrafts[connection.request_id] })} disabled={loading || (reportDrafts[connection.request_id]?.trim().length || 0) < 10} style={{ width: "100%", padding: "10px", border: 0, borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, fontWeight: 700 }}>Submit safety report</button>
+      </details>
+    </div>)}
+  </div>
 }
 
 function SignupForm() {
@@ -530,6 +709,9 @@ export default function PeerPage() {
           <button onClick={() => setTab("find")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "find" ? CORAL : "#ffffff", color: tab === "find" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "find" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
             Find a supporter
           </button>
+          <button onClick={() => setTab("manage")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "manage" ? CORAL : "#ffffff", color: tab === "manage" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "manage" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
+            Manage
+          </button>
           {featureFlags.supporterSignup && <button onClick={() => setTab("signup")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "signup" ? CORAL : "#ffffff", color: tab === "signup" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "signup" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
             Become a supporter
           </button>}
@@ -587,6 +769,7 @@ export default function PeerPage() {
         )}
 
         {featureFlags.supporterSignup && tab === "signup" && <SignupForm />}
+        {tab === "manage" && <ConnectionManager />}
       </div>
     </div>
   )

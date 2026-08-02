@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ARRAY, Boolean, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ARRAY, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
@@ -124,6 +124,10 @@ class PeerRequester(Base):
     credential_hash = Column(String(60), nullable=True)
     private_data_encrypted = Column(Text, nullable=False)
     status = Column(String(32), nullable=False, default="active")
+    identity_verified_at = Column(DateTime(timezone=True), nullable=True)
+    identity_verification_method = Column(String(40), nullable=True)
+    identity_subject_hash = Column(String(64), nullable=True)
+    identity_verified_by = Column(String(64), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     retention_expires_at = Column(DateTime(timezone=True), nullable=False)
@@ -147,10 +151,63 @@ class PeerConnectRequest(Base):
     message = Column(Text)
     private_data_encrypted = Column(Text, nullable=True)
     status = Column(String(50), default="pending")
+    requester_consented_at = Column(DateTime(timezone=True), nullable=True)
+    supporter_consented_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    declined_at = Column(DateTime(timezone=True), nullable=True)
+    canceled_at = Column(DateTime(timezone=True), nullable=True)
+    blocked_at = Column(DateTime(timezone=True), nullable=True)
+    unavailable_at = Column(DateTime(timezone=True), nullable=True)
+    last_relay_at = Column(DateTime(timezone=True), nullable=True)
     requested_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     retention_expires_at = Column(DateTime(timezone=True), nullable=True)
     withdrawn_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PeerRelayMessage(Base):
+    __tablename__ = "peer_relay_messages"
+
+    message_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_id = Column(UUID(as_uuid=True), ForeignKey("peer_connect_requests.request_id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_role = Column(String(32), nullable=False)
+    sender_id = Column(UUID(as_uuid=True), nullable=False)
+    body_encrypted = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    retention_expires_at = Column(DateTime(timezone=True), nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PeerBlock(Base):
+    __tablename__ = "peer_blocks"
+    __table_args__ = (UniqueConstraint("supporter_id", "requester_id", name="uq_peer_block_pair"),)
+
+    block_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    supporter_id = Column(UUID(as_uuid=True), ForeignKey("peer_signups.supporter_id", ondelete="CASCADE"), nullable=False, index=True)
+    requester_id = Column(UUID(as_uuid=True), ForeignKey("peer_requesters.requester_id", ondelete="CASCADE"), nullable=False, index=True)
+    created_by_role = Column(String(32), nullable=False)
+    created_by_id = Column(UUID(as_uuid=True), nullable=False)
+    active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    retention_expires_at = Column(DateTime(timezone=True), nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PeerConnectionReport(Base):
+    __tablename__ = "peer_connection_reports"
+
+    connection_report_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_id = Column(UUID(as_uuid=True), ForeignKey("peer_connect_requests.request_id", ondelete="CASCADE"), nullable=False, index=True)
+    reporter_role = Column(String(32), nullable=False)
+    reporter_id = Column(UUID(as_uuid=True), nullable=False)
+    target_role = Column(String(32), nullable=False)
+    target_id = Column(UUID(as_uuid=True), nullable=False)
+    reason_encrypted = Column(Text, nullable=False)
+    status = Column(String(32), nullable=False, default="open")
+    reported_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    retention_expires_at = Column(DateTime(timezone=True), nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
 class ResourceClick(Base):
