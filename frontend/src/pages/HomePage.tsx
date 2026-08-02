@@ -2,6 +2,7 @@ import { Link } from "react-router-dom"
 import { featureFlags } from "../config/featureFlags"
 import { useState } from "react"
 import { getResource } from "../resources/registry.ts"
+import { resourcePath } from "../resources/directory.ts"
 
 const CORAL = "#FF5A5F"
 
@@ -107,7 +108,7 @@ export default function HomePage() {
           </div>
           <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
             {featuredResources.map((resource, idx) => (
-              <Link key={resource.id} to="/resources" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < featuredResources.length - 1 ? "1px solid #f5f5f5" : "none", textDecoration: "none" }}>
+              <Link key={resource.id} to={resourcePath(resource)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < featuredResources.length - 1 ? "1px solid #f5f5f5" : "none", textDecoration: "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>

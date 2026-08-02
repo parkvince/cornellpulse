@@ -62,9 +62,10 @@ test("all resource consumers use the registry instead of duplicate arrays", () =
 
 test("resource UI exposes verification status and official sources", () => {
   const resourcesPage = readFileSync(join(process.cwd(), "src", "pages", "ResourcesPage.tsx"), "utf8")
+  const resourceDetailPage = readFileSync(join(process.cwd(), "src", "pages", "ResourceDetailPage.tsx"), "utf8")
   const resultCard = readFileSync(join(process.cwd(), "src", "components", "checkin", "ResultCard.tsx"), "utf8")
   assert.match(resourcesPage, /Last verified/)
-  assert.match(resourcesPage, /Official source/)
+  assert.match(resourceDetailPage, /official source/i)
   assert.match(resourcesPage, /ACTIVE_RESOURCES\.length} verified resources/)
   assert.match(resultCard, /Last verified/)
 })

@@ -3,6 +3,30 @@ export const RESOURCE_REVIEW_STATUSES = ["verified", "needs_review", "retired"] 
 
 export type ResourceCategory = typeof RESOURCE_CATEGORIES[number]
 export type ResourceReviewStatus = typeof RESOURCE_REVIEW_STATUSES[number]
+export type ResourceCostType = "free" | "paid" | "varies"
+export type ResourceUrgency = "emergency" | "urgent" | "routine"
+export type ResourceEligibilityGroup = "anyone" | "cornell_student" | "cornell_community"
+export type ResourceModality = "phone" | "text" | "online" | "in_person"
+export type ResourceScope = "campus" | "community" | "national"
+export type AppointmentRequirement = "required" | "not_required" | "varies"
+export type Weekday = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat"
+
+export interface WeeklyHoursInterval {
+  days: Weekday[]
+  start: string
+  end: string
+}
+
+export interface DatedHoursOverride {
+  from: string
+  through: string
+  intervals: WeeklyHoursInterval[]
+}
+
+export type ResourceAvailability =
+  | { kind: "always" }
+  | { kind: "weekly"; intervals: WeeklyHoursInterval[]; overrides?: DatedHoursOverride[] }
+  | { kind: "variable" }
 
 export interface ResourceTextAction {
   number: string
@@ -23,6 +47,14 @@ export interface ResourceRecord {
   hours: string
   timezone: string
   accessInstructions: string
+  whatHappensNext: string
+  costType: ResourceCostType
+  urgency: ResourceUrgency
+  eligibilityGroups: ResourceEligibilityGroup[]
+  modalities: ResourceModality[]
+  scope: ResourceScope
+  appointmentRequirement: AppointmentRequirement
+  availability: ResourceAvailability
   officialSourceUrl: string
   verificationDate: string | null
   verifier: string
@@ -30,11 +62,33 @@ export interface ResourceRecord {
   tags: string[]
 }
 
-type VerifiedResource = Omit<ResourceRecord, "verificationDate" | "verifier" | "reviewStatus">
+type ResourceDecisionMetadata = Pick<ResourceRecord, "whatHappensNext" | "costType" | "urgency" | "eligibilityGroups" | "modalities" | "scope" | "appointmentRequirement" | "availability">
+type VerifiedResource = Omit<ResourceRecord, "verificationDate" | "verifier" | "reviewStatus" | keyof ResourceDecisionMetadata>
+
+const RESOURCE_DECISIONS: Record<string, ResourceDecisionMetadata> = {
+  emergency_911: { whatHappensNext: "A dispatcher asks where you are and what is happening, then sends the appropriate emergency response.", costType: "free", urgency: "emergency", eligibilityGroups: ["anyone"], modalities: ["phone"], scope: "national", appointmentRequirement: "not_required", availability: { kind: "always" } },
+  cornell_public_safety: { whatHappensNext: "A Cornell dispatcher assesses the situation and coordinates campus police, fire, medical, or other public-safety response.", costType: "free", urgency: "emergency", eligibilityGroups: ["cornell_community"], modalities: ["phone"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "always" } },
+  "988_lifeline": { whatHappensNext: "A trained crisis counselor responds by phone, text, or chat to listen, assess immediate safety, and help identify next steps.", costType: "free", urgency: "urgent", eligibilityGroups: ["anyone"], modalities: ["phone", "text", "online"], scope: "national", appointmentRequirement: "not_required", availability: { kind: "always" } },
+  cornell_health_247: { whatHappensNext: "The phone menu connects you with a medical or mental health provider for consultation and guidance about appropriate follow-up.", costType: "varies", urgency: "urgent", eligibilityGroups: ["cornell_student"], modalities: ["phone"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "always" } },
+  crisis_text_line: { whatHappensNext: "An automated response confirms receipt, then a volunteer Crisis Counselor joins the text conversation and helps you work toward a safer next step.", costType: "free", urgency: "urgent", eligibilityGroups: ["anyone"], modalities: ["text", "online"], scope: "national", appointmentRequirement: "not_required", availability: { kind: "always" } },
+  cayuga_medical_er: { whatHappensNext: "Emergency Department staff triage the immediate concern and determine evaluation, treatment, observation, or referral needs.", costType: "varies", urgency: "emergency", eligibilityGroups: ["anyone"], modalities: ["phone", "in_person"], scope: "community", appointmentRequirement: "not_required", availability: { kind: "always" } },
+  caps_access: { whatHappensNext: "A CAPS clinician spends about 20 minutes discussing your concern and recommends suitable Cornell Health or outside options; this visit is not counseling.", costType: "free", urgency: "routine", eligibilityGroups: ["cornell_student"], modalities: ["phone", "online", "in_person"], scope: "campus", appointmentRequirement: "required", availability: { kind: "variable" } },
+  lets_talk: { whatHappensNext: "A counselor offers a brief informal consultation and may suggest services or next steps; it does not create an ongoing counseling relationship.", costType: "free", urgency: "routine", eligibilityGroups: ["cornell_student"], modalities: ["online", "in_person"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "variable" } },
+  ears: { whatHappensNext: "A trained student peer mentor listens informally, offers support, and may point you toward relevant professional or campus resources.", costType: "free", urgency: "routine", eligibilityGroups: ["cornell_student"], modalities: ["in_person"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "variable" } },
+  learning_strategies: { whatHappensNext: "You choose the relevant tutoring, course, workshop, or study-skills program and follow that program’s current participation instructions.", costType: "varies", urgency: "routine", eligibilityGroups: ["cornell_student"], modalities: ["online", "in_person"], scope: "campus", appointmentRequirement: "varies", availability: { kind: "variable" } },
+  basic_needs: { whatHappensNext: "After enrollment and completion of the required state form, you visit during open hours and select available items within current limits.", costType: "free", urgency: "routine", eligibilityGroups: ["cornell_community"], modalities: ["online", "in_person"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "weekly", intervals: [{ days: ["tue", "thu"], start: "16:00", end: "19:00" }, { days: ["wed", "fri"], start: "10:00", end: "13:00" }, { days: ["sun"], start: "12:00", end: "15:00" }], overrides: [{ from: "2026-05-26", through: "2026-08-16", intervals: [{ days: ["tue", "thu"], start: "15:00", end: "19:00" }, { days: ["wed", "fri"], start: "10:00", end: "13:00" }] }] } },
+  identity_support: { whatHappensNext: "Staff can answer questions, connect you with programs, or help identify relevant campus support; program-specific follow-up varies.", costType: "free", urgency: "routine", eligibilityGroups: ["cornell_community"], modalities: ["phone", "online", "in_person"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "weekly", intervals: [{ days: ["mon", "tue", "wed", "thu", "fri"], start: "09:00", end: "17:00" }] } },
+  financial_aid_emergency_fund: { whatHappensNext: "Financial Aid reviews the submitted application and documentation against available fund criteria; an application does not guarantee an award.", costType: "free", urgency: "routine", eligibilityGroups: ["cornell_student"], modalities: ["phone", "online", "in_person"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "weekly", intervals: [{ days: ["mon", "tue", "wed", "thu", "fri"], start: "10:00", end: "13:00" }, { days: ["mon", "tue", "wed", "thu", "fri"], start: "14:00", end: "16:00" }] } },
+  cornell_botanic_gardens: { whatHappensNext: "You plan your own visit; the official visitor information provides current parking, accessibility, seasonal hours, and closure notices.", costType: "free", urgency: "routine", eligibilityGroups: ["anyone"], modalities: ["in_person"], scope: "community", appointmentRequirement: "not_required", availability: { kind: "variable" } },
+  helen_newman_fitness: { whatHappensNext: "You confirm the activity’s current schedule and access requirement, then present the required Cornell ID, membership, or pass at the facility.", costType: "paid", urgency: "routine", eligibilityGroups: ["cornell_community"], modalities: ["in_person"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "variable" } },
+}
 
 function verifiedResource(resource: VerifiedResource): ResourceRecord {
+  const decisionMetadata = RESOURCE_DECISIONS[resource.id]
+  if (!decisionMetadata) throw new Error(`Missing decision metadata for resource: ${resource.id}`)
   return {
     ...resource,
+    ...decisionMetadata,
     verificationDate: "2026-08-02",
     verifier: "CornellPulse official-source review",
     reviewStatus: "verified",
@@ -116,7 +170,7 @@ export function validateResourceRegistry(records: readonly ResourceRecord[] = RE
     if (!/^[a-z0-9]+(?:_[a-z0-9]+)*$/.test(resource.id)) errors.push(`${prefix}: id must be a stable snake_case identifier`)
     if (ids.has(resource.id)) errors.push(`${prefix}: duplicate id`)
     ids.add(resource.id)
-    for (const field of ["officialName", "description", "eligibility", "cost", "location", "hours", "timezone", "accessInstructions", "officialSourceUrl", "verifier"] as const) {
+    for (const field of ["officialName", "description", "eligibility", "cost", "location", "hours", "timezone", "accessInstructions", "whatHappensNext", "officialSourceUrl", "verifier"] as const) {
       if (typeof resource[field] !== "string" || !resource[field].trim()) errors.push(`${prefix}: ${field} is required`)
     }
     if (!RESOURCE_CATEGORIES.includes(resource.category)) errors.push(`${prefix}: invalid category`)
@@ -126,6 +180,19 @@ export function validateResourceRegistry(records: readonly ResourceRecord[] = RE
     if (resource.phone !== null && !/^[0-9-]+$/.test(resource.phone)) errors.push(`${prefix}: phone has an invalid format`)
     if (resource.textAction && (!/^[0-9]+$/.test(resource.textAction.number) || !resource.textAction.prefilledText.trim())) errors.push(`${prefix}: malformed textAction`)
     if (!Array.isArray(resource.tags) || resource.tags.length === 0 || resource.tags.some(tag => typeof tag !== "string" || !tag.trim())) errors.push(`${prefix}: tags must contain non-empty strings`)
+    if (!["free", "paid", "varies"].includes(resource.costType)) errors.push(`${prefix}: invalid costType`)
+    if (!["emergency", "urgent", "routine"].includes(resource.urgency)) errors.push(`${prefix}: invalid urgency`)
+    if (!["campus", "community", "national"].includes(resource.scope)) errors.push(`${prefix}: invalid scope`)
+    if (!["required", "not_required", "varies"].includes(resource.appointmentRequirement)) errors.push(`${prefix}: invalid appointmentRequirement`)
+    if (!Array.isArray(resource.eligibilityGroups) || resource.eligibilityGroups.length === 0 || resource.eligibilityGroups.some(group => !["anyone", "cornell_student", "cornell_community"].includes(group))) errors.push(`${prefix}: invalid eligibilityGroups`)
+    if (!Array.isArray(resource.modalities) || resource.modalities.length === 0 || resource.modalities.some(modality => !["phone", "text", "online", "in_person"].includes(modality))) errors.push(`${prefix}: invalid modalities`)
+    if (!resource.availability || !["always", "weekly", "variable"].includes(resource.availability.kind)) errors.push(`${prefix}: invalid availability`)
+    if (resource.availability?.kind === "weekly") {
+      const intervals = [...resource.availability.intervals, ...(resource.availability.overrides || []).flatMap(override => override.intervals)]
+      if (resource.availability.intervals.length === 0) errors.push(`${prefix}: weekly availability requires intervals`)
+      if (intervals.some(interval => interval.days.length === 0 || interval.days.some(day => !["sun", "mon", "tue", "wed", "thu", "fri", "sat"].includes(day)) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(interval.start) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(interval.end))) errors.push(`${prefix}: malformed availability interval`)
+      if ((resource.availability.overrides || []).some(override => !/^\d{4}-\d{2}-\d{2}$/.test(override.from) || !/^\d{4}-\d{2}-\d{2}$/.test(override.through) || override.from > override.through)) errors.push(`${prefix}: malformed availability override`)
+    }
     try { new Intl.DateTimeFormat("en-US", { timeZone: resource.timezone }).format() } catch { errors.push(`${prefix}: invalid IANA timezone`) }
     if (resource.verificationDate !== null) {
       const dateMatches = /^\d{4}-\d{2}-\d{2}$/.test(resource.verificationDate)

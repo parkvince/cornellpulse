@@ -3,6 +3,7 @@ import { useState } from "react"
 import HomePage from "./pages/HomePage"
 import CheckInPage from "./pages/CheckInPage"
 import ResourcesPage from "./pages/ResourcesPage"
+import ResourceDetailPage from "./pages/ResourceDetailPage"
 import PeerPage from "./pages/PeerPage"
 import AdminPage from "./pages/AdminPage"
 import OnboardingPage from "./pages/OnboardingPage"
@@ -21,7 +22,7 @@ function BottomNav() {
   const hide = ["/admin", "/onboarding"].includes(location.pathname)
   if (hide) return null
 
-  const active = (path: string) => location.pathname === path
+  const active = (path: string) => location.pathname === path || (path === "/resources" && location.pathname.startsWith("/resources/"))
 
   return (
     <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "430px", backgroundColor: "#ffffff", borderTop: "1px solid #ebebeb", display: "flex", alignItems: "center", zIndex: 100, paddingBottom: "24px", paddingTop: "8px" }}>
@@ -83,6 +84,7 @@ export default function App() {
           <Route path="/" element={onboarded ? <HomePage /> : <Navigate to="/onboarding" />} />
           <Route path="/checkin" element={<CheckInPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/resources/:resourceId" element={<ResourceDetailPage />} />
           <Route path="/peer" element={featureFlags.peerConnect ? <PeerPage /> : <FeatureUnavailablePage feature="Peer Connect" />} />
           <Route path="/peer/signup" element={featureFlags.supporterSignup ? <PeerSignupPage /> : <FeatureUnavailablePage feature="Supporter signup" />} />
           <Route path="/profile" element={<ProfilePage />} />

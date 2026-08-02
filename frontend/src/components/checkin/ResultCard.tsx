@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom"
 import { featureFlags } from "../../config/featureFlags"
 import type { SafetyAssessment } from "../../checkin/localRecommendations"
 import type { ResourceRecord } from "../../resources/registry.ts"
+import { callHref, resourcePath, textHref } from "../../resources/directory.ts"
 import { CrisisContactActions, EmergencyActions } from "../shared/EmergencyHelp"
 
 const CORAL = "#FF5A5F"
@@ -110,18 +111,22 @@ function ResourceItem(props: ResourceItemProps) {
           <p style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>One option to explore</p>
           <p style={{ fontSize: "22px", fontWeight: 800, color: "#ffffff", marginBottom: "6px" }}>{r.officialName}</p>
           <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", lineHeight: 1.5, marginBottom: "16px" }}>{r.description}</p>
-          {r.phone && (
-            <a href={"tel:" + r.phone} style={{ display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontWeight: 700, fontSize: "15px", textDecoration: "none" }}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          {callHref(r) && (
+            <a href={callHref(r)} style={{ display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontWeight: 700, fontSize: "15px", textDecoration: "none" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
               {r.phone}
             </a>
           )}
+          {textHref(r) && <a href={textHref(r)} style={{ display: "inline-flex", alignItems: "center", backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontWeight: 700, fontSize: "15px", textDecoration: "none" }}>Text {r.textAction?.number}</a>}
+          </div>
         </div>
         <div style={{ backgroundColor: "#ffffff", padding: "16px 20px" }}>
           <p style={{ fontSize: "13px", color: "#717171", marginBottom: "8px" }}><span style={{ fontWeight: 600, color: "#222222" }}>Hours: </span>{r.hours} ({r.timezone})</p>
           <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>{r.accessInstructions}</p>
           <p style={{ fontSize: "11px", color: "#b0b0b0", marginBottom: "10px" }}>{r.verificationDate ? `Last verified ${r.verificationDate} by ${r.verifier}` : `Verification pending · ${r.verifier}`}</p>
           <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <Link to={resourcePath(r)} style={{ fontSize: "13px", color: CORAL, fontWeight: 700 }}>Details</Link>
             {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: CORAL, fontWeight: 600, textDecoration: "underline" }}>Visit website</a>}
             <button onClick={saveResource} style={{ fontSize: "13px", color: "#717171", backgroundColor: "transparent", border: "none", textDecoration: "underline", padding: 0, cursor: "pointer" }}>Save</button>
           </div>
@@ -134,9 +139,10 @@ function ResourceItem(props: ResourceItemProps) {
     <div style={{ borderRadius: "16px", padding: "18px", backgroundColor: "#ffffff", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
       <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>{r.officialName}</p>
       <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5, marginBottom: "10px" }}>{r.description}</p>
-      {r.phone && <a href={"tel:" + r.phone} style={{ fontSize: "14px", fontWeight: 700, color: CORAL, display: "block", marginBottom: "6px" }}>{r.phone}</a>}
+      {callHref(r) && <a href={callHref(r)} style={{ fontSize: "14px", fontWeight: 700, color: CORAL, display: "block", marginBottom: "6px" }}>Call {r.phone}</a>}
+      {textHref(r) && <a href={textHref(r)} style={{ fontSize: "14px", fontWeight: 700, color: CORAL, display: "block", marginBottom: "6px" }}>Text {r.textAction?.number}</a>}
       <p style={{ fontSize: "12px", color: "#b0b0b0", marginBottom: "8px" }}>{r.hours} · {r.verificationDate ? `Verified ${r.verificationDate}` : "Verification pending"}</p>
-      {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: CORAL, fontWeight: 600, textDecoration: "underline" }}>Visit website</a>}
+      <div style={{ display: "flex", gap: "12px" }}><Link to={resourcePath(r)} style={{ fontSize: "13px", color: CORAL, fontWeight: 700 }}>Details</Link>{r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: CORAL, fontWeight: 600, textDecoration: "underline" }}>Visit website</a>}</div>
     </div>
   )
 }
