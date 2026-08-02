@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation, Link, Navigate } from "react-router-dom"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import HomePage from "./pages/HomePage"
 import CheckInPage from "./pages/CheckInPage"
 import ResourcesPage from "./pages/ResourcesPage"
@@ -12,6 +12,7 @@ import FeatureUnavailablePage from "./pages/FeatureUnavailablePage"
 import NotFoundPage from "./pages/NotFoundPage"
 import PrivacyPage from "./pages/PrivacyPage"
 import { featureFlags } from "./config/featureFlags"
+import EmergencyHelp from "./components/shared/EmergencyHelp"
 
 const CORAL = "#FF5A5F"
 
@@ -72,13 +73,7 @@ function BottomNav() {
 }
 
 export default function App() {
-  const [onboarded, setOnboarded] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    setOnboarded(!!localStorage.getItem("cornellpulse_onboarded"))
-  }, [])
-
-  if (onboarded === null) return null
+  const [onboarded] = useState(() => !!localStorage.getItem("cornellpulse_onboarded"))
 
   return (
     <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "430px", height: "100%", display: "flex", flexDirection: "column", backgroundColor: "#fff8f7" }}>
@@ -96,6 +91,7 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
+      <EmergencyHelp />
       <BottomNav />
     </div>
   )

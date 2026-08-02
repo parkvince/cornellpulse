@@ -1,5 +1,4 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional, List
 from enum import Enum
 
 class CollegeEnum(str, Enum):
@@ -33,21 +32,6 @@ class WorkloadCategory(str, Enum):
     heavy = "heavy"
     unbearable = "unbearable"
 
-class StressTrigger(str, Enum):
-    academics = "academics"
-    social = "social"
-    financial = "financial"
-    family = "family"
-    identity = "identity"
-    health = "health"
-    future = "future"
-    housing = "housing"
-    sleep = "sleep"
-    loneliness = "loneliness"
-    grief = "grief"
-    discrimination = "discrimination"
-    nothing_specific = "nothing_specific"
-
 class AggregateContributionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -55,23 +39,6 @@ class AggregateContributionRequest(BaseModel):
     sleep_category: SleepCategory
     workload_category: WorkloadCategory
     college: CollegeEnum
-
-class ResourceResult(BaseModel):
-    resource_id: str
-    name: str
-    tagline: str
-    phone: Optional[str] = None
-    url: Optional[str] = None
-    hours: Optional[str] = None
-    how_to_access: Optional[str] = None
-
-class TriageResult(BaseModel):
-    primary: ResourceResult
-    secondary: List[ResourceResult]
-    crisis_flag: bool
-    distress_level: str
-    why: str
-    show_peer_connect: bool
 
 class AggregateContributionResponse(BaseModel):
     aggregate_updated: bool

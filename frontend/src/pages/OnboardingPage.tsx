@@ -6,13 +6,13 @@ const slides = [
   {
     tag: "Welcome",
     title: "Find the right support, right now.",
-    body: "CornellPulse matches you to the right mental health resource at Cornell in under 90 seconds.",
+    body: "CornellPulse helps you explore support resources based on the choices you enter.",
     bg: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)",
   },
   {
     tag: "Resources",
     title: "35+ Cornell and Ithaca resources.",
-    body: "From CAPS therapy to peer counseling to outdoor stress relief. We know every option and find the right one for you.",
+    body: "Browse Cornell and Ithaca options, then decide which resources may fit what you need.",
     bg: "linear-gradient(135deg, #00A699 0%, #007A73 100%)",
   },
   {
@@ -24,7 +24,7 @@ const slides = [
   {
     tag: "Privacy",
     title: "Clear choices about your data.",
-    body: "Check-ins are sent to the server for resource matching. Optional aggregate contribution and resource-click analytics are off until you choose to enable them.",
+    body: "Recommendations are generated on your device. Optional aggregate contribution and resource-click analytics are off until you choose to enable them.",
     bg: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)",
   },
   {
@@ -60,10 +60,10 @@ export default function OnboardingPage() {
         {slide.isDisclosure ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {[
-              { heading: "Not a clinical service", body: "CornellPulse is a resource navigation tool. It does not provide therapy, counseling, or medical advice." },
+              { heading: "Not a clinical assessment", body: "CornellPulse is a resource-navigation tool. It is not a diagnosis, therapy, medical advice, or a clinically validated screening tool." },
               { heading: "Not affiliated with Cornell University", body: "This app was built independently by Cornell students. It is not an official Cornell product." },
               { heading: "Know what is transmitted", body: "Check-in recommendations are generated on this device. Optional aggregate contribution and resource-click analytics are controlled from Privacy & Data and start off." },
-              { heading: "In an emergency", body: "If you are in immediate danger, call 911 or Cornell Police at 607-255-1111. This app cannot dispatch help." },
+              { heading: "In an emergency", body: "For an immediate medical or mental health emergency, call 911. On the Ithaca campus, Cornell Public Safety can be reached at 607-255-1111. This app cannot dispatch help." },
             ].map(item => (
               <div key={item.heading} style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "14px 16px", border: "1px solid #ebebeb" }}>
                 <p style={{ fontSize: "13px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>{item.heading}</p>

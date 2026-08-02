@@ -4,7 +4,7 @@ import { join } from "node:path"
 import test from "node:test"
 
 import { submitAggregateContribution } from "../src/api/client.ts"
-import { buildLocalRecommendation } from "../src/checkin/localRecommendations.ts"
+import { assessSafetySignal, buildLocalRecommendation } from "../src/checkin/localRecommendations.ts"
 
 const SENSITIVE_CANARY = "SENSITIVE_CANARY_free_text_741"
 
@@ -17,7 +17,7 @@ test("free text affects local safety routing without entering an aggregate reque
     wantsToTalk: false,
     freeText: `I am thinking about suicide ${SENSITIVE_CANARY}`,
   })
-  assert.equal(result.triage_result.crisis_flag, true)
+  assert.equal(result.safety.signal, "check-in")
 
   let requestBody = ""
   const fakeFetch: typeof fetch = async (_input, init) => {
@@ -38,6 +38,48 @@ test("free text affects local safety routing without entering an aggregate reque
   assert.deepEqual(Object.keys(JSON.parse(requestBody)).sort(), ["college", "mood_score", "sleep_category", "workload_category"])
   assert.equal(requestBody.includes(SENSITIVE_CANARY), false)
   assert.equal(/free.?text|trigger|talk|session|token|recommendation/i.test(requestBody), false)
+})
+
+test("explicit first-person crisis phrases route separately to urgent help", () => {
+  const phrases = [
+    "I am going to kill myself",
+    "I want to die",
+    "I can't keep myself safe",
+    "I plan to hurt myself",
+    "I am not suicidal, but I am going to kill myself",
+  ]
+  for (const phrase of phrases) assert.deepEqual(assessSafetySignal(phrase, 7), { signal: "urgent", reason: "explicit-language" })
+})
+
+test("negated and obvious contextual mentions do not become urgent keyword matches", () => {
+  const phrases = [
+    "I am not suicidal",
+    "I don't want to die",
+    "I would never hurt myself",
+    "We discussed suicide prevention in class",
+    "My research paper is about self-harm awareness",
+  ]
+  for (const phrase of phrases) assert.equal(assessSafetySignal(phrase, 7).signal, "none", phrase)
+})
+
+test("mood boundary prompts a check-in without claiming a crisis", () => {
+  assert.deepEqual(assessSafetySignal("", 1), { signal: "check-in", reason: "low-mood" })
+  assert.deepEqual(assessSafetySignal("", 2), { signal: "check-in", reason: "low-mood" })
+  assert.deepEqual(assessSafetySignal("", 3), { signal: "none", reason: "none" })
+})
+
+test("empty and ambiguous input are handled without clinical certainty", () => {
+  assert.deepEqual(assessSafetySignal("   ", 6), { signal: "none", reason: "none" })
+  assert.deepEqual(assessSafetySignal("I keep thinking about death", 6), { signal: "check-in", reason: "ambiguous-language" })
+  assert.deepEqual(assessSafetySignal("Everything feels hard", 6), { signal: "none", reason: "none" })
+})
+
+test("emergency text actions use sms links with prefilled text", () => {
+  const source = readFileSync(join(process.cwd(), "src", "components", "shared", "EmergencyHelp.tsx"), "utf8")
+  assert.equal(source.includes("sms:988?body=Hello%2C%20I%20need%20support."), true)
+  assert.equal(source.includes("href: \"tel:911\""), true)
+  assert.equal(source.includes("href: \"tel:6072551111\""), true)
+  assert.equal(source.includes("href: \"tel:6072555155\""), true)
 })
 
 test("check-in source never writes free text or drafts to browser storage", () => {

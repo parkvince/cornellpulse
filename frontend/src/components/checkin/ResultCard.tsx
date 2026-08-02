@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { featureFlags } from "../../config/featureFlags"
-import type { Resource } from "../../checkin/localRecommendations"
+import type { Resource, SafetyAssessment } from "../../checkin/localRecommendations"
+import { EmergencyActions } from "../shared/EmergencyHelp"
 
 const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
@@ -105,7 +106,7 @@ function ResourceItem(props: ResourceItemProps) {
     return (
       <div style={{ borderRadius: "20px", overflow: "hidden", marginBottom: "12px", boxShadow: "0 8px 32px rgba(255,90,95,0.25)" }}>
         <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "24px 20px 20px" }}>
-          <p style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>Best match for you</p>
+          <p style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>One option to explore</p>
           <p style={{ fontSize: "22px", fontWeight: 800, color: "#ffffff", marginBottom: "6px" }}>{r.name}</p>
           <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", lineHeight: 1.5, marginBottom: "16px" }}>{r.tagline}</p>
           {r.phone && (
@@ -140,11 +141,10 @@ function ResourceItem(props: ResourceItemProps) {
 
 interface ResultCardProps {
   result: {
-    triage_result: {
+    safety: SafetyAssessment
+    recommendation: {
       primary: Resource
       secondary: Resource[]
-      crisis_flag: boolean
-      distress_level: string
       why: string
       show_peer_connect: boolean
     }
@@ -159,7 +159,8 @@ interface ResultCardProps {
 }
 
 export default function ResultCard(props: ResultCardProps) {
-  const tr = props.result.triage_result
+  const tr = props.result.recommendation
+  const safety = props.result.safety
   const [toast, setToast] = useState("")
   const [feedback, setFeedback] = useState("")
   const moodScore = props.moodScore || 5
@@ -168,12 +169,12 @@ export default function ResultCard(props: ResultCardProps) {
     try {
       const h = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
       if (h.some((entry: { id?: string }) => entry.id === props.checkinId)) return
-      const entry = { id: props.checkinId, date: new Date().toISOString(), mood: moodScore, distress_level: tr.distress_level, resource: tr.primary.name }
+      const entry = { id: props.checkinId, date: new Date().toISOString(), mood: moodScore, resource: tr.primary.name }
       localStorage.setItem("cornellpulse_history", JSON.stringify([entry, ...h].slice(0, 20)))
     } catch {
       return
     }
-  }, [moodScore, props.checkinId, tr.distress_level, tr.primary.name])
+  }, [moodScore, props.checkinId, tr.primary.name])
 
   function showToast(msg: string) {
     setToast(msg)
@@ -184,13 +185,19 @@ export default function ResultCard(props: ResultCardProps) {
 
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh", padding: "24px 20px 32px" }}>
-      {tr.crisis_flag && (
+      {safety.signal === "urgent" && (
         <div style={{ backgroundColor: "#FFF0F0", border: "2px solid #FF5A5F", borderRadius: "16px", padding: "20px", marginBottom: "24px" }}>
-          <p style={{ fontSize: "15px", fontWeight: 800, color: CORAL, marginBottom: "8px" }}>Please reach out right now</p>
-          <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6, marginBottom: "16px" }}>Based on what you shared, we want to make sure you get support immediately.</p>
-          <a href="tel:988" style={{ display: "block", backgroundColor: CORAL, color: "#fff", padding: "14px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "15px", marginBottom: "8px" }}>Call 988 now</a>
-          <a href="sms:741741" style={{ display: "block", border: "2px solid " + CORAL, color: CORAL, padding: "12px", borderRadius: "12px", textAlign: "center", fontWeight: 600, fontSize: "14px", marginBottom: "8px" }}>Text HOME to 741741</a>
-          <a href="tel:6072551111" style={{ display: "block", border: "2px solid " + CORAL, color: CORAL, padding: "12px", borderRadius: "12px", textAlign: "center", fontWeight: 600, fontSize: "14px" }}>Call Cornell Police 607-255-1111</a>
+          <p style={{ fontSize: "15px", fontWeight: 800, color: CORAL, marginBottom: "8px" }}>Some words you entered may point to an immediate safety concern</p>
+          <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6, marginBottom: "16px" }}>This automated check can be wrong and is not a diagnosis or clinical assessment. If you may act now or cannot stay safe, call 911. Otherwise, 988 can provide crisis support.</p>
+          <EmergencyActions />
+        </div>
+      )}
+
+      {safety.signal === "check-in" && (
+        <div style={{ backgroundColor: "#FFF0F0", border: "1.5px solid #FF5A5F", borderRadius: "16px", padding: "18px", marginBottom: "20px" }}>
+          <p style={{ fontSize: "14px", fontWeight: 800, color: CORAL, marginBottom: "6px" }}>Would immediate support be useful?</p>
+          <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "12px" }}>A low mood selection or ambiguous wording prompted this check-in. The system cannot determine whether you are in danger. Call or text 988 for crisis support, or call 911 if there is an immediate safety threat.</p>
+          <div style={{ display: "flex", gap: "8px" }}><a href="tel:988" style={{ flex: 1, backgroundColor: CORAL, color: "#ffffff", padding: "10px", borderRadius: "10px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call 988</a><a href="sms:988?body=Hello%2C%20I%20need%20support." style={{ flex: 1, backgroundColor: "#ffffff", color: CORAL, padding: "10px", borderRadius: "10px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Text 988</a></div>
         </div>
       )}
 
@@ -200,14 +207,14 @@ export default function ResultCard(props: ResultCardProps) {
         </div>
         <div>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "2px" }}>Your results</p>
-          <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", letterSpacing: "-0.01em" }}>Here is what we found</h2>
+          <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", letterSpacing: "-0.01em" }}>Resources you may want to explore</h2>
         </div>
       </div>
 
-      {cleanTriggers.length > 0 && !tr.crisis_flag && (
+      {cleanTriggers.length > 0 && (
         <div style={{ backgroundColor: "#FFF0F0", borderRadius: "12px", padding: "14px 16px", marginBottom: "16px" }}>
           <p style={{ fontSize: "14px", color: "#222222", lineHeight: 1.6 }}>
-            It sounds like <strong style={{ color: CORAL }}>{cleanTriggers.slice(0, 2).join(" and ")}</strong> {cleanTriggers.length === 1 ? "is" : "are"} weighing on you right now. That is completely valid.
+            You selected <strong style={{ color: CORAL }}>{cleanTriggers.slice(0, 2).join(" and ")}</strong>. These choices help narrow the resource list, but they are not a clinical assessment.
           </p>
         </div>
       )}
@@ -222,14 +229,14 @@ export default function ResultCard(props: ResultCardProps) {
 
       {tr.secondary.length > 0 && (
         <div style={{ marginTop: "16px" }}>
-          <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Other options</p>
+          <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Other resources to explore</p>
           {tr.secondary.map(r => <ResourceItem key={r.resource_id} resource={r} />)}
         </div>
       )}
 
       {!feedback && (
         <div style={{ marginTop: "20px", backgroundColor: "#ffffff", borderRadius: "16px", padding: "16px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "10px" }}>
-          <p style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "12px", textAlign: "center" }}>Was this recommendation helpful?</p>
+          <p style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "12px", textAlign: "center" }}>Were these resource options useful?</p>
           <div style={{ display: "flex", gap: "8px" }}>
             <button onClick={() => setFeedback("helpful")} style={{ flex: 1, padding: "12px", backgroundColor: "#FFF0F0", color: CORAL, border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>

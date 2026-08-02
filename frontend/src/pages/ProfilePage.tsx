@@ -118,8 +118,8 @@ const [confirmClear, setConfirmClear] = useState(false)
               <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Up to 20 result summaries can be stored on this device until you clear them or remove browser/app data.</p>
             </div>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #f5f5f5" }}>
-              <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>Server processing and optional contribution</p>
-              <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Check-ins are transmitted for matching. Aggregate contribution and resource-click analytics are separate, optional choices that start off.</p>
+              <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>On-device recommendations and optional contribution</p>
+              <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Recommendations are generated on this device. Aggregate contribution and resource-click analytics are separate, optional choices that start off.</p>
             </div>
             <Link to="/privacy" style={{ width: "100%", padding: "16px 20px", textAlign: "left", backgroundColor: "transparent", borderBottom: "1px solid #f5f5f5", display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none" }}>
               <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222" }}>Privacy & Data controls</p>
@@ -139,8 +139,8 @@ const [confirmClear, setConfirmClear] = useState(false)
               <img src="/logo.png" alt="" width={20} height={20} />
               <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222" }}>CornellPulse</p>
             </div>
-            <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>Built independently by Cornell students. Not affiliated with or endorsed by Cornell University. Not a clinical service.</p>
-            <p style={{ fontSize: "12px", color: "#b0b0b0" }}>In an emergency call 911 or Cornell Police at 607-255-1111.</p>
+            <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>Built independently by Cornell students. Not affiliated with or endorsed by Cornell University. Not a diagnosis or clinically validated assessment.</p>
+            <p style={{ fontSize: "12px", color: "#b0b0b0" }}>For an immediate emergency call 911. On the Ithaca campus, call Cornell Public Safety at 607-255-1111.</p>
           </div>
         </div>
       </div>

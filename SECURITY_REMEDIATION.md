@@ -9,6 +9,7 @@ Peer Connect, supporter signup, and the public admin UI are disabled by default 
 - Rotate any credential ever committed or shared, remove it from repository history where appropriate, and use deployment secret storage.
 - Validate privacy language, crisis guidance, resource accuracy, accessibility, monitoring, backups, and recovery in a production-like environment.
 - Require a documented safety/privacy sign-off before enabling any feature flag in production.
+- Complete every licensed-professional and Cornell Health review item in `SAFETY_REVIEW.md`; automated phrase tests are not clinical validation.
 
 Default-off flags are centralized in `frontend/src/config/featureFlags.ts` and `backend/app/config.py`. Environment overrides must not be treated as launch approval.
 
