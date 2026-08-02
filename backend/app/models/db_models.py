@@ -132,6 +132,7 @@ class PeerRequester(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     retention_expires_at = Column(DateTime(timezone=True), nullable=False)
     withdrawn_at = Column(DateTime(timezone=True), nullable=True)
+    suspended_at = Column(DateTime(timezone=True), nullable=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
 
@@ -188,8 +189,10 @@ class PeerBlock(Base):
     requester_id = Column(UUID(as_uuid=True), ForeignKey("peer_requesters.requester_id", ondelete="CASCADE"), nullable=False, index=True)
     created_by_role = Column(String(32), nullable=False)
     created_by_id = Column(UUID(as_uuid=True), nullable=False)
+    reason_code = Column(String(40), nullable=False, default="participant_safety_choice")
     active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    ended_at = Column(DateTime(timezone=True), nullable=True)
     retention_expires_at = Column(DateTime(timezone=True), nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
@@ -204,9 +207,51 @@ class PeerConnectionReport(Base):
     target_role = Column(String(32), nullable=False)
     target_id = Column(UUID(as_uuid=True), nullable=False)
     reason_encrypted = Column(Text, nullable=False)
-    status = Column(String(32), nullable=False, default="open")
+    status = Column(String(32), nullable=False, default="submitted")
+    severity = Column(String(16), nullable=True)
+    assigned_to_role = Column(String(32), nullable=True)
+    assigned_to_id = Column(String(64), nullable=True)
+    triaged_at = Column(DateTime(timezone=True), nullable=True)
+    triaged_by = Column(String(64), nullable=True)
+    resolution_code = Column(String(48), nullable=True)
+    resolution_encrypted = Column(Text, nullable=True)
+    resolved_by = Column(String(64), nullable=True)
+    duplicate_of = Column(UUID(as_uuid=True), nullable=True)
     reported_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     resolved_at = Column(DateTime(timezone=True), nullable=True)
+    retention_expires_at = Column(DateTime(timezone=True), nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PeerModerationNote(Base):
+    __tablename__ = "peer_moderation_notes"
+
+    note_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    connection_report_id = Column(UUID(as_uuid=True), ForeignKey("peer_connection_reports.connection_report_id", ondelete="CASCADE"), nullable=False, index=True)
+    author_role = Column(String(32), nullable=False)
+    author_id = Column(String(64), nullable=False)
+    note_encrypted = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    retention_expires_at = Column(DateTime(timezone=True), nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PeerNotification(Base):
+    __tablename__ = "peer_notifications"
+
+    notification_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_type = Column(String(64), nullable=False)
+    target_type = Column(String(40), nullable=False)
+    target_id = Column(String(64), nullable=False, index=True)
+    recipient_role = Column(String(32), nullable=False)
+    recipient_id = Column(String(64), nullable=False)
+    channel = Column(String(20), nullable=False, default="email")
+    status = Column(String(32), nullable=False, default="pending")
+    attempt_count = Column(Integer, nullable=False, default=0)
+    provider_message_id = Column(String(128), nullable=True)
+    last_error_code = Column(String(64), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    attempted_at = Column(DateTime(timezone=True), nullable=True)
     retention_expires_at = Column(DateTime(timezone=True), nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 

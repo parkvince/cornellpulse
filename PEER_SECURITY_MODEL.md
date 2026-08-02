@@ -19,6 +19,8 @@ New email notifications use fixed subjects and HTML-escaped server-generated UUI
 
 Connection requests use double opt-in and never copy or return either person's phone number or email. An encrypted in-app relay opens only after requester and supporter consent; recognizable direct-contact details are rejected. See `CONNECTION_PRIVACY_MODEL.md`.
 
+Safety reports now use submitted, triaged, investigating, and terminal resolution states with severity, assignment, encrypted notes/resolution, participant suspension/reinstatement, bidirectional blocks, and PII-minimized audit history. Bulk report export is not implemented; the queue omits report reasons and moderators cannot read relay messages. See `PEER_SAFETY_OPERATIONS.md`.
+
 ## Abuse, audit, and retention
 
 - Login, registration, connection, and report limits use PostgreSQL rows with a unique scope/subject hash and `SELECT ... FOR UPDATE`, so limits are shared across API processes.
@@ -30,7 +32,7 @@ Connection requests use double opt-in and never copy or return either person's p
 ## Safe migration sequence
 
 1. Keep all peer feature flags false and take a verified database backup.
-2. Apply `backend/migrations/20260802_peer_security_redesign.sql`, `backend/migrations/20260802_supporter_onboarding.sql`, and `backend/migrations/20260803_connection_relay.sql` in staging. They add and backfill columns/tables without removing existing rows or columns. Only unique legacy supporter names are linked automatically; ambiguous names remain null for human reconciliation. Legacy references do not satisfy consent gates, and legacy active-looking connections become unavailable because they lack explicit requester consent.
+2. Apply `backend/migrations/20260802_peer_security_redesign.sql`, `backend/migrations/20260802_supporter_onboarding.sql`, `backend/migrations/20260803_connection_relay.sql`, and `backend/migrations/20260803_peer_safety_operations.sql` in staging. They add and backfill columns/tables without removing existing rows or columns. Only unique legacy supporter names are linked automatically; ambiguous names remain null for human reconciliation. Legacy references do not satisfy consent gates, legacy active-looking connections become unavailable because they lack explicit requester consent, and legacy open connection reports become submitted for triage.
 3. Configure a new Fernet key in secret storage. Run `backend/scripts/backfill_peer_pii.py` without `--apply` and review counts without exposing row content.
 4. Run the backfill with `--apply` in staging, verify decryptability and that copied plaintext columns are empty, then repeat through the approved production change process. Quarantine and resolve legacy reference data under an approved deletion/notification plan.
 5. Provide a verified credential enrollment/reset process for migrated people. The migration intentionally does not invent passwords.

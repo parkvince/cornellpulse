@@ -123,6 +123,13 @@ def peer_security_settings(monkeypatch):
     monkeypatch.setattr(settings, "FEATURE_SUPPORTER_SIGNUP", True)
     monkeypatch.setattr(settings, "PEER_AUTH_SECRET", "peer-test-secret-that-is-at-least-32-characters")
     monkeypatch.setattr(settings, "PEER_PII_ENCRYPTION_KEY", Fernet.generate_key().decode())
+    monkeypatch.setattr(settings, "PEER_SAFETY_CONTACT_EMAIL", "safety@example.com")
+    monkeypatch.setattr(settings, "PEER_APPROVAL_VERSION", "2026-08-03")
+    monkeypatch.setattr(settings, "PEER_SAFETY_APPROVAL_ID", "safety-approved")
+    monkeypatch.setattr(settings, "PEER_PRIVACY_APPROVAL_ID", "privacy-approved")
+    monkeypatch.setattr(settings, "PEER_SECURITY_APPROVAL_ID", "security-approved")
+    monkeypatch.setattr(settings, "PEER_OPERATIONS_APPROVAL_ID", "operations-approved")
+    monkeypatch.setattr(auth, "CORNELL_IDENTITY_INTEGRATION_IMPLEMENTED", True)
 
 
 def test_public_supporter_serializer_never_exposes_private_contact(peer_security_settings):
@@ -153,6 +160,25 @@ def test_public_supporter_serializer_never_exposes_private_contact(peer_security
         response = client.get("/api/v1/peer-supporters")
     assert response.status_code == 200
     assert response.json() == [public]
+    assert "private@cornell.edu" not in response.text
+    assert "+16075551234" not in response.text
+
+
+def test_moderator_supporter_profile_read_excludes_private_contact_and_references(peer_security_settings):
+    supporter_id = uuid.uuid4()
+    supporter = PeerSignup(
+        supporter_id=supporter_id, name="Public Display", year="Senior", major="History",
+        locations=["Olin Library"], availability=["Weekdays"], interests=["Reading"], about="Public profile.",
+        status="approved", approved=True,
+        private_data_encrypted=encrypt_private_data({"email": "private@cornell.edu", "phone": "+16075551234", "reference_email": "reference@example.com"}),
+        retention_expires_at=datetime(2027, 1, 1, tzinfo=timezone.utc),
+    )
+    token = create_peer_token("moderator", "moderator")
+    with TestClient(peer_app(TableDb({"peer_signups": [supporter]}))) as client:
+        response = client.get(f"/api/v1/peer/supporters/{supporter_id}/private", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    assert "private_contact" not in response.json()
+    assert "reference" not in response.json()
     assert "private@cornell.edu" not in response.text
     assert "+16075551234" not in response.text
 

@@ -5,6 +5,7 @@ Peer Connect, supporter signup, and the public admin UI are disabled by default 
 - Apply and verify `backend/migrations/20260802_peer_security_redesign.sql` on a backed-up staging database, run the encrypted PII backfill in dry-run and apply modes, and reconcile ambiguous legacy name relationships before enabling Peer Connect.
 - Apply `backend/migrations/20260802_supporter_onboarding.sql`, quarantine legacy reference records so they cannot satisfy consent gates, and complete an approved deletion/notification decision for that pre-consent data.
 - Apply `backend/migrations/20260803_connection_relay.sql`; verify legacy requests become unavailable rather than appearing accepted or pending; exercise double opt-in, block/report, relay encryption, and expiry under concurrency.
+- Apply `backend/migrations/20260803_peer_safety_operations.sql`; validate triage assignment, encrypted notes/resolutions, bidirectional blocks, suspension/reinstatement, notification failure states, and retention on a backed-up staging copy.
 - Integrate an authorized Cornell OIDC/SAML identity provider, including server-side assertion validation and revocation handling. The current manual non-production evidence route is deliberately not production-eligible.
 - Establish credential enrollment/reset procedures for migrated supporters, requesters, moderators, withdrawals, and deletion requests.
 - Review the implemented collection, encryption, retention, deletion, audit, status-history, and minimal email-notification boundaries with qualified privacy/security reviewers.
@@ -15,7 +16,7 @@ Peer Connect, supporter signup, and the public admin UI are disabled by default 
 - Require a documented safety/privacy sign-off before enabling any feature flag in production.
 - Complete every licensed-professional and Cornell Health review item in `SAFETY_REVIEW.md`; automated phrase tests are not clinical validation.
 
-Default-off flags are centralized in `frontend/src/config/featureFlags.ts` and `backend/app/config.py`. Environment overrides must not be treated as launch approval.
+Default-off flags are centralized in `frontend/src/config/featureFlags.ts` and `backend/app/config.py`. Environment overrides are not launch approval: the runtime readiness gate additionally requires current safety, privacy, security, operations, identity-provider, encryption, authentication, and monitored-contact evidence.
 
 Administrator access uses a short-lived signed token in an HttpOnly, SameSite=Strict cookie. Production startup rejects missing or unsafe session secrets, password hashes, or non-HTTPS frontend origins. CORS controls which browser origins may send credentialed requests; it is not an authentication mechanism.
 

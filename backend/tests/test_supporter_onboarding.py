@@ -123,6 +123,13 @@ def onboarding_settings(monkeypatch):
     monkeypatch.setattr(settings, "FEATURE_SUPPORTER_SIGNUP", True)
     monkeypatch.setattr(settings, "PEER_AUTH_SECRET", "peer-test-secret-that-is-at-least-32-characters")
     monkeypatch.setattr(settings, "PEER_PII_ENCRYPTION_KEY", Fernet.generate_key().decode())
+    monkeypatch.setattr(settings, "PEER_SAFETY_CONTACT_EMAIL", "safety@example.com")
+    monkeypatch.setattr(settings, "PEER_APPROVAL_VERSION", "2026-08-03")
+    monkeypatch.setattr(settings, "PEER_SAFETY_APPROVAL_ID", "safety-approved")
+    monkeypatch.setattr(settings, "PEER_PRIVACY_APPROVAL_ID", "privacy-approved")
+    monkeypatch.setattr(settings, "PEER_SECURITY_APPROVAL_ID", "security-approved")
+    monkeypatch.setattr(settings, "PEER_OPERATIONS_APPROVAL_ID", "operations-approved")
+    monkeypatch.setattr(auth, "CORNELL_IDENTITY_INTEGRATION_IMPLEMENTED", True)
 
 
 def test_state_machine_contains_every_required_state_and_transition_boundary():
@@ -154,6 +161,24 @@ async def test_complete_happy_path_requires_each_gate_and_supports_suspension(on
     assert record.status == "suspended" and record.approved is False
     await peer._transition_supporter(db, record, admin, "review", "administrative_review")
     assert record.status == "review"
+
+
+@pytest.mark.asyncio
+async def test_suspended_supporter_reinstatement_is_admin_only_and_rechecks_requirements(onboarding_settings, monkeypatch):
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "")
+    record = supporter("approved")
+    invitation = accepted_invitation(record.supporter_id)
+    db = OnboardingDb(record, [invitation])
+    moderator = PeerPrincipal("moderator", "moderator")
+    admin = PeerPrincipal("administrator", "administrator")
+    await peer._transition_supporter(db, record, moderator, "suspended", "safety_review")
+    payload = peer.SubjectSafetyActionRequest(action="reinstate", reason_code="resolved_review")
+    with pytest.raises(HTTPException) as moderator_error:
+        await peer.update_peer_subject_safety_status("supporter", record.supporter_id, payload, moderator, None, db)
+    assert moderator_error.value.status_code == 403
+    response = await peer.update_peer_subject_safety_status("supporter", record.supporter_id, payload, admin, None, db)
+    assert response["status"] == "approved"
+    assert response["notification"]["status"] == "skipped"
 
 
 @pytest.mark.asyncio

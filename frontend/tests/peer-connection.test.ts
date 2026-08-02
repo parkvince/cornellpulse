@@ -38,3 +38,16 @@ test("peer features remain disabled by default", () => {
   assert.match(envExample, /^FEATURE_PEER_CONNECT=false$/m)
   assert.match(envExample, /^VITE_FEATURE_PEER_CONNECT=false$/m)
 })
+
+test("safety operations remain independent and readiness-gated", () => {
+  const safety = readFileSync(new URL("../../backend/app/services/peer_safety.py", import.meta.url), "utf8")
+  const readiness = readFileSync(new URL("../../backend/app/services/peer_readiness.py", import.meta.url), "utf8")
+  const operations = readFileSync(new URL("../../PEER_SAFETY_OPERATIONS.md", import.meta.url), "utf8")
+  assert.match(safety, /not Cornell University, Cornell Health, Cornell Police, or an emergency service/i)
+  assert.match(readiness, /safety approval/)
+  assert.match(readiness, /privacy approval/)
+  assert.match(readiness, /security approval/)
+  assert.match(readiness, /operations approval/)
+  assert.match(operations, /provider acceptance is not proof of delivery/i)
+  assert.match(operations, /Moderators cannot read relay messages/i)
+})

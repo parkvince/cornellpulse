@@ -55,11 +55,25 @@ def validate_security_settings() -> None:
             settings.PEER_REQUEST_RESPONSE_HOURS,
             settings.PEER_RELAY_RETENTION_DAYS,
             settings.PEER_BLOCK_RETENTION_DAYS,
+            settings.PEER_MODERATION_NOTE_RETENTION_DAYS,
+            settings.PEER_NOTIFICATION_RETENTION_DAYS,
         )
         if any(value < 1 for value in retention_values):
             errors.append("Peer retention and rate-limit settings must be positive")
         if not CORNELL_IDENTITY_INTEGRATION_IMPLEMENTED:
             errors.append("Peer Connect and supporter signup cannot be enabled in production until Cornell identity verification is integrated")
+        if "@" not in settings.PEER_SAFETY_CONTACT_EMAIL:
+            errors.append("PEER_SAFETY_CONTACT_EMAIL must be a monitored email address")
+        if settings.PEER_APPROVAL_VERSION != "2026-08-03":
+            errors.append("PEER_APPROVAL_VERSION must match the current safety-operations version")
+        approval_ids = (
+            settings.PEER_SAFETY_APPROVAL_ID,
+            settings.PEER_PRIVACY_APPROVAL_ID,
+            settings.PEER_SECURITY_APPROVAL_ID,
+            settings.PEER_OPERATIONS_APPROVAL_ID,
+        )
+        if any(len(value.strip()) < 8 for value in approval_ids):
+            errors.append("Peer safety, privacy, security, and operations approval identifiers are required")
 
     if errors:
         raise RuntimeError("Invalid production security configuration: " + "; ".join(errors))

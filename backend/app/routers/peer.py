@@ -30,6 +30,8 @@ from app.models.db_models import (
     PeerBlock,
     PeerConnectionReport,
     PeerConnectRequest,
+    PeerModerationNote,
+    PeerNotification,
     PeerRelayMessage,
     PeerRequester,
     PeerSignup,
@@ -47,6 +49,13 @@ from app.services.peer_security import (
     verify_peer_password,
 )
 from app.services.rate_limits import enforce_persistent_rate_limit
+from app.services.peer_readiness import peer_readiness_blockers, peer_readiness_status
+from app.services.peer_safety import (
+    EMERGENCY_BOUNDARIES,
+    REPORT_SEVERITIES,
+    RESOLUTION_CODES,
+    report_transition_allowed,
+)
 from app.services.connection_flow import (
     CONNECTION_STATES,
     PUBLIC_MEETING_LOCATIONS,
@@ -74,12 +83,14 @@ FROM_EMAIL = "CornellPulse <onboarding@resend.dev>"
 EMAIL_RE = re.compile(r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$")
 PHONE_RE = re.compile(r"^\+?[1-9][0-9]{7,14}$")
 CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-AUDIT_METADATA_KEYS = {"supporter_id", "requester_id", "invitation_id", "from", "to", "reason_code", "action", "supporters", "requesters", "requests", "reports", "messages", "blocks", "connection_reports", "reference_invitations", "audit_logs", "status_history", "rate_limit_buckets"}
+AUDIT_METADATA_KEYS = {"supporter_id", "requester_id", "invitation_id", "from", "to", "reason_code", "action", "supporters", "requesters", "requests", "reports", "messages", "blocks", "connection_reports", "moderation_notes", "notifications", "reference_invitations", "audit_logs", "status_history", "rate_limit_buckets"}
 
 
 def require_peer_connect() -> None:
     if not settings.FEATURE_PEER_CONNECT:
         raise HTTPException(status_code=503, detail="Peer Connect is unavailable pending safety review.")
+    if peer_readiness_blockers():
+        raise HTTPException(status_code=503, detail="Peer Connect cannot start because the launch-readiness gate is incomplete.")
 
 
 def require_supporter_signup() -> None:
@@ -344,6 +355,71 @@ class ConnectionSafetyReportRequest(StrictPeerModel):
         return _safe_text(value, "reason")
 
 
+class ReportTriageRequest(StrictPeerModel):
+    severity: Literal["low", "moderate", "high", "critical"]
+    assigned_to_role: Literal["moderator", "administrator"]
+    assigned_to_id: str = Field(min_length=1, max_length=64)
+
+    @field_validator("assigned_to_id")
+    @classmethod
+    def validate_assignee(cls, value: str) -> str:
+        return _safe_text(value, "assigned_to_id")
+
+    @model_validator(mode="after")
+    def validate_known_assignee(self):
+        expected = "moderator" if self.assigned_to_role == "moderator" else "administrator"
+        if self.assigned_to_id != expected:
+            raise ValueError("The assignee must be a configured staff identity")
+        return self
+
+
+class ModerationNoteRequest(StrictPeerModel):
+    note: str = Field(min_length=10, max_length=1000)
+
+    @field_validator("note")
+    @classmethod
+    def validate_note(cls, value: str) -> str:
+        value = _safe_text(value, "note")
+        if contains_contact_details(value):
+            raise ValueError("Do not copy phone numbers, email addresses, links, or social handles into moderation notes")
+        return value
+
+
+class ReportResolutionRequest(StrictPeerModel):
+    outcome: Literal["resolved", "dismissed", "duplicate"]
+    resolution_code: Literal[
+        "no_action", "documented_guidance", "participant_blocked", "account_suspended",
+        "account_reinstated", "duplicate_report", "unable_to_investigate", "operator_emergency_escalation",
+    ]
+    summary: str = Field(min_length=10, max_length=1000)
+    duplicate_of: uuid.UUID | None = None
+
+    @field_validator("summary")
+    @classmethod
+    def validate_summary(cls, value: str) -> str:
+        value = _safe_text(value, "summary")
+        if contains_contact_details(value):
+            raise ValueError("Do not copy phone numbers, email addresses, links, or social handles into resolution summaries")
+        return value
+
+    @model_validator(mode="after")
+    def validate_duplicate(self):
+        if (self.outcome == "duplicate") is not (self.duplicate_of is not None):
+            raise ValueError("duplicate_of is required only for duplicate outcomes")
+        if self.outcome == "duplicate" and self.resolution_code != "duplicate_report":
+            raise ValueError("Duplicate outcomes require the duplicate_report resolution code")
+        return self
+
+
+class ParticipantBlockRequest(StrictPeerModel):
+    reason_code: Literal["participant_safety_choice", "unwanted_contact", "boundary_violation", "safety_concern"] = "participant_safety_choice"
+
+
+class SubjectSafetyActionRequest(StrictPeerModel):
+    action: Literal["suspend", "reinstate"]
+    reason_code: Literal["active_safety_review", "policy_violation", "resolved_review", "administrative_correction"]
+
+
 def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
@@ -352,9 +428,9 @@ def _expires(days: int) -> datetime:
     return datetime.now(timezone.utc) + timedelta(days=days)
 
 
-def _send_email(to: str, template: Literal["application", "approval", "connection", "report"], record_id: str) -> None:
+def _send_email(to: str, template: Literal["application", "approval", "connection", "report"], record_id: str) -> dict[str, str | None]:
     if not settings.RESEND_API_KEY or not to or not EMAIL_RE.fullmatch(to) or "\r" in to or "\n" in to:
-        return
+        return {"status": "skipped", "provider_message_id": None, "error_code": "not_configured_or_invalid_recipient"}
     subject_by_template = {
         "application": "New CornellPulse supporter application",
         "approval": "CornellPulse supporter application update",
@@ -364,10 +440,48 @@ def _send_email(to: str, template: Literal["application", "approval", "connectio
     body = f"<p>A CornellPulse peer workflow record requires attention.</p><p>Reference: <code>{email_html(record_id)}</code></p>"
     try:
         resend.api_key = settings.RESEND_API_KEY
-        resend.Emails.send({"from": FROM_EMAIL, "to": to, "subject": subject_by_template[template], "html": body})
+        response = resend.Emails.send({"from": FROM_EMAIL, "to": to, "subject": subject_by_template[template], "html": body})
+        provider_id = response.get("id") if isinstance(response, dict) else getattr(response, "id", None)
+        if not provider_id:
+            return {"status": "failed", "provider_message_id": None, "error_code": "provider_response_unconfirmed"}
+        return {"status": "provider_accepted", "provider_message_id": str(provider_id)[:128], "error_code": None}
     except Exception:
         # Do not log recipient addresses, provider payloads, or user content.
-        return
+        return {"status": "failed", "provider_message_id": None, "error_code": "provider_request_failed"}
+
+
+def _record_notification(db: AsyncSession, event_type: str, target_type: str, target_id: str, recipient_role: str, recipient_id: str, attempt: dict[str, str | None]) -> PeerNotification:
+    notification = PeerNotification(
+        notification_id=uuid.uuid4(),
+        event_type=event_type,
+        target_type=target_type,
+        target_id=target_id,
+        recipient_role=recipient_role,
+        recipient_id=recipient_id,
+        channel="email",
+        status=str(attempt["status"]),
+        attempt_count=0 if attempt["status"] == "skipped" else 1,
+        provider_message_id=attempt.get("provider_message_id"),
+        last_error_code=attempt.get("error_code"),
+        attempted_at=datetime.now(timezone.utc) if attempt["status"] != "skipped" else None,
+        retention_expires_at=_expires(settings.PEER_NOTIFICATION_RETENTION_DAYS),
+    )
+    db.add(notification)
+    return notification
+
+
+def _notification_summary(notification: PeerNotification) -> dict:
+    return {
+        "notification_id": str(notification.notification_id),
+        "channel": notification.channel,
+        "status": notification.status,
+        "meaning": {
+            "provider_accepted": "The email provider accepted the request; delivery is not confirmed.",
+            "failed": "The provider did not confirm acceptance.",
+            "skipped": "No delivery attempt was made.",
+            "pending": "A delivery attempt has not completed.",
+        }.get(notification.status, "Delivery is not confirmed."),
+    }
 
 
 def _send_reference_invitation(to: str, token: str) -> None:
@@ -652,9 +766,48 @@ async def _transition_connection(db: AsyncSession, connection: PeerConnectReques
     _audit(db, actor, "connection.status_changed", "connection_request", str(connection.request_id), {"from": current, "to": target})
 
 
+async def _create_participant_block(db: AsyncSession, connection: PeerConnectRequest, actor: PeerPrincipal, reason_code: str) -> PeerBlock:
+    _assert_connection_participant(connection, actor)
+    if actor.role not in {"supporter", "requester"}:
+        raise HTTPException(status_code=403, detail="Only connection participants may block the other participant.")
+    existing_result = await db.execute(select(PeerBlock).where(
+        PeerBlock.supporter_id == connection.supporter_id,
+        PeerBlock.requester_id == connection.requester_id,
+        PeerBlock.active.is_(True),
+        PeerBlock.deleted_at.is_(None),
+    ))
+    if existing_result.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="A block is already active for this participant pair.")
+    if connection.status in {"pending", "accepted"}:
+        await _transition_connection(db, connection, actor, "blocked")
+    block = PeerBlock(
+        block_id=uuid.uuid4(),
+        supporter_id=connection.supporter_id,
+        requester_id=connection.requester_id,
+        created_by_role=actor.role,
+        created_by_id=uuid.UUID(actor.subject_id),
+        reason_code=reason_code,
+        retention_expires_at=_expires(settings.PEER_BLOCK_RETENTION_DAYS),
+    )
+    db.add(block)
+    _audit(db, actor, "connection.block.created", "connection_request", str(connection.request_id), {"reason_code": reason_code})
+    return block
+
+
 @router.get("/peer/supporter-policy", dependencies=[Depends(require_supporter_signup)])
 async def get_supporter_policy():
     return SUPPORTER_POLICY
+
+
+@router.get("/peer/safety-boundaries", dependencies=[Depends(require_peer_connect)])
+async def get_peer_safety_boundaries():
+    return EMERGENCY_BOUNDARIES
+
+
+@router.get("/peer/readiness")
+async def get_peer_readiness(actor: PeerPrincipal = Depends(require_peer_administrator)):
+    _ = actor
+    return peer_readiness_status()
 
 
 @router.post("/peer-signup", dependencies=[Depends(require_supporter_signup)], status_code=201)
@@ -958,10 +1111,15 @@ async def get_supporter_private(supporter_id: uuid.UUID, actor: PeerPrincipal = 
         supporter = result.scalar_one_or_none()
         if not supporter:
             raise HTTPException(status_code=404, detail="Supporter not found.")
-    private = _supporter_private(supporter)
-    _audit(db, actor, "supporter.private.read", "supporter", str(supporter_id))
+    private = _supporter_private(supporter) if actor.role in {"supporter", "administrator"} else {}
+    _audit(db, actor, "supporter.private.read" if actor.role in {"supporter", "administrator"} else "supporter.profile.read", "supporter", str(supporter_id))
     await db.commit()
-    return {**public_supporter_dict(supporter), "status": supporter.status, "private_contact": {"email": private.get("email"), "phone": private.get("phone")}, **({"reference": {key: private.get(key) for key in ("reference_name", "reference_phone", "reference_email", "reference_relationship")}} if actor.role == "administrator" else {})}
+    response = {**public_supporter_dict(supporter), "status": supporter.status}
+    if actor.role in {"supporter", "administrator"}:
+        response["private_contact"] = {"email": private.get("email"), "phone": private.get("phone")}
+    if actor.role == "administrator":
+        response["reference"] = {key: private.get(key) for key in ("reference_name", "reference_phone", "reference_email", "reference_relationship")}
+    return response
 
 
 @router.get("/peer-signups")
@@ -1042,8 +1200,12 @@ async def peer_connect(payload: ConnectRequest, request: Request, actor: PeerPri
         await db.rollback()
         raise HTTPException(status_code=409, detail="An active request already exists for this supporter.") from exc
     supporter_private = _supporter_private(supporter)
-    _send_email(str(supporter_private.get("email") or ""), "connection", str(request_id))
-    return _connection_summary(connection, include_details=False)
+    attempt = _send_email(str(supporter_private.get("email") or ""), "connection", str(request_id))
+    notification = _record_notification(db, "connection_request_submitted", "connection_request", str(request_id), "supporter", str(payload.supporter_id), attempt)
+    await db.commit()
+    response = _connection_summary(connection, include_details=False)
+    response["notification"] = _notification_summary(notification)
+    return response
 
 
 @router.get("/peer/public-meeting-options", dependencies=[Depends(require_peer_connect)])
@@ -1114,28 +1276,31 @@ async def supporter_connection_action(request_id: uuid.UUID, payload: SupporterC
     target = {"accept": "accepted", "decline": "declined", "expire": "expired", "block": "blocked"}[payload.action]
     if target == "accepted":
         await _verified_requester(db, connection.requester_id)
-    await _transition_connection(db, connection, actor, target)
     if target == "blocked":
-        block_result = await db.execute(select(PeerBlock).where(
-            PeerBlock.supporter_id == connection.supporter_id,
-            PeerBlock.requester_id == connection.requester_id,
-        ))
-        block = block_result.scalar_one_or_none()
-        if block:
-            block.active = True
-            block.deleted_at = None
-            block.retention_expires_at = _expires(settings.PEER_BLOCK_RETENTION_DAYS)
-        else:
-            db.add(PeerBlock(
-                supporter_id=connection.supporter_id,
-                requester_id=connection.requester_id,
-                created_by_role="supporter",
-                created_by_id=connection.supporter_id,
-                retention_expires_at=_expires(settings.PEER_BLOCK_RETENTION_DAYS),
-            ))
-        _audit(db, actor, "connection.block.created", "connection_request", str(request_id))
+        await _create_participant_block(db, connection, actor, "participant_safety_choice")
+    else:
+        await _transition_connection(db, connection, actor, target)
     await db.commit()
     return _connection_summary(connection, include_details=False)
+
+
+@router.post("/peer-requests/{request_id}/block", status_code=201)
+async def block_connection_participant(request_id: uuid.UUID, payload: ParticipantBlockRequest, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.request_id == request_id, PeerConnectRequest.deleted_at.is_(None)))
+    connection = result.scalar_one_or_none()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection request not found.")
+    if actor.role == "requester":
+        await _verified_requester(db, uuid.UUID(actor.subject_id))
+    elif actor.role == "supporter":
+        await _verified_supporter(db, uuid.UUID(actor.subject_id))
+    block = await _create_participant_block(db, connection, actor, payload.reason_code)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="A block is already active for this participant pair.") from exc
+    return {"block_id": str(block.block_id), "request_id": str(request_id), "status": "active"}
 
 
 @router.post("/peer-requests/{request_id}/cancel")
@@ -1252,8 +1417,17 @@ async def report_connection(request_id: uuid.UUID, payload: ConnectionSafetyRepo
         target_role, target_id = "supporter", connection.supporter_id
     else:
         target_role, target_id = "requester", connection.requester_id
+    duplicate_result = await db.execute(select(PeerConnectionReport).where(
+        PeerConnectionReport.request_id == request_id,
+        PeerConnectionReport.reporter_role == actor.role,
+        PeerConnectionReport.reporter_id == uuid.UUID(actor.subject_id),
+        PeerConnectionReport.status.in_(["submitted", "triaged", "investigating"]),
+        PeerConnectionReport.deleted_at.is_(None),
+    ))
+    if duplicate_result.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="An active safety report already exists for this connection.")
     report_id = uuid.uuid4()
-    db.add(PeerConnectionReport(
+    report = PeerConnectionReport(
         connection_report_id=report_id,
         request_id=request_id,
         reporter_role=actor.role,
@@ -1261,28 +1435,37 @@ async def report_connection(request_id: uuid.UUID, payload: ConnectionSafetyRepo
         target_role=target_role,
         target_id=target_id,
         reason_encrypted=encrypt_private_data({"reason": payload.reason}),
+        status="submitted",
         retention_expires_at=_expires(settings.PEER_REPORT_RETENTION_DAYS),
-    ))
-    _status_history(db, actor, "connection_report", str(report_id), None, "open")
+    )
+    db.add(report)
+    _status_history(db, actor, "connection_report", str(report_id), None, "submitted")
     _audit(db, actor, "connection.report.created", "connection_report", str(report_id), {"requester_id": str(connection.requester_id), "supporter_id": str(connection.supporter_id)})
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="An active safety report already exists for this connection.") from exc
+    attempt = _send_email(settings.PEER_SAFETY_CONTACT_EMAIL, "report", str(report_id))
+    notification = _record_notification(db, "safety_report_submitted", "connection_report", str(report_id), "operator", "safety_contact", attempt)
     await db.commit()
-    _send_email(settings.ADMIN_EMAIL, "report", str(report_id))
-    return {"connection_report_id": str(report_id), "request_id": str(request_id), "status": "open"}
+    return {"connection_report_id": str(report_id), "request_id": str(request_id), "status": "submitted", "notification": _notification_summary(notification)}
 
 
 @router.get("/peer/connection-reports")
 async def get_connection_reports(actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.deleted_at.is_(None)).order_by(PeerConnectionReport.reported_at.desc()))
+    result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.deleted_at.is_(None)).order_by(PeerConnectionReport.reported_at.desc()).limit(100))
     response = []
     for report in result.scalars().all():
-        private = decrypt_private_data(report.reason_encrypted)
         response.append({
             "connection_report_id": str(report.connection_report_id),
             "request_id": str(report.request_id),
             "reporter_role": report.reporter_role,
             "target_role": report.target_role,
             "status": report.status,
-            "reason": private.get("reason"),
+            "severity": report.severity,
+            "assigned_to_role": report.assigned_to_role,
+            "assigned_to_id": report.assigned_to_id,
             "reported_at": report.reported_at.isoformat() if report.reported_at else None,
         })
     _audit(db, actor, "connection.reports.read", "connection_report_collection", "all", {"connection_reports": len(response)})
@@ -1290,43 +1473,186 @@ async def get_connection_reports(actor: PeerPrincipal = Depends(require_peer_sta
     return response
 
 
-@router.post("/peer/connection-reports/{report_id}/resolve")
-async def resolve_connection_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+@router.get("/peer/connection-reports/{report_id}")
+async def get_connection_report_detail(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.connection_report_id == report_id, PeerConnectionReport.deleted_at.is_(None)))
     report = result.scalar_one_or_none()
     if not report:
         raise HTTPException(status_code=404, detail="Connection report not found.")
-    if report.status != "open":
-        raise HTTPException(status_code=409, detail="Connection report is no longer open.")
-    report.status = "resolved"
-    report.resolved_at = datetime.now(timezone.utc)
-    _status_history(db, actor, "connection_report", str(report_id), "open", "resolved")
-    _audit(db, actor, "connection.report.resolved", "connection_report", str(report_id))
+    private = decrypt_private_data(report.reason_encrypted)
+    note_result = await db.execute(select(PeerModerationNote).where(PeerModerationNote.connection_report_id == report_id, PeerModerationNote.deleted_at.is_(None)).order_by(PeerModerationNote.created_at.asc()))
+    notes = []
+    for note in note_result.scalars().all():
+        note_private = decrypt_private_data(note.note_encrypted)
+        notes.append({"note_id": str(note.note_id), "author_role": note.author_role, "note": note_private.get("note"), "created_at": note.created_at.isoformat() if note.created_at else None})
+    _audit(db, actor, "connection.report.detail_read", "connection_report", str(report_id))
     await db.commit()
-    return {"connection_report_id": str(report_id), "status": "resolved"}
+    return {
+        "connection_report_id": str(report_id), "request_id": str(report.request_id),
+        "reporter_role": report.reporter_role, "target_role": report.target_role,
+        "status": report.status, "severity": report.severity,
+        "assigned_to_role": report.assigned_to_role, "assigned_to_id": report.assigned_to_id,
+        "reason": private.get("reason"), "notes": notes,
+        "resolution_code": report.resolution_code,
+        "resolution_summary": (decrypt_private_data(report.resolution_encrypted).get("summary") if report.resolution_encrypted else None),
+    }
+
+
+@router.post("/peer/connection-reports/{report_id}/triage")
+async def triage_connection_report(report_id: uuid.UUID, payload: ReportTriageRequest, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    if payload.severity not in REPORT_SEVERITIES:
+        raise HTTPException(status_code=422, detail="Unsupported report severity.")
+    if actor.role == "moderator" and (payload.assigned_to_role != "moderator" or payload.assigned_to_id != actor.subject_id):
+        raise HTTPException(status_code=403, detail="Moderators may assign a report only to themselves.")
+    result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.connection_report_id == report_id, PeerConnectionReport.deleted_at.is_(None)))
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Connection report not found.")
+    if not report_transition_allowed(report.status, "triaged"):
+        raise HTTPException(status_code=409, detail=f"Report cannot move from {report.status} to triaged.")
+    previous = report.status
+    report.status = "triaged"
+    report.severity = payload.severity
+    report.assigned_to_role = payload.assigned_to_role
+    report.assigned_to_id = payload.assigned_to_id
+    report.triaged_at = datetime.now(timezone.utc)
+    report.triaged_by = actor.subject_id
+    _status_history(db, actor, "connection_report", str(report_id), previous, "triaged")
+    _audit(db, actor, "connection.report.triaged", "connection_report", str(report_id), {"from": previous, "to": "triaged"})
+    await db.commit()
+    return {"connection_report_id": str(report_id), "status": "triaged", "severity": report.severity, "assigned_to_role": report.assigned_to_role, "assigned_to_id": report.assigned_to_id, **({"emergency_boundaries": EMERGENCY_BOUNDARIES} if report.severity == "critical" else {})}
+
+
+@router.post("/peer/connection-reports/{report_id}/notes", status_code=201)
+async def add_connection_report_note(report_id: uuid.UUID, payload: ModerationNoteRequest, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.connection_report_id == report_id, PeerConnectionReport.deleted_at.is_(None)))
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Connection report not found.")
+    if report.status not in {"triaged", "investigating"}:
+        raise HTTPException(status_code=409, detail="Notes may be added only to a triaged or investigating report.")
+    if actor.role == "moderator" and (report.assigned_to_role != "moderator" or report.assigned_to_id != actor.subject_id):
+        raise HTTPException(status_code=403, detail="This report is not assigned to the moderator.")
+    note = PeerModerationNote(
+        note_id=uuid.uuid4(), connection_report_id=report_id,
+        author_role=actor.role, author_id=actor.subject_id,
+        note_encrypted=encrypt_private_data({"note": payload.note}),
+        retention_expires_at=_expires(settings.PEER_MODERATION_NOTE_RETENTION_DAYS),
+    )
+    db.add(note)
+    if report.status == "triaged":
+        report.status = "investigating"
+        _status_history(db, actor, "connection_report", str(report_id), "triaged", "investigating")
+    _audit(db, actor, "connection.report.note_added", "connection_report", str(report_id))
+    await db.commit()
+    return {"note_id": str(note.note_id), "connection_report_id": str(report_id), "status": report.status}
+
+
+@router.post("/peer/connection-reports/{report_id}/resolve")
+async def resolve_connection_report(report_id: uuid.UUID, payload: ReportResolutionRequest, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    if payload.resolution_code not in RESOLUTION_CODES:
+        raise HTTPException(status_code=422, detail="Unsupported resolution code.")
+    result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.connection_report_id == report_id, PeerConnectionReport.deleted_at.is_(None)))
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Connection report not found.")
+    if actor.role == "moderator" and (report.assigned_to_role != "moderator" or report.assigned_to_id != actor.subject_id):
+        raise HTTPException(status_code=403, detail="This report is not assigned to the moderator.")
+    if not report_transition_allowed(report.status, payload.outcome):
+        raise HTTPException(status_code=409, detail=f"Report cannot move from {report.status} to {payload.outcome}.")
+    previous = report.status
+    report.status = payload.outcome
+    report.resolution_code = payload.resolution_code
+    report.resolution_encrypted = encrypt_private_data({"summary": payload.summary})
+    report.resolved_by = actor.subject_id
+    report.resolved_at = datetime.now(timezone.utc)
+    report.duplicate_of = payload.duplicate_of
+    _status_history(db, actor, "connection_report", str(report_id), previous, payload.outcome)
+    _audit(db, actor, "connection.report.resolved", "connection_report", str(report_id), {"from": previous, "to": payload.outcome, "reason_code": payload.resolution_code})
+    await db.commit()
+    return {"connection_report_id": str(report_id), "status": report.status, "resolution_code": report.resolution_code}
+
+
+@router.get("/peer/connection-reports/{report_id}/history")
+async def get_connection_report_history(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    report_result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.connection_report_id == report_id, PeerConnectionReport.deleted_at.is_(None)))
+    if not report_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Connection report not found.")
+    status_result = await db.execute(select(PeerStatusHistory).where(PeerStatusHistory.entity_type == "connection_report", PeerStatusHistory.entity_id == str(report_id)).order_by(PeerStatusHistory.changed_at.asc()))
+    audit_result = await db.execute(select(PeerAuditLog).where(PeerAuditLog.target_type == "connection_report", PeerAuditLog.target_id == str(report_id)).order_by(PeerAuditLog.occurred_at.asc()))
+    _audit(db, actor, "connection.report.history_read", "connection_report", str(report_id))
+    await db.commit()
+    return {
+        "status_history": [{"from": item.previous_status, "to": item.new_status, "actor_role": item.actor_role, "changed_at": item.changed_at.isoformat() if item.changed_at else None} for item in status_result.scalars().all()],
+        "audit_history": [{"action": item.action, "actor_role": item.actor_role, "occurred_at": item.occurred_at.isoformat() if item.occurred_at else None} for item in audit_result.scalars().all()],
+    }
+
+
+@router.post("/peer/safety/subjects/{subject_role}/{subject_id}/status")
+async def update_peer_subject_safety_status(subject_role: Literal["supporter", "requester"], subject_id: uuid.UUID, payload: SubjectSafetyActionRequest, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    if payload.action == "reinstate" and actor.role != "administrator":
+        raise HTTPException(status_code=403, detail="Only an administrator may reinstate a suspended participant.")
+    now = datetime.now(timezone.utc)
+    if subject_role == "supporter":
+        result = await db.execute(select(PeerSignup).where(PeerSignup.supporter_id == subject_id, PeerSignup.deleted_at.is_(None)))
+        subject = result.scalar_one_or_none()
+        if not subject:
+            raise HTTPException(status_code=404, detail="Supporter not found.")
+        if payload.action == "suspend":
+            if subject.status != "approved":
+                raise HTTPException(status_code=409, detail="Only an approved supporter may be suspended.")
+            await _transition_supporter(db, subject, actor, "suspended", "safety_review")
+        else:
+            if subject.status != "suspended":
+                raise HTTPException(status_code=409, detail="Only a suspended supporter may be reinstated.")
+            readiness_errors = await _supporter_readiness_errors(db, subject)
+            if readiness_errors:
+                raise HTTPException(status_code=409, detail="Reinstatement requirements incomplete: " + ", ".join(readiness_errors) + ".")
+            subject.status = "approved"
+            subject.approved = True
+            subject.suspended_at = None
+            _status_history(db, actor, "supporter", str(subject_id), "suspended", "approved")
+            _audit(db, actor, "supporter.reinstated", "supporter", str(subject_id), {"reason_code": payload.reason_code})
+    else:
+        result = await db.execute(select(PeerRequester).where(PeerRequester.requester_id == subject_id, PeerRequester.deleted_at.is_(None)))
+        subject = result.scalar_one_or_none()
+        if not subject:
+            raise HTTPException(status_code=404, detail="Requester not found.")
+        expected = "active" if payload.action == "suspend" else "suspended"
+        if subject.status != expected:
+            raise HTTPException(status_code=409, detail=f"Requester must be {expected} for this action.")
+        previous = subject.status
+        subject.status = "suspended" if payload.action == "suspend" else "active"
+        subject.suspended_at = now if payload.action == "suspend" else None
+        _status_history(db, actor, "requester", str(subject_id), previous, subject.status)
+        _audit(db, actor, f"requester.{payload.action}ed", "requester", str(subject_id), {"reason_code": payload.reason_code})
+        if payload.action == "suspend":
+            connection_result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.requester_id == subject_id, PeerConnectRequest.status.in_(["pending", "accepted"]), PeerConnectRequest.deleted_at.is_(None)))
+            for connection in connection_result.scalars().all():
+                await _transition_connection(db, connection, actor, "unavailable")
+    await db.commit()
+    attempt = _send_email(settings.PEER_SAFETY_CONTACT_EMAIL, "report", str(subject_id))
+    notification = _record_notification(db, f"participant_{payload.action}ed", subject_role, str(subject_id), "operator", "safety_contact", attempt)
+    await db.commit()
+    return {"subject_role": subject_role, "subject_id": str(subject_id), "status": subject.status, "notification": _notification_summary(notification)}
+
+
+@router.get("/peer/notifications/{notification_id}")
+async def get_peer_notification_status(notification_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerNotification).where(PeerNotification.notification_id == notification_id, PeerNotification.deleted_at.is_(None)))
+    notification = result.scalar_one_or_none()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found.")
+    _audit(db, actor, "notification.status_read", "notification", str(notification_id))
+    await db.commit()
+    return _notification_summary(notification)
 
 
 @router.post("/report-supporter", dependencies=[Depends(require_peer_connect)], status_code=201)
 async def report_supporter(payload: ReportRequest, request: Request, actor: PeerPrincipal = Depends(require_requester), db: AsyncSession = Depends(get_db)):
     await enforce_persistent_rate_limit(db, "supporter-report", actor.subject_id, 3, settings.PEER_RATE_LIMIT_WINDOW_SECONDS)
     await _active_requester(db, uuid.UUID(actor.subject_id))
-    await _active_supporter(db, payload.supporter_id, approved=True)
-    report_id = uuid.uuid4()
-    report = SupporterReport(
-        report_id=report_id,
-        supporter_id=payload.supporter_id,
-        reporter_id=uuid.UUID(actor.subject_id),
-        private_data_encrypted=encrypt_private_data({"reason": payload.reason}),
-        status="open",
-        resolved=False,
-        retention_expires_at=_expires(settings.PEER_REPORT_RETENTION_DAYS),
-    )
-    db.add(report)
-    _status_history(db, actor, "supporter_report", str(report_id), None, "open")
-    _audit(db, actor, "report.created", "supporter_report", str(report_id), {"supporter_id": str(payload.supporter_id)})
-    await db.commit()
-    _send_email(settings.ADMIN_EMAIL, "report", str(report_id))
-    return {"report_id": str(report_id), "status": "open"}
+    raise HTTPException(status_code=410, detail="Standalone supporter reports are retired. Submit a safety report from the authenticated connection so participant identity and authorization can be verified.")
 
 
 @router.get("/reports")
@@ -1334,8 +1660,7 @@ async def get_reports(actor: PeerPrincipal = Depends(require_peer_staff), _: Non
     result = await db.execute(select(SupporterReport).where(SupporterReport.deleted_at.is_(None)).order_by(SupporterReport.reported_at.desc()))
     response = []
     for report in result.scalars().all():
-        private = decrypt_private_data(report.private_data_encrypted) if report.private_data_encrypted else {"reason": report.reason, "reporter_email": report.reporter_email}
-        response.append({"report_id": str(report.report_id), "supporter_id": str(report.supporter_id), "status": report.status, "reported_at": report.reported_at.isoformat() if report.reported_at else None, "private": {"reason": private.get("reason"), **({"reporter_email": private.get("reporter_email")} if actor.role == "administrator" else {})}})
+        response.append({"report_id": str(report.report_id), "supporter_id": str(report.supporter_id), "status": report.status, "reported_at": report.reported_at.isoformat() if report.reported_at else None, "legacy": True})
     _audit(db, actor, "reports.read", "report_collection", "all")
     await db.commit()
     return response
@@ -1467,6 +1792,8 @@ async def delete_request(request_id: uuid.UUID, actor: PeerPrincipal = Depends(r
     connection = result.scalar_one_or_none()
     if not connection:
         raise HTTPException(status_code=404, detail="Connection request not found.")
+    if connection.status in {"pending", "accepted"}:
+        raise HTTPException(status_code=409, detail="An active connection must be canceled, blocked, expired, or marked unavailable before deletion.")
     connection.deleted_at = datetime.now(timezone.utc)
     connection.status = "deleted"
     connection.private_data_encrypted = None
@@ -1484,6 +1811,29 @@ async def delete_request(request_id: uuid.UUID, actor: PeerPrincipal = Depends(r
     _audit(db, actor, "connection.deleted", "connection_request", str(request_id))
     await db.commit()
     return {"request_id": str(request_id), "status": "deleted", "private_data_deleted": True}
+
+
+@router.delete("/peer/connection-reports/{report_id}")
+async def delete_connection_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.connection_report_id == report_id, PeerConnectionReport.deleted_at.is_(None)))
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Connection report not found.")
+    if report.status not in {"resolved", "dismissed", "duplicate"}:
+        raise HTTPException(status_code=409, detail="An active safety report cannot be deleted before resolution.")
+    now = datetime.now(timezone.utc)
+    report.reason_encrypted = encrypt_private_data({"deleted": True})
+    report.resolution_encrypted = None
+    report.deleted_at = now
+    report.status = "deleted"
+    note_result = await db.execute(select(PeerModerationNote).where(PeerModerationNote.connection_report_id == report_id, PeerModerationNote.deleted_at.is_(None)))
+    for note in note_result.scalars().all():
+        note.note_encrypted = encrypt_private_data({"deleted": True})
+        note.deleted_at = now
+    _status_history(db, actor, "connection_report", str(report_id), None, "deleted")
+    _audit(db, actor, "connection.report.deleted", "connection_report", str(report_id))
+    await db.commit()
+    return {"connection_report_id": str(report_id), "status": "deleted", "private_data_deleted": True}
 
 
 @router.delete("/reports/{report_id}")
@@ -1505,7 +1855,7 @@ async def delete_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(req
 @router.post("/peer/retention/purge")
 async def purge_expired_peer_data(actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)
-    purged = {"supporters": 0, "requesters": 0, "requests": 0, "reports": 0, "messages": 0, "blocks": 0, "connection_reports": 0, "reference_invitations": 0}
+    purged = {"supporters": 0, "requesters": 0, "requests": 0, "reports": 0, "messages": 0, "blocks": 0, "connection_reports": 0, "moderation_notes": 0, "notifications": 0, "reference_invitations": 0}
     model_fields = (
         (PeerSignup, "supporters"),
         (PeerRequester, "requesters"),
@@ -1556,9 +1906,22 @@ async def purge_expired_peer_data(actor: PeerPrincipal = Depends(require_peer_ad
     connection_report_result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.retention_expires_at <= now, PeerConnectionReport.deleted_at.is_(None)))
     for connection_report in connection_report_result.scalars().all():
         connection_report.reason_encrypted = encrypt_private_data({"expired": True})
+        connection_report.resolution_encrypted = None
         connection_report.status = "expired"
         connection_report.deleted_at = now
         purged["connection_reports"] += 1
+    note_result = await db.execute(select(PeerModerationNote).where(PeerModerationNote.retention_expires_at <= now, PeerModerationNote.deleted_at.is_(None)))
+    for note in note_result.scalars().all():
+        note.note_encrypted = encrypt_private_data({"expired": True})
+        note.deleted_at = now
+        purged["moderation_notes"] += 1
+    notification_result = await db.execute(select(PeerNotification).where(PeerNotification.retention_expires_at <= now, PeerNotification.deleted_at.is_(None)))
+    for notification in notification_result.scalars().all():
+        notification.provider_message_id = None
+        notification.last_error_code = None
+        notification.deleted_at = now
+        notification.status = "expired"
+        purged["notifications"] += 1
     invitation_result = await db.execute(select(SupporterReferenceInvitation).where(
         SupporterReferenceInvitation.expires_at <= now,
         SupporterReferenceInvitation.deleted_at.is_(None),

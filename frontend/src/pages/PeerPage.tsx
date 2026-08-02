@@ -200,7 +200,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
     try {
       const response = await fetch(`${API_URL}/peer-requests/${requestId}/report`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ reason: reportReason }) })
       const data = await response.json().catch(() => ({})) as { status?: string; detail?: string }
-      if (!response.ok || data.status !== "open") throw new Error(data.detail || "The server did not confirm the safety report.")
+      if (!response.ok || data.status !== "submitted") throw new Error(data.detail || "The server did not confirm the safety report.")
       setShowReport(false); setReportReason("")
     } catch (cause) { setError(cause instanceof Error ? cause.message : "The safety report was not confirmed.") }
     finally { setLoading(false) }
@@ -462,7 +462,7 @@ function ConnectionManager() {
       <details style={{ marginTop: "12px" }}><summary style={{ fontSize: "12px", color: "#717171", cursor: "pointer" }}>Report a safety concern</summary>
         <label htmlFor={`report-${connection.request_id}`} style={{ fontSize: "12px", color: "#717171", display: "block", margin: "8px 0 4px" }}>Describe the concern (at least 10 characters)</label>
         <textarea id={`report-${connection.request_id}`} value={reportDrafts[connection.request_id] || ""} onChange={event => setReportDrafts(current => ({ ...current, [connection.request_id]: event.target.value }))} maxLength={500} rows={2} style={{ width: "100%", padding: "10px", border: "2px solid #ebebeb", borderRadius: "10px", resize: "vertical", marginBottom: "6px" }} />
-        <button onClick={() => confirmedAction(`peer-requests/${connection.request_id}/report`, "open", { reason: reportDrafts[connection.request_id] })} disabled={loading || (reportDrafts[connection.request_id]?.trim().length || 0) < 10} style={{ width: "100%", padding: "10px", border: 0, borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, fontWeight: 700 }}>Submit safety report</button>
+        <button onClick={() => confirmedAction(`peer-requests/${connection.request_id}/report`, "submitted", { reason: reportDrafts[connection.request_id] })} disabled={loading || (reportDrafts[connection.request_id]?.trim().length || 0) < 10} style={{ width: "100%", padding: "10px", border: 0, borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, fontWeight: 700 }}>Submit safety report</button>
       </details>
     </div>)}
   </div>
