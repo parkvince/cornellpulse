@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
+from app.auth import validate_security_settings
 from app.database import init_db
-from app.routers import checkin, heatmap, peer, tracking
+from app.routers import admin_auth, checkin, heatmap, peer, tracking
+
+validate_security_settings()
 
 app = FastAPI(
     title="CornellPulse API",
@@ -23,6 +26,7 @@ async def startup():
     await init_db()
 
 app.include_router(checkin.router, prefix="/api/v1")
+app.include_router(admin_auth.router, prefix="/api/v1")
 app.include_router(heatmap.router, prefix="/api/v1")
 app.include_router(peer.router, prefix="/api/v1")
 app.include_router(tracking.router, prefix="/api/v1")

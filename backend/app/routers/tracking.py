@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.database import get_db
 from app.models.db_models import ResourceClick
+from app.auth import require_admin
 
 router = APIRouter()
 
@@ -18,7 +19,7 @@ async def track_click(request: ClickRequest, db: AsyncSession = Depends(get_db))
     await db.commit()
     return {"status": "recorded"}
 
-@router.get("/click-stats")
+@router.get("/click-stats", dependencies=[Depends(require_admin)])
 async def click_stats(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(

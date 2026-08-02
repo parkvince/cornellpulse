@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 
 const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
-// The legacy client-side gate is intentionally non-functional. Do not put credentials in frontend code.
-const ADMIN_PASSWORD = ""
 
 const AVATAR_COLORS = ["#FF5A5F", "#00A699", "#FC642D", "#7B68EE", "#20B2AA", "#FF6B6B", "#4ECDC4"]
 function avatarColor(name: string) {
@@ -28,74 +26,135 @@ function StatCard({ label, value, sub, color }: { label: string; value: string |
   )
 }
 
+interface AdminSummary { avg_mood: number | null; count: number }
+interface PeerSignup {
+  id: number; name: string; email: string; phone: string; year: string; major?: string
+  locations: string[]; availability: string[]; interests: string[]; about?: string
+  refName: string; refPhone: string; refEmail: string; refRelationship?: string
+  approved: boolean; submitted_at?: string
+}
+interface PeerRequest {
+  id: number; supporter_name: string; requester_name: string; requester_email: string
+  requester_phone?: string; preferred_location: string; preferred_time: string
+  message?: string; status: string; requested_at?: string
+}
+
 export default function AdminPage() {
-  const [authed, setAuthed] = useState(false)
+  const [authed, setAuthed] = useState<boolean | null>(null)
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [tab, setTab] = useState("overview")
-  const [summary, setSummary] = useState<any>(null)
-  const [signups, setSignups] = useState<any[]>([])
-  const [requests, setRequests] = useState<any[]>([])
-  const [selectedSignup, setSelectedSignup] = useState<any>(null)
-  const [selectedRequest, setSelectedRequest] = useState<any>(null)
+  const [summary, setSummary] = useState<AdminSummary | null>(null)
+  const [signups, setSignups] = useState<PeerSignup[]>([])
+  const [requests, setRequests] = useState<PeerRequest[]>([])
+  const [selectedSignup, setSelectedSignup] = useState<PeerSignup | null>(null)
+  const [selectedRequest, setSelectedRequest] = useState<PeerRequest | null>(null)
   const [approving, setApproving] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("all")
 
-  function login() {
-    if (ADMIN_PASSWORD && password === ADMIN_PASSWORD) { setAuthed(true); setError("") }
-    else setError("Incorrect password.")
+  const adminFetch = useCallback(async (path: string, options: RequestInit = {}) => {
+    const response = await fetch(`${API_URL}${path}`, { ...options, credentials: "include" })
+    if (response.status === 401 || response.status === 403) setAuthed(false)
+    if (!response.ok) throw new Error(`Admin request failed: ${response.status}`)
+    return response
+  }, [])
+
+  async function login() {
+    setError("")
+    try {
+      await adminFetch("/admin/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      })
+      setPassword("")
+      setAuthed(true)
+      await loadData()
+    } catch {
+      setError("Incorrect password or too many attempts. Please try again later.")
+    }
   }
 
-  async function loadData() {
+  async function logout() {
+    try {
+      await adminFetch("/admin/auth/logout", { method: "POST" })
+    } catch {
+      // The local session is cleared even if the server is unavailable.
+    }
+    setAuthed(false)
+    setSummary(null)
+    setSignups([])
+    setRequests([])
+  }
+
+  const loadData = useCallback(async () => {
     try {
       const [s, sg, r] = await Promise.all([
-        fetch(`${API_URL}/campus/summary`).then(res => res.json()),
-        fetch(`${API_URL}/peer-signups`).then(res => res.json()),
-        fetch(`${API_URL}/peer-requests`).then(res => res.json()),
+        adminFetch("/campus/summary").then(res => res.json()),
+        adminFetch("/peer-signups").then(res => res.json()),
+        adminFetch("/peer-requests").then(res => res.json()),
       ])
-      setSummary(s)
-      setSignups(Array.isArray(sg) ? sg : [])
-      setRequests(Array.isArray(r) ? r : [])
-    } catch {}
-  }
+      setSummary(s as AdminSummary)
+      setSignups(Array.isArray(sg) ? sg as PeerSignup[] : [])
+      setRequests(Array.isArray(r) ? r as PeerRequest[] : [])
+    } catch {
+      // adminFetch already clears authentication for unauthorized responses.
+    }
+  }, [adminFetch])
 
-  useEffect(() => { if (authed) loadData() }, [authed])
+  useEffect(() => {
+    fetch(`${API_URL}/admin/auth/session`, { credentials: "include" })
+      .then(response => {
+        if (!response.ok) throw new Error("No active administrator session")
+        setAuthed(true)
+        void loadData()
+      })
+      .catch(() => setAuthed(false))
+  }, [loadData])
 
   async function approveSignup(id: number) {
     setApproving(id)
     try {
-      await fetch(`${API_URL}/peer-signups/${id}/approve`, { method: "POST" })
+      await adminFetch(`/peer-signups/${id}/approve`, { method: "POST" })
       await loadData()
-      if (selectedSignup?.id === id) setSelectedSignup((prev: any) => ({ ...prev, approved: true }))
-    } catch {}
+      if (selectedSignup?.id === id) setSelectedSignup(prev => prev ? ({ ...prev, approved: true }) : prev)
+    } catch {
+      // adminFetch handles expired or unauthorized sessions.
+    }
     setApproving(null)
   }
 
   async function deleteSignup(id: number) {
     if (!confirm("Remove this application? This cannot be undone.")) return
     try {
-      await fetch(`${API_URL}/peer-signups/${id}`, { method: "DELETE" })
+      await adminFetch(`/peer-signups/${id}`, { method: "DELETE" })
       await loadData()
       setSelectedSignup(null)
-    } catch {}
+    } catch {
+      // adminFetch handles expired or unauthorized sessions.
+    }
   }
 
   async function resolveRequest(id: number) {
     try {
-      await fetch(`${API_URL}/peer-requests/${id}/resolve`, { method: "POST" })
+      await adminFetch(`/peer-requests/${id}/resolve`, { method: "POST" })
       await loadData()
-      if (selectedRequest?.id === id) setSelectedRequest((prev: any) => ({ ...prev, status: "resolved" }))
-    } catch {}
+      if (selectedRequest?.id === id) setSelectedRequest(prev => prev ? ({ ...prev, status: "resolved" }) : prev)
+    } catch {
+      // adminFetch handles expired or unauthorized sessions.
+    }
   }
 
   async function deleteRequest(id: number) {
     if (!confirm("Delete this request? This cannot be undone.")) return
     try {
-      await fetch(`${API_URL}/peer-requests/${id}`, { method: "DELETE" })
+      await adminFetch(`/peer-requests/${id}`, { method: "DELETE" })
       await loadData()
       setSelectedRequest(null)
-    } catch {}
+    } catch {
+      // adminFetch handles expired or unauthorized sessions.
+    }
   }
 
   const filteredSignups = signups.filter(s => {
@@ -353,7 +412,7 @@ export default function AdminPage() {
       <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 28px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em" }}>CornellPulse</p>
-          <button onClick={() => setAuthed(false)} style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", backgroundColor: "rgba(255,255,255,0.15)", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontFamily: "DM Sans, sans-serif" }}>Sign out</button>
+          <button onClick={logout} style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", backgroundColor: "rgba(255,255,255,0.15)", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontFamily: "DM Sans, sans-serif" }}>Sign out</button>
         </div>
         <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em" }}>Admin</h1>
       </div>
@@ -411,7 +470,7 @@ export default function AdminPage() {
               {signups.slice(0, 4).map(s => {
                 const color = avatarColor(s.name)
                 return (
-                  <button key={s.id} onClick={() => { setSelectedSignup(s); setTab("signups") }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "12px", padding: "14px 20px", borderBottom: "1px solid #f5f5f5", backgroundColor: "transparent", border: "none", cursor: "pointer", textAlign: "left" } as any}>
+                  <button key={s.id} onClick={() => { setSelectedSignup(s); setTab("signups") }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "12px", padding: "14px 20px", borderBottom: "1px solid #f5f5f5", backgroundColor: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}>
                     <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: color + "15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <span style={{ fontSize: "16px", fontWeight: 800, color }}>{s.name.charAt(0)}</span>
                     </div>

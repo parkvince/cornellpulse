@@ -9,6 +9,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 import resend
 from app.config import settings
+from app.auth import require_admin
 
 router = APIRouter()
 
@@ -130,7 +131,7 @@ async def peer_signup(request: PeerSignupRequest, req: Request, db: AsyncSession
     return {"status": "received"}
 
 
-@router.get("/peer-signups")
+@router.get("/peer-signups", dependencies=[Depends(require_admin)])
 async def get_signups(db: AsyncSession = Depends(get_db), _: None = Depends(require_supporter_signup)):
     result = await db.execute(select(PeerSignup).order_by(PeerSignup.submitted_at.desc()))
     signups = result.scalars().all()
@@ -158,7 +159,7 @@ async def get_signups(db: AsyncSession = Depends(get_db), _: None = Depends(requ
     ]
 
 
-@router.post("/peer-signups/{signup_id}/approve")
+@router.post("/peer-signups/{signup_id}/approve", dependencies=[Depends(require_admin)])
 async def approve_signup(signup_id: int, db: AsyncSession = Depends(get_db), _: None = Depends(require_supporter_signup)):
     result = await db.execute(select(PeerSignup).where(PeerSignup.id == signup_id))
     signup = result.scalar_one_or_none()
@@ -266,7 +267,7 @@ async def peer_connect(request: PeerConnectRequestModel, req: Request, db: Async
     return {"status": "received"}
 
 
-@router.get("/peer-requests")
+@router.get("/peer-requests", dependencies=[Depends(require_admin)])
 async def get_requests(db: AsyncSession = Depends(get_db), _: None = Depends(require_peer_connect)):
     result = await db.execute(select(PeerConnectRequest).order_by(PeerConnectRequest.requested_at.desc()))
     requests = result.scalars().all()
@@ -287,7 +288,7 @@ async def get_requests(db: AsyncSession = Depends(get_db), _: None = Depends(req
     ]
 
 
-@router.delete("/peer-signups/{signup_id}")
+@router.delete("/peer-signups/{signup_id}", dependencies=[Depends(require_admin)])
 async def delete_signup(signup_id: int, db: AsyncSession = Depends(get_db), _: None = Depends(require_supporter_signup)):
     result = await db.execute(select(PeerSignup).where(PeerSignup.id == signup_id))
     signup = result.scalar_one_or_none()
@@ -325,7 +326,7 @@ async def report_supporter(request: ReportRequest, db: AsyncSession = Depends(ge
     return {"status": "received"}
 
 
-@router.get("/reports")
+@router.get("/reports", dependencies=[Depends(require_admin)])
 async def get_reports(db: AsyncSession = Depends(get_db), _: None = Depends(require_peer_connect)):
     from app.models.db_models import SupporterReport
     result = await db.execute(select(SupporterReport).order_by(SupporterReport.reported_at.desc()))
@@ -342,7 +343,7 @@ async def get_reports(db: AsyncSession = Depends(get_db), _: None = Depends(requ
         for r in reports
     ]
 
-@router.post("/peer-requests/{request_id}/resolve")
+@router.post("/peer-requests/{request_id}/resolve", dependencies=[Depends(require_admin)])
 async def resolve_request(request_id: int, db: AsyncSession = Depends(get_db), _: None = Depends(require_peer_connect)):
     result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.id == request_id))
     req = result.scalar_one_or_none()
@@ -352,7 +353,7 @@ async def resolve_request(request_id: int, db: AsyncSession = Depends(get_db), _
     await db.commit()
     return {"status": "resolved"}
 
-@router.delete("/peer-requests/{request_id}")
+@router.delete("/peer-requests/{request_id}", dependencies=[Depends(require_admin)])
 async def delete_request(request_id: int, db: AsyncSession = Depends(get_db), _: None = Depends(require_peer_connect)):
     result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.id == request_id))
     req = result.scalar_one_or_none()
