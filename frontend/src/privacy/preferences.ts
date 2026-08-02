@@ -36,5 +36,6 @@ export function clearCornellPulseDeviceData(storage: Pick<Storage, "removeItem">
   storage.removeItem("cornellpulse_onboarded")
   storage.removeItem(PRIVACY_PREFERENCES_KEY)
   session.removeItem("cornellpulse_checkin_draft")
+  session.removeItem("cornellpulse_checkin_draft_v2")
   session.removeItem("cornellpulse_result_saved")
 }

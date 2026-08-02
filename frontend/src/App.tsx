@@ -78,7 +78,7 @@ export default function App() {
 
   return (
     <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "430px", height: "100%", display: "flex", flexDirection: "column", backgroundColor: "#fff8f7" }}>
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: "90px" }}>
+      <div id="app-scroll-container" style={{ flex: 1, overflowY: "auto", paddingBottom: "90px", scrollPaddingBottom: "180px", WebkitOverflowScrolling: "touch" }}>
         <Routes>
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/" element={onboarded ? <HomePage /> : <Navigate to="/onboarding" />} />

@@ -82,10 +82,13 @@ test("emergency text actions use sms links with prefilled text", () => {
   assert.equal(getResource("cornell_health_247").phone, "607-255-5155")
 })
 
-test("check-in source never writes free text or drafts to browser storage", () => {
+test("structured check-in draft never includes free text", () => {
   const flow = readFileSync(join(process.cwd(), "src", "components", "checkin", "CheckInFlow.tsx"), "utf8")
   const resultCard = readFileSync(join(process.cwd(), "src", "components", "checkin", "ResultCard.tsx"), "utf8")
-  assert.equal(/sessionStorage\.setItem/.test(flow + resultCard), false)
+  const draftAssignment = flow.match(/const draft: StructuredDraft = \{([^}]+)\}/)?.[1] || ""
+  assert.match(flow, /sessionStorage\.setItem\(DRAFT_KEY, JSON\.stringify\(draft\)\)/)
+  assert.match(draftAssignment, /step, mood, sleep, workload, triggers, wantsToTalk, college/)
+  assert.equal(draftAssignment.includes("freeText"), false)
   assert.equal(/localStorage\.setItem\([^\n]*freeText/.test(flow + resultCard), false)
   assert.equal(flow.includes("submitAggregateContribution({\n        mood_score: mood,\n        sleep_category: sleep,\n        workload_category: workload,\n        college: college || \"other\","), true)
 })
