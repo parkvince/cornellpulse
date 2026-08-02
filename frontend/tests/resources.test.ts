@@ -44,6 +44,8 @@ test("verification claims agree with review status", () => {
     }
   }
   assert.ok(ACTIVE_RESOURCES.every(resource => resource.reviewStatus !== "retired"))
+  assert.ok(ACTIVE_RESOURCES.every(resource => resource.reviewStatus === "verified"))
+  assert.ok(ACTIVE_RESOURCES.every(resource => resource.verificationDate === "2026-08-02"))
 })
 
 test("all resource consumers use the registry instead of duplicate arrays", () => {
@@ -62,7 +64,26 @@ test("resource UI exposes verification status and official sources", () => {
   const resourcesPage = readFileSync(join(process.cwd(), "src", "pages", "ResourcesPage.tsx"), "utf8")
   const resultCard = readFileSync(join(process.cwd(), "src", "components", "checkin", "ResultCard.tsx"), "utf8")
   assert.match(resourcesPage, /Last verified/)
-  assert.match(resourcesPage, /Verification pending/)
   assert.match(resourcesPage, /Official source/)
+  assert.match(resourcesPage, /ACTIVE_RESOURCES\.length} verified resources/)
   assert.match(resultCard, /Last verified/)
+})
+
+test("audited registry excludes stale links and unsupported claims", () => {
+  const serialized = JSON.stringify(RESOURCE_REGISTRY).toLowerCase()
+  for (const stale of [
+    "ears.cornell.edu",
+    "recreation.athletics.cornell.edu",
+    "finaid.cornell.edu/emergency-fund\"",
+    "scl.cornell.edu/identity-resources",
+    "headspace",
+    "no questions asked",
+    "every option",
+    "guaranteed wait",
+  ]) assert.equal(serialized.includes(stale), false, `stale or unsupported resource content returned: ${stale}`)
+
+  assert.equal(getResource("ears").officialName, "EARS Peer Mentoring")
+  assert.equal(getResource("identity_support").officialName, "Cornell LGBT Resource Center")
+  assert.equal(getResource("basic_needs").officialName, "Cornell Food Pantry")
+  assert.match(getResource("helen_newman_fitness").cost, /Not universally free/)
 })
