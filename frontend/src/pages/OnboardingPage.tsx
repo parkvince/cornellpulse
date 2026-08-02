@@ -21,7 +21,7 @@ const slides = [
   {
     tag: "Connect",
     title: "Talk to a peer who gets it.",
-    body: "Connect with vetted Cornell students who want to grab food, go for a walk, or just be there.",
+    body: "Peer Connect is unavailable while identity, conduct, training, and safety requirements are reviewed.",
     bg: "linear-gradient(135deg, #FC642D 0%, #FF5A5F 100%)",
   },
   {

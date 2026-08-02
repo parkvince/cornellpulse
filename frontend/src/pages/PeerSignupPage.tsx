@@ -61,19 +61,17 @@ export default function PeerSignupPage() {
     name: "",
     email: "",
     phone: "",
+    password: "",
     year: "",
     major: "",
     locations: [] as string[],
     availability: [] as string[],
     interests: [] as string[],
     about: "",
-    refName: "",
-    refPhone: "",
-    refEmail: "",
-    refRelationship: "",
+    policyAccepted: false,
   })
 
-  function update(field: string, value: any) {
+  function update(field: string, value: string | string[] | boolean) {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
@@ -92,18 +90,28 @@ export default function PeerSignupPage() {
 
   async function handleSubmit() {
     try {
-      await fetch((import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1") + "/peer-signup", {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
+      const response = await fetch(apiUrl + "/peer-signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ display_name: form.name, email: form.email, phone: form.phone, password: form.password, year: form.year, major: form.major, locations: form.locations, availability: form.availability, interests: form.interests, about: form.about }),
       })
+      if (!response.ok) return
+      const draft = await response.json() as { supporter_id: string; access_token: string }
+      const submitResponse = await fetch(`${apiUrl}/peer-signups/${draft.supporter_id}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${draft.access_token}` },
+        body: JSON.stringify({ policy_version: "2026-08-02", role_scope_accepted: true, conduct_standards_accepted: true, crisis_boundaries_accepted: true, public_meeting_rules_accepted: true, reporting_policy_accepted: true, withdrawal_controls_acknowledged: true }),
+      })
+      if (!submitResponse.ok) return
     } catch (e) {
       console.error("Submit failed", e)
+      return
     }
     setSubmitted(true)
   }
 
-  const canSubmit = form.name && form.email && form.phone && form.year && form.locations.length > 0 && form.refName && form.refPhone && form.refEmail
+  const canSubmit = form.name && form.email && form.phone && form.password.length >= 12 && form.year && form.locations.length > 0 && form.policyAccepted
 
   if (submitted) {
     return (
@@ -111,7 +119,7 @@ export default function PeerSignupPage() {
         <div style={{ fontSize: "40px", marginBottom: "16px" }}>?</div>
         <h2 style={{ fontSize: "22px", fontWeight: 700, marginBottom: "12px" }}>Thanks for signing up</h2>
         <p style={{ fontSize: "15px", color: "#555", lineHeight: 1.6, marginBottom: "24px" }}>
-          We will review your application and reach out to you and your reference within a few days. We really appreciate you being willing to show up for other students.
+          Your application is submitted, but it is not approved. Cornell identity verification, a consent-based reference invitation, current training requirements, and administrator review must be completed before any public profile can appear.
         </p>
         <p style={{ fontSize: "13px", color: "#aaa" }}>You can close this page.</p>
       </div>
@@ -141,6 +149,11 @@ export default function PeerSignupPage() {
         <div style={{ marginBottom: "14px" }}>
           <label style={{ fontSize: "14px", fontWeight: 500, color: "#333", display: "block", marginBottom: "6px" }}>Phone number <span style={{ color: "#c00" }}>*</span></label>
           <input value={form.phone} onChange={e => update("phone", e.target.value)} placeholder="Your phone number" type="tel" style={{ width: "100%", padding: "12px 14px", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "15px", backgroundColor: "#fff", color: "#1a1a1a" }} />
+        </div>
+
+        <div style={{ marginBottom: "14px" }}>
+          <label style={{ fontSize: "14px", fontWeight: 500, color: "#333", display: "block", marginBottom: "6px" }}>Password <span style={{ color: "#c00" }}>*</span></label>
+          <input value={form.password} onChange={e => update("password", e.target.value)} placeholder="At least 12 characters" type="password" autoComplete="new-password" style={{ width: "100%", padding: "12px 14px", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "15px", backgroundColor: "#fff", color: "#1a1a1a" }} />
         </div>
 
         <div style={{ marginBottom: "14px" }}>
@@ -204,37 +217,10 @@ export default function PeerSignupPage() {
         <div style={{ fontSize: "12px", color: "#ccc", textAlign: "right" }}>{form.about.length}/300</div>
       </div>
 
-      <div style={{ marginBottom: "32px", backgroundColor: "#f9f9f9", border: "1px solid #e5e5e5", borderRadius: "12px", padding: "20px" }}>
-        <p style={{ fontSize: "15px", fontWeight: 700, color: "#1a1a1a", marginBottom: "6px" }}>Reference <span style={{ color: "#c00" }}>*</span></p>
-        <p style={{ fontSize: "13px", color: "#666", lineHeight: 1.6, marginBottom: "20px" }}>
-          We require one reference from someone who knows you well -- a friend, RA, professor, or anyone who can speak to your character. We will reach out to them before approving you. This is how we make sure our peer supporters are the right people for this role.
-        </p>
-
-        <div style={{ marginBottom: "14px" }}>
-          <label style={{ fontSize: "14px", fontWeight: 500, color: "#333", display: "block", marginBottom: "6px" }}>Reference name <span style={{ color: "#c00" }}>*</span></label>
-          <input value={form.refName} onChange={e => update("refName", e.target.value)} placeholder="Their full name" style={{ width: "100%", padding: "12px 14px", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "15px", backgroundColor: "#fff", color: "#1a1a1a" }} />
-        </div>
-
-        <div style={{ marginBottom: "14px" }}>
-          <label style={{ fontSize: "14px", fontWeight: 500, color: "#333", display: "block", marginBottom: "6px" }}>Reference phone <span style={{ color: "#c00" }}>*</span></label>
-          <input value={form.refPhone} onChange={e => update("refPhone", e.target.value)} placeholder="Their phone number" type="tel" style={{ width: "100%", padding: "12px 14px", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "15px", backgroundColor: "#fff", color: "#1a1a1a" }} />
-        </div>
-
-        <div style={{ marginBottom: "14px" }}>
-          <label style={{ fontSize: "14px", fontWeight: 500, color: "#333", display: "block", marginBottom: "6px" }}>Reference email <span style={{ color: "#c00" }}>*</span></label>
-          <input value={form.refEmail} onChange={e => update("refEmail", e.target.value)} placeholder="Their email address" type="email" style={{ width: "100%", padding: "12px 14px", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "15px", backgroundColor: "#fff", color: "#1a1a1a" }} />
-        </div>
-
-        <div style={{ marginBottom: "0" }}>
-          <label style={{ fontSize: "14px", fontWeight: 500, color: "#333", display: "block", marginBottom: "6px" }}>How do they know you <span style={{ color: "#999", fontWeight: 400 }}>(optional)</span></label>
-          <input value={form.refRelationship} onChange={e => update("refRelationship", e.target.value)} placeholder="e.g. My RA, my professor, my friend" style={{ width: "100%", padding: "12px 14px", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "15px", backgroundColor: "#fff", color: "#1a1a1a" }} />
-        </div>
-      </div>
-
       <div style={{ backgroundColor: "#f9f9f9", border: "1px solid #e5e5e5", borderRadius: "12px", padding: "16px", marginBottom: "24px" }}>
-        <p style={{ fontSize: "13px", color: "#666", lineHeight: 1.6 }}>
-          By submitting this form you agree that CornellPulse may contact you and your reference. Your information will never be shared publicly. You can opt out at any time by emailing us.
-        </p>
+        <p style={{ fontSize: "14px", fontWeight: 700, color: "#1a1a1a", marginBottom: "8px" }}>Role and conduct acknowledgement</p>
+        <p style={{ fontSize: "13px", color: "#666", lineHeight: 1.6, marginBottom: "12px" }}>Supporters offer informal peer presence and resource navigation—not therapy, diagnosis, crisis response, transportation, or guaranteed confidentiality. Public, well-lit meeting rules, conduct standards, crisis escalation, reporting, training, and withdrawal requirements apply.</p>
+        <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "13px", color: "#333", lineHeight: 1.5 }}><input type="checkbox" checked={form.policyAccepted} onChange={event => update("policyAccepted", event.target.checked)} />I reviewed and accept the current supporter policy. I understand that identity verification, a consent-based reference invitation, training evidence, and administrator review are still required before approval.</label>
       </div>
 
       <button

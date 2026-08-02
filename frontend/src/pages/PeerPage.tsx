@@ -72,10 +72,10 @@ const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 const TIME_BLOCKS = ["Mornings", "Afternoons", "Evenings", "Late nights"]
 
 interface Supporter {
-  name: string; year: string; major: string
+  supporter_id: string
+  display_name: string; year: string; major: string
   locations: string[]; availability: string[]
   interests: string[]; about: string
-  email: string; phone: string
 }
 
 function avatarColor(name: string) {
@@ -84,15 +84,15 @@ function avatarColor(name: string) {
 }
 
 function SupporterCard({ supporter, onRequest }: { supporter: Supporter, onRequest: (s: Supporter) => void }) {
-  const color = avatarColor(supporter.name)
+  const color = avatarColor(supporter.display_name)
   return (
     <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "20px", marginBottom: "12px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: "14px", marginBottom: "12px" }}>
         <div style={{ width: "48px", height: "48px", borderRadius: "16px", backgroundColor: color + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{ fontSize: "20px", fontWeight: 800, color: color }}>{supporter.name.charAt(0)}</span>
+          <span style={{ fontSize: "20px", fontWeight: 800, color: color }}>{supporter.display_name.charAt(0)}</span>
         </div>
         <div style={{ flex: 1 }}>
-          <p style={{ fontSize: "16px", fontWeight: 700, color: "#222222", marginBottom: "2px" }}>{supporter.name}</p>
+          <p style={{ fontSize: "16px", fontWeight: 700, color: "#222222", marginBottom: "2px" }}>{supporter.display_name}</p>
           <p style={{ fontSize: "12px", color: "#717171" }}>{supporter.year}{supporter.major ? ` · ${supporter.major}` : ""}</p>
         </div>
       </div>
@@ -148,14 +148,14 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
     try {
       await fetch(`${API_URL}/peer-connect`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, preferred_time: form.preferred_times.join(", "), supporter_name: supporter.name }),
+        body: JSON.stringify({ supporter_id: supporter.supporter_id, preferred_location: form.preferred_location, preferred_time: form.preferred_times.join(", "), message: form.message }),
       })
     } catch { /* Peer Connect remains feature-gated during safety review. */ }
     setLoading(false)
     setDone(true)
   }
 
-  const color = avatarColor(supporter.name)
+  const color = avatarColor(supporter.display_name)
 
   if (showReport) {
     return (
@@ -165,7 +165,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
           <p style={{ fontSize: "13px", color: "#717171", marginBottom: "16px" }}>This goes directly to our team and is kept confidential.</p>
           <textarea value={reportReason} onChange={e => setReportReason(e.target.value)} placeholder="What happened?" rows={4} style={{ width: "100%", padding: "12px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", resize: "none", marginBottom: "16px", fontFamily: "DM Sans, sans-serif" }} />
           <button onClick={async () => {
-            try { await fetch(`${API_URL}/report-supporter`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ supporter_name: supporter.name, reporter_email: form.requester_email, reason: reportReason }) }) } catch { /* Peer Connect remains feature-gated during safety review. */ }
+            try { await fetch(`${API_URL}/report-supporter`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ supporter_id: supporter.supporter_id, reason: reportReason }) }) } catch { /* Peer Connect remains feature-gated during safety review. */ }
             setShowReport(false); onSubmit()
           }} disabled={!reportReason.trim()} style={{ width: "100%", padding: "14px", backgroundColor: reportReason.trim() ? CORAL : "#ebebeb", color: reportReason.trim() ? "#fff" : "#b0b0b0", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: reportReason.trim() ? "pointer" : "default" }}>
             Submit report
@@ -183,29 +183,18 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
             <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <h3 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", marginBottom: "8px" }}>You are connected</h3>
-            <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>{supporter.name} has been notified. Reach out to them directly.</p>
+            <h3 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", marginBottom: "8px" }}>Request submitted</h3>
+            <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>The protected workflow records your request without displaying {supporter.display_name}'s private contact information.</p>
           </div>
 
           <div style={{ backgroundColor: "#fff8f7", borderRadius: "16px", padding: "16px", marginBottom: "16px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
               <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: color + "20", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: "16px", fontWeight: 800, color: color }}>{supporter.name.charAt(0)}</span>
+                <span style={{ fontSize: "16px", fontWeight: 800, color: color }}>{supporter.display_name.charAt(0)}</span>
               </div>
-              <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222" }}>{supporter.name}</p>
+              <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222" }}>{supporter.display_name}</p>
             </div>
-            {supporter.phone && (
-              <a href={`tel:${supporter.phone}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 16px", backgroundColor: CORAL, color: "#ffffff", borderRadius: "12px", fontSize: "14px", fontWeight: 700, marginBottom: "8px", textDecoration: "none" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
-                Call or text {supporter.phone}
-              </a>
-            )}
-            {supporter.email && (
-              <a href={`mailto:${supporter.email}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 16px", border: "2px solid #ebebeb", color: "#222222", borderRadius: "12px", fontSize: "14px", fontWeight: 600, textDecoration: "none" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                Email {supporter.email}
-              </a>
-            )}
+            <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>No phone number or email address is returned by the public supporter API.</p>
           </div>
 
           <button onClick={onSubmit} style={{ width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 600, marginBottom: "10px", cursor: "pointer" }}>Done</button>
@@ -220,7 +209,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
       <div style={{ backgroundColor: "#ffffff", borderRadius: "24px 24px 0 0", padding: "24px 24px 48px", width: "100%", maxHeight: "85vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <div>
-            <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#222222", marginBottom: "2px" }}>Meet with {supporter.name}</h3>
+            <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#222222", marginBottom: "2px" }}>Meet with {supporter.display_name}</h3>
             <p style={{ fontSize: "13px", color: "#717171" }}>We will send them your details</p>
           </div>
           <button onClick={onClose} style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#f5f5f5", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
@@ -287,7 +276,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         </div>
 
         <div style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "12px 14px", marginBottom: "20px" }}>
-          <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6 }}>{supporter.name} has been vetted and approved by our team. You will receive their contact info immediately after submitting.</p>
+          <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6 }}>Submitting a request does not share this supporter's private phone number or email. Contact is handled only through the protected workflow.</p>
         </div>
 
         <button onClick={handleSubmit} disabled={!canSubmit || loading} style={{ width: "100%", padding: "16px", backgroundColor: canSubmit && !loading ? CORAL : "#ebebeb", color: canSubmit && !loading ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: canSubmit && !loading ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
@@ -304,14 +293,14 @@ function SignupForm() {
   const [step, setStep] = useState(1)
   const TOTAL = 3
   const [submitted, setSubmitted] = useState(false)
+  const [policyAccepted, setPolicyAccepted] = useState(false)
   const [locationSearch, setLocationSearch] = useState("")
   const [majorSearch, setMajorSearch] = useState("")
   const [showMajorList, setShowMajorList] = useState(false)
   const [form, setForm] = useState({
-    name: "", email: "", phone: "", year: "", majors: [] as string[],
+    name: "", email: "", phone: "", password: "", year: "", majors: [] as string[],
     locations: [] as string[], availability: [] as string[],
     interests: [] as string[], about: "",
-    refName: "", refPhone: "", refEmail: "", refRelationship: "",
   })
 
   function update(field: string, value: string | string[]) { setForm(prev => ({ ...prev, [field]: value })) }
@@ -328,16 +317,26 @@ function SignupForm() {
   const filteredMajors = majorSearch ? MAJORS.filter(m => m.toLowerCase().includes(majorSearch.toLowerCase()) && !form.majors.includes(m)).slice(0, 8) : []
   const filteredLocations = LOCATIONS.filter(l => l.toLowerCase().includes(locationSearch.toLowerCase()))
   const emailValid = isCornellEmail(form.email)
-  const refEmailValid = isCornellEmail(form.refEmail)
-  const sameEmail = form.email.trim().toLowerCase() === form.refEmail.trim().toLowerCase() && form.email !== ""
 
-  const step1Valid = form.name && emailValid && form.phone && form.year
+  const step1Valid = form.name && emailValid && form.phone && form.password.length >= 12 && form.year
   const step2Valid = form.locations.length > 0
-  const step3Valid = form.refName && form.refPhone && refEmailValid && !sameEmail
+  const step3Valid = policyAccepted
 
   async function handleSubmit() {
     try {
-      await fetch(`${API_URL}/peer-signup`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, major: form.majors.join(", ") }) })
+      const response = await fetch(`${API_URL}/peer-signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: form.name, email: form.email, phone: form.phone, password: form.password, year: form.year, major: form.majors.join(", "), locations: form.locations, availability: form.availability, interests: form.interests, about: form.about }),
+      })
+      if (!response.ok) return
+      const draft = await response.json() as { supporter_id: string; access_token: string }
+      const submitResponse = await fetch(`${API_URL}/peer-signups/${draft.supporter_id}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${draft.access_token}` },
+        body: JSON.stringify({ policy_version: "2026-08-02", role_scope_accepted: true, conduct_standards_accepted: true, crisis_boundaries_accepted: true, public_meeting_rules_accepted: true, reporting_policy_accepted: true, withdrawal_controls_acknowledged: true }),
+      })
+      if (!submitResponse.ok) return
     } catch { /* Supporter signup remains feature-gated during safety review. */ }
     setSubmitted(true)
   }
@@ -389,6 +388,7 @@ function SignupForm() {
             {form.email && !emailValid && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Must be a valid @cornell.edu email.</p>}
           </div>
           <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Phone number <span style={{ color: CORAL }}>*</span></label><input value={form.phone} onChange={e => update("phone", e.target.value)} placeholder="Your phone" type="tel" style={inputStyle} /></div>
+          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Password <span style={{ color: CORAL }}>*</span></label><input value={form.password} onChange={e => update("password", e.target.value)} placeholder="At least 12 characters" type="password" autoComplete="new-password" style={inputStyle} /></div>
           <div style={{ marginBottom: "14px" }}>
             <label style={labelStyle}>Year <span style={{ color: CORAL }}>*</span></label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
@@ -469,21 +469,12 @@ function SignupForm() {
 
       {step === 3 && (
         <div>
-          <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#222222", marginBottom: "6px" }}>Reference</h3>
-          <p style={{ fontSize: "14px", color: "#717171", marginBottom: "20px", lineHeight: 1.6 }}>We require one Cornell reference who can speak to your character. This is how we keep the program safe.</p>
-
-          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Reference name <span style={{ color: CORAL }}>*</span></label><input value={form.refName} onChange={e => update("refName", e.target.value)} placeholder="Their full name" style={inputStyle} /></div>
-          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Reference phone <span style={{ color: CORAL }}>*</span></label><input value={form.refPhone} onChange={e => update("refPhone", e.target.value)} placeholder="Their phone" type="tel" style={inputStyle} /></div>
-          <div style={{ marginBottom: "14px" }}>
-            <label style={labelStyle}>Reference Cornell email <span style={{ color: CORAL }}>*</span></label>
-            <input value={form.refEmail} onChange={e => update("refEmail", e.target.value)} placeholder="netid@cornell.edu" type="email" style={{ ...inputStyle, borderColor: form.refEmail && (!refEmailValid || sameEmail) ? CORAL : "#ebebeb" }} />
-            {form.refEmail && !refEmailValid && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Must be a valid @cornell.edu email.</p>}
-            {sameEmail && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Reference must be a different person.</p>}
-          </div>
-          <div style={{ marginBottom: "24px" }}><label style={labelStyle}>How do they know you <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(optional)</span></label><input value={form.refRelationship} onChange={e => update("refRelationship", e.target.value)} placeholder="e.g. My RA, my friend, my professor" style={inputStyle} /></div>
+          <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#222222", marginBottom: "6px" }}>Role boundaries</h3>
+          <p style={{ fontSize: "14px", color: "#717171", marginBottom: "20px", lineHeight: 1.6 }}>Supporters offer informal peer presence and resource navigation. They do not provide therapy, diagnosis, crisis response, transportation, or guaranteed confidentiality.</p>
 
           <div style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "14px", marginBottom: "20px", border: "1px solid #f0f0f0" }}>
-            <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6 }}>By submitting you agree that CornellPulse may contact you and your reference. Your info will never be shared publicly without your approval.</p>
+            <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>You must follow the conduct, crisis-escalation, public-meeting, reporting, privacy, and withdrawal rules. Cornell identity verification, a consent-based reference invitation, training requirements, and administrator review are still required after submission.</p>
+            <label style={{ display: "flex", gap: "10px", alignItems: "flex-start", fontSize: "13px", color: "#222222", lineHeight: 1.5 }}><input type="checkbox" checked={policyAccepted} onChange={event => setPolicyAccepted(event.target.checked)} />I reviewed and accept the current supporter role and conduct policy.</label>
           </div>
 
           <div style={{ display: "flex", gap: "10px" }}>
@@ -514,7 +505,7 @@ export default function PeerPage() {
   const allInterests = Array.from(new Set(supporters.flatMap(s => s.interests || [])))
   const filtered = supporters.filter(s => {
     const matchInterest = !interestFilter || (s.interests || []).includes(interestFilter)
-    const matchSearch = !search || s.name.toLowerCase().includes(search.toLowerCase()) || (s.major || "").toLowerCase().includes(search.toLowerCase()) || (s.about || "").toLowerCase().includes(search.toLowerCase())
+    const matchSearch = !search || s.display_name.toLowerCase().includes(search.toLowerCase()) || (s.major || "").toLowerCase().includes(search.toLowerCase()) || (s.about || "").toLowerCase().includes(search.toLowerCase())
     return matchInterest && matchSearch
   })
 
@@ -527,7 +518,7 @@ export default function PeerPage() {
 <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Peer support</p>
         <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", marginBottom: "6px" }}>Talk to a student who gets it.</h1>
-        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", marginBottom: "20px", lineHeight: 1.5 }}>Trained Cornell peer supporters, ready to meet up -- coffee, a walk, or a chat.</p>
+        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", marginBottom: "20px", lineHeight: 1.5 }}>Peer Connect remains unavailable while identity, training, conduct, and safety requirements are reviewed.</p>
         <div style={{ position: "relative" }}>
           <svg style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, major, interest..." style={{ width: "100%", padding: "13px 14px 13px 42px", border: "none", borderRadius: "14px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }} />
@@ -565,7 +556,7 @@ export default function PeerPage() {
                 {[
                   { step: "1", text: "Browse students who have signed up to listen, grab food, or just hang out." },
                   { step: "2", text: "Tap a supporter and fill out a short request. Takes 30 seconds." },
-                  { step: "3", text: "You get their contact info immediately and they get notified." },
+                  { step: "3", text: "The protected workflow records status and contact sharing remains limited to authorized participants." },
                 ].map(item => (
                   <div key={item.step} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
                     <div style={{ width: "24px", height: "24px", borderRadius: "8px", backgroundColor: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -587,7 +578,7 @@ export default function PeerPage() {
               </div>
             )}
 
-            {!loading && filtered.map((s, i) => <SupporterCard key={i} supporter={s} onRequest={setSelectedSupporter} />)}
+            {!loading && filtered.map(s => <SupporterCard key={s.supporter_id} supporter={s} onRequest={setSelectedSupporter} />)}
 
             <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "14px 16px", marginBottom: "24px", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
               <p style={{ fontSize: "12px", color: "#b0b0b0", lineHeight: 1.6 }}>If you need crisis support, call or text {crisisResource.phone}. For 24/7 consultation, call {healthResource.officialName} at {healthResource.phone}.</p>

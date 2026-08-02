@@ -3,9 +3,11 @@
 Peer Connect, supporter signup, and the public admin UI are disabled by default while the following launch blockers remain.
 
 - Apply and verify `backend/migrations/20260802_peer_security_redesign.sql` on a backed-up staging database, run the encrypted PII backfill in dry-run and apply modes, and reconcile ambiguous legacy name relationships before enabling Peer Connect.
-- Establish credential enrollment/reset and identity-verification procedures for migrated supporters, requesters, moderators, withdrawals, and deletion requests.
+- Apply `backend/migrations/20260802_supporter_onboarding.sql`, quarantine legacy reference records so they cannot satisfy consent gates, and complete an approved deletion/notification decision for that pre-consent data.
+- Integrate an authorized Cornell OIDC/SAML identity provider, including server-side assertion validation and revocation handling. The current manual non-production evidence route is deliberately not production-eligible.
+- Establish credential enrollment/reset procedures for migrated supporters, requesters, moderators, withdrawals, and deletion requests.
 - Review the implemented collection, encryption, retention, deletion, audit, status-history, and minimal email-notification boundaries with qualified privacy/security reviewers.
-- Define supporter vetting, training, supervision, incident response, reporting, escalation, and emergency boundaries with qualified Cornell stakeholders.
+- Have qualified Cornell stakeholders approve the implemented supporter role scope, conduct, training, supervision, incident response, reporting, escalation, emergency, and public-meeting boundaries in `SUPPORTER_ONBOARDING.md`.
 - Schedule the administrator-only cleanup for expired peer records, audit logs, status history, and rate-limit buckets; exercise concurrency and failover against the production PostgreSQL topology.
 - Rotate any credential ever committed or shared, remove it from repository history where appropriate, and use deployment secret storage.
 - Validate privacy language, crisis guidance, resource accuracy, accessibility, monitoring, backups, and recovery in a production-like environment.

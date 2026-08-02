@@ -18,6 +18,7 @@ ADMIN_TOKEN_AUDIENCE = "cornellpulse-admin"
 ADMIN_TOKEN_ISSUER = "cornellpulse-api"
 PEER_TOKEN_AUDIENCE = "cornellpulse-peer"
 PeerRole = Literal["supporter", "requester", "moderator", "administrator"]
+CORNELL_IDENTITY_INTEGRATION_IMPLEMENTED = False
 
 
 @dataclass(frozen=True)
@@ -50,9 +51,12 @@ def validate_security_settings() -> None:
             settings.PEER_REPORT_RETENTION_DAYS,
             settings.PEER_AUDIT_RETENTION_DAYS,
             settings.PEER_RATE_LIMIT_WINDOW_SECONDS,
+            settings.PEER_REFERENCE_INVITATION_DAYS,
         )
         if any(value < 1 for value in retention_values):
             errors.append("Peer retention and rate-limit settings must be positive")
+        if not CORNELL_IDENTITY_INTEGRATION_IMPLEMENTED:
+            errors.append("Peer Connect and supporter signup cannot be enabled in production until Cornell identity verification is integrated")
 
     if errors:
         raise RuntimeError("Invalid production security configuration: " + "; ".join(errors))

@@ -12,6 +12,7 @@ import PeerSignupPage from "./pages/PeerSignupPage"
 import FeatureUnavailablePage from "./pages/FeatureUnavailablePage"
 import NotFoundPage from "./pages/NotFoundPage"
 import PrivacyPage from "./pages/PrivacyPage"
+import ReferenceInvitationPage from "./pages/ReferenceInvitationPage"
 import { featureFlags } from "./config/featureFlags"
 import EmergencyHelp from "./components/shared/EmergencyHelp"
 
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="/resources/:resourceId" element={<ResourceDetailPage />} />
           <Route path="/peer" element={featureFlags.peerConnect ? <PeerPage /> : <FeatureUnavailablePage feature="Peer Connect" />} />
           <Route path="/peer/signup" element={featureFlags.supporterSignup ? <PeerSignupPage /> : <FeatureUnavailablePage feature="Supporter signup" />} />
+          <Route path="/peer/reference" element={featureFlags.supporterSignup ? <ReferenceInvitationPage /> : <FeatureUnavailablePage feature="Reference invitations" />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/admin" element={featureFlags.publicAdmin ? <AdminPage /> : <FeatureUnavailablePage feature="Admin" />} />

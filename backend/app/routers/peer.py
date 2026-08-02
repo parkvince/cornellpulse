@@ -1,11 +1,14 @@
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
+from hmac import new as hmac_new
+from secrets import token_urlsafe
 from typing import Literal
 
 import resend
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +20,7 @@ from app.auth import (
     require_peer_administrator,
     require_peer_staff,
     require_requester,
+    require_supporter,
 )
 from app.config import settings
 from app.database import get_db
@@ -27,6 +31,7 @@ from app.models.db_models import (
     PeerSignup,
     PeerStatusHistory,
     RateLimitBucket,
+    SupporterReferenceInvitation,
     SupporterReport,
 )
 from app.services.peer_security import (
@@ -38,6 +43,14 @@ from app.services.peer_security import (
     verify_peer_password,
 )
 from app.services.rate_limits import enforce_persistent_rate_limit
+from app.services.supporter_onboarding import (
+    SUPPORTER_APPLICATION_STATES,
+    SUPPORTER_POLICY,
+    SUPPORTER_POLICY_VERSION,
+    SUPPORTER_TRAINING_MODULES,
+    SUPPORTER_TRAINING_VERSION,
+    transition_allowed,
+)
 
 
 router = APIRouter()
@@ -45,7 +58,7 @@ FROM_EMAIL = "CornellPulse <onboarding@resend.dev>"
 EMAIL_RE = re.compile(r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$")
 PHONE_RE = re.compile(r"^\+?[1-9][0-9]{7,14}$")
 CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-AUDIT_METADATA_KEYS = {"supporter_id", "from", "to", "supporters", "requesters", "requests", "reports", "audit_logs", "status_history", "rate_limit_buckets"}
+AUDIT_METADATA_KEYS = {"supporter_id", "invitation_id", "from", "to", "reason_code", "supporters", "requesters", "requests", "reports", "reference_invitations", "audit_logs", "status_history", "rate_limit_buckets"}
 
 
 def require_peer_connect() -> None:
@@ -56,6 +69,11 @@ def require_peer_connect() -> None:
 def require_supporter_signup() -> None:
     if not settings.FEATURE_SUPPORTER_SIGNUP:
         raise HTTPException(status_code=503, detail="Supporter signup is unavailable pending safety review.")
+
+
+def require_peer_workflow() -> None:
+    if not settings.FEATURE_PEER_CONNECT and not settings.FEATURE_SUPPORTER_SIGNUP:
+        raise HTTPException(status_code=503, detail="Peer workflows are unavailable pending safety review.")
 
 
 def _safe_text(value: str, label: str) -> str:
@@ -93,22 +111,21 @@ class SupporterSignupRequest(StrictPeerModel):
     availability: list[str] = Field(default_factory=list, max_length=10)
     interests: list[str] = Field(default_factory=list, max_length=10)
     about: str | None = Field(default=None, max_length=500)
-    reference_name: str = Field(min_length=1, max_length=80)
-    reference_phone: str = Field(min_length=8, max_length=32)
-    reference_email: str = Field(min_length=3, max_length=254)
-    reference_relationship: str | None = Field(default=None, max_length=100)
 
-    @field_validator("email", "reference_email")
+    @field_validator("email")
     @classmethod
     def validate_email(cls, value: str) -> str:
-        return _email(value)
+        normalized = _email(value)
+        if not normalized.endswith("@cornell.edu"):
+            raise ValueError("A Cornell email is required for contact; email-domain validation is not identity verification")
+        return normalized
 
-    @field_validator("phone", "reference_phone")
+    @field_validator("phone")
     @classmethod
     def validate_phone(cls, value: str) -> str:
         return _phone(value)
 
-    @field_validator("display_name", "year", "major", "about", "reference_name", "reference_relationship")
+    @field_validator("display_name", "year", "major", "about")
     @classmethod
     def validate_text(cls, value: str | None, info) -> str | None:
         return _safe_text(value, info.field_name) if value is not None else None
@@ -122,6 +139,91 @@ class SupporterSignupRequest(StrictPeerModel):
         if len(set(item.casefold() for item in cleaned)) != len(cleaned):
             raise ValueError(f"{info.field_name} cannot contain duplicates")
         return cleaned
+
+
+class SupporterPolicyAcceptanceRequest(StrictPeerModel):
+    policy_version: str = Field(min_length=1, max_length=32)
+    role_scope_accepted: Literal[True]
+    conduct_standards_accepted: Literal[True]
+    crisis_boundaries_accepted: Literal[True]
+    public_meeting_rules_accepted: Literal[True]
+    reporting_policy_accepted: Literal[True]
+    withdrawal_controls_acknowledged: Literal[True]
+
+    @field_validator("policy_version")
+    @classmethod
+    def validate_policy_version(cls, value: str) -> str:
+        if value != SUPPORTER_POLICY_VERSION:
+            raise ValueError("The current supporter policy must be reviewed and accepted")
+        return value
+
+
+class SupporterTransitionRequest(StrictPeerModel):
+    target_status: Literal["identity_pending", "reference_pending", "training_pending", "review", "approved", "suspended", "rejected"]
+    reason_code: Literal["requirements_complete", "application_incomplete", "policy_violation", "safety_review", "administrative_review", "supporter_request"] = "administrative_review"
+
+
+class IdentityVerificationEvidenceRequest(StrictPeerModel):
+    verification_reference: str = Field(min_length=8, max_length=128)
+
+    @field_validator("verification_reference")
+    @classmethod
+    def validate_reference(cls, value: str) -> str:
+        return _safe_text(value, "verification_reference")
+
+
+class ReferenceInvitationRequest(StrictPeerModel):
+    email: str = Field(min_length=3, max_length=254)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        return _email(value)
+
+
+class ReferenceDecisionRequest(StrictPeerModel):
+    token: str = Field(min_length=32, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
+    consent: bool
+    relationship: str | None = Field(default=None, max_length=100)
+    statement: str | None = Field(default=None, max_length=500)
+
+    @field_validator("relationship", "statement")
+    @classmethod
+    def validate_text(cls, value: str | None, info) -> str | None:
+        return _safe_text(value, info.field_name) if value is not None else None
+
+    @model_validator(mode="after")
+    def validate_decision(self):
+        if self.consent and (not self.relationship or len(self.relationship) < 2 or not self.statement or len(self.statement) < 20):
+            raise ValueError("Consent, relationship, and a 20-character statement are required to provide a reference")
+        if not self.consent and (self.relationship is not None or self.statement is not None):
+            raise ValueError("A declined invitation cannot include reference content")
+        return self
+
+
+class TrainingCompletionRequest(StrictPeerModel):
+    requirements_version: str = Field(min_length=1, max_length=32)
+    completed_modules: list[str] = Field(min_length=len(SUPPORTER_TRAINING_MODULES), max_length=len(SUPPORTER_TRAINING_MODULES))
+    evidence_reference: str = Field(min_length=8, max_length=128)
+
+    @field_validator("requirements_version")
+    @classmethod
+    def validate_version(cls, value: str) -> str:
+        if value != SUPPORTER_TRAINING_VERSION:
+            raise ValueError("The current training requirements must be completed")
+        return value
+
+    @field_validator("completed_modules")
+    @classmethod
+    def validate_modules(cls, values: list[str]) -> list[str]:
+        if len(values) != len(set(values)) or set(values) != set(SUPPORTER_TRAINING_MODULES):
+            raise ValueError("Every current training requirement must be completed exactly once")
+        return list(SUPPORTER_TRAINING_MODULES)
+
+    @field_validator("evidence_reference")
+    @classmethod
+    def validate_evidence(cls, value: str) -> str:
+        return _safe_text(value, "evidence_reference")
 
 
 class RequesterRegistrationRequest(StrictPeerModel):
@@ -204,6 +306,24 @@ def _send_email(to: str, template: Literal["application", "approval", "connectio
         return
 
 
+def _send_reference_invitation(to: str, token: str) -> None:
+    if not settings.RESEND_API_KEY or not EMAIL_RE.fullmatch(to) or "\r" in to or "\n" in to:
+        return
+    # URL fragments are not sent in HTTP requests, reducing capability-token exposure in access logs.
+    invitation_url = f"{settings.FRONTEND_URL.rstrip('/')}/peer/reference#token={token}"
+    body = (
+        "<p>You were invited to provide a CornellPulse supporter reference.</p>"
+        "<p>Opening the invitation does not imply consent. You may decline without providing any reference content.</p>"
+        f'<p><a href="{email_html(invitation_url)}">Review the consent request</a></p>'
+    )
+    try:
+        resend.api_key = settings.RESEND_API_KEY
+        resend.Emails.send({"from": FROM_EMAIL, "to": to, "subject": "CornellPulse reference consent invitation", "html": body})
+    except Exception:
+        # Do not log invitation tokens, recipient addresses, or provider payloads.
+        return
+
+
 def _audit(db: AsyncSession, actor: PeerPrincipal, action: str, target_type: str, target_id: str, metadata: dict | None = None) -> None:
     safe_metadata = {
         key: value
@@ -217,6 +337,18 @@ def _audit(db: AsyncSession, actor: PeerPrincipal, action: str, target_type: str
         target_type=target_type,
         target_id=target_id,
         event_metadata=safe_metadata,
+        retention_expires_at=_expires(settings.PEER_AUDIT_RETENTION_DAYS),
+    ))
+
+
+def _audit_reference(db: AsyncSession, action: str, invitation: SupporterReferenceInvitation) -> None:
+    db.add(PeerAuditLog(
+        actor_role="reference",
+        actor_id=str(invitation.invitation_id),
+        action=action,
+        target_type="reference_invitation",
+        target_id=str(invitation.invitation_id),
+        event_metadata={"supporter_id": str(invitation.supporter_id), "invitation_id": str(invitation.invitation_id)},
         retention_expires_at=_expires(settings.PEER_AUDIT_RETENTION_DAYS),
     ))
 
@@ -255,6 +387,88 @@ def _request_private(connection: PeerConnectRequest) -> dict:
     }
 
 
+def _protected_hash(scope: str, value: str) -> str:
+    key = (settings.PEER_AUTH_SECRET or settings.ADMIN_SESSION_SECRET or "development-peer-key").encode("utf-8")
+    return hmac_new(key, f"{scope}:{value}".encode("utf-8"), sha256).hexdigest()
+
+
+async def _reference_requirement_complete(db: AsyncSession, supporter_id: uuid.UUID) -> bool:
+    result = await db.execute(select(SupporterReferenceInvitation).where(
+        SupporterReferenceInvitation.supporter_id == supporter_id,
+        SupporterReferenceInvitation.status == "accepted",
+        SupporterReferenceInvitation.consented_at.is_not(None),
+        SupporterReferenceInvitation.deleted_at.is_(None),
+    ))
+    return result.scalar_one_or_none() is not None
+
+
+async def _supporter_readiness_errors(db: AsyncSession, supporter: PeerSignup) -> list[str]:
+    errors: list[str] = []
+    if supporter.policy_version != SUPPORTER_POLICY_VERSION or not supporter.policy_accepted_at:
+        errors.append("current supporter policy acceptance")
+    if not supporter.identity_verified_at or not supporter.identity_subject_hash:
+        errors.append("Cornell identity verification")
+    if settings.is_production and supporter.identity_verification_method != "cornell_oidc":
+        errors.append("production Cornell OIDC verification")
+    if not await _reference_requirement_complete(db, supporter.supporter_id):
+        errors.append("consented reference response")
+    if (
+        supporter.training_requirements_version != SUPPORTER_TRAINING_VERSION
+        or not supporter.training_completed_at
+        or not supporter.training_evidence_hash
+        or set(supporter.training_modules_completed or []) != set(SUPPORTER_TRAINING_MODULES)
+    ):
+        errors.append("current training requirements")
+    return errors
+
+
+async def _transition_supporter(
+    db: AsyncSession,
+    supporter: PeerSignup,
+    actor: PeerPrincipal,
+    target: str,
+    reason_code: str,
+) -> None:
+    current = supporter.status
+    if not transition_allowed(current, target):
+        raise HTTPException(status_code=409, detail=f"Supporter application cannot move from {current} to {target}.")
+    if actor.role == "moderator" and not (current == "approved" and target == "suspended"):
+        raise HTTPException(status_code=403, detail="Moderators may suspend an approved supporter but cannot advance or reject applications.")
+    if actor.role not in {"moderator", "administrator"}:
+        raise HTTPException(status_code=403, detail="Staff authorization required for this transition.")
+
+    if target == "reference_pending" and (not supporter.identity_verified_at or not supporter.identity_subject_hash):
+        raise HTTPException(status_code=409, detail="Cornell identity verification is required before requesting a reference.")
+    if target == "training_pending" and not await _reference_requirement_complete(db, supporter.supporter_id):
+        raise HTTPException(status_code=409, detail="A consented reference response is required before training review.")
+    if target == "review":
+        training_ready = (
+            supporter.training_requirements_version == SUPPORTER_TRAINING_VERSION
+            and supporter.training_completed_at
+            and supporter.training_evidence_hash
+            and set(supporter.training_modules_completed or []) == set(SUPPORTER_TRAINING_MODULES)
+        )
+        if not training_ready:
+            raise HTTPException(status_code=409, detail="Every current training requirement must be completed before review.")
+    if target == "approved":
+        errors = await _supporter_readiness_errors(db, supporter)
+        if errors:
+            raise HTTPException(status_code=409, detail="Approval requirements incomplete: " + ", ".join(errors) + ".")
+
+    now = datetime.now(timezone.utc)
+    supporter.status = target
+    supporter.approved = target == "approved"
+    if target == "approved":
+        supporter.approved_at = now
+        supporter.suspended_at = None
+    elif target == "suspended":
+        supporter.suspended_at = now
+    elif target == "rejected":
+        supporter.rejected_at = now
+    _status_history(db, actor, "supporter", str(supporter.supporter_id), current, target)
+    _audit(db, actor, "supporter.status_changed", "supporter", str(supporter.supporter_id), {"from": current, "to": target, "reason_code": reason_code})
+
+
 async def _active_requester(db: AsyncSession, requester_id: uuid.UUID) -> PeerRequester:
     result = await db.execute(select(PeerRequester).where(
         PeerRequester.requester_id == requester_id,
@@ -270,7 +484,10 @@ async def _active_requester(db: AsyncSession, requester_id: uuid.UUID) -> PeerRe
 
 
 async def _active_supporter(db: AsyncSession, supporter_id: uuid.UUID, *, approved: bool) -> PeerSignup:
-    allowed_statuses = ["approved"] if approved else ["pending", "approved"]
+    allowed_statuses = ["approved"] if approved else [
+        "draft", "submitted", "identity_pending", "reference_pending",
+        "training_pending", "review", "approved", "suspended",
+    ]
     result = await db.execute(select(PeerSignup).where(
         PeerSignup.supporter_id == supporter_id,
         PeerSignup.status.in_(allowed_statuses),
@@ -282,6 +499,11 @@ async def _active_supporter(db: AsyncSession, supporter_id: uuid.UUID, *, approv
     if not supporter:
         raise HTTPException(status_code=403, detail="Supporter account is no longer active.")
     return supporter
+
+
+@router.get("/peer/supporter-policy", dependencies=[Depends(require_supporter_signup)])
+async def get_supporter_policy():
+    return SUPPORTER_POLICY
 
 
 @router.post("/peer-signup", dependencies=[Depends(require_supporter_signup)], status_code=201)
@@ -298,25 +520,185 @@ async def peer_signup(payload: SupporterSignupRequest, request: Request, db: Asy
         interests=payload.interests,
         about=payload.about,
         approved=False,
-        status="pending",
+        status="draft",
         credential_hash=hash_peer_password(payload.password),
         private_data_encrypted=encrypt_private_data({
             "email": payload.email,
             "phone": payload.phone,
-            "reference_name": payload.reference_name,
-            "reference_phone": payload.reference_phone,
-            "reference_email": payload.reference_email,
-            "reference_relationship": payload.reference_relationship,
         }),
         retention_expires_at=_expires(settings.PEER_SUPPORTER_RETENTION_DAYS),
     )
     db.add(supporter)
     actor = PeerPrincipal(str(supporter_id), "supporter")
-    _audit(db, actor, "supporter.application.created", "supporter", str(supporter_id))
-    _status_history(db, actor, "supporter", str(supporter_id), None, "pending")
+    _audit(db, actor, "supporter.application.draft_created", "supporter", str(supporter_id))
+    _status_history(db, actor, "supporter", str(supporter_id), None, "draft")
+    await db.commit()
+    return {"supporter_id": str(supporter_id), "status": "draft", "access_token": create_peer_token("supporter", str(supporter_id)), "token_type": "bearer"}
+
+
+@router.post("/peer-signups/{supporter_id}/submit")
+async def submit_supporter_application(supporter_id: uuid.UUID, payload: SupporterPolicyAcceptanceRequest, actor: PeerPrincipal = Depends(require_supporter), _: None = Depends(require_supporter_signup), db: AsyncSession = Depends(get_db)):
+    if actor.subject_id != str(supporter_id):
+        raise HTTPException(status_code=403, detail="Supporters may submit only their own application.")
+    result = await db.execute(select(PeerSignup).where(PeerSignup.supporter_id == supporter_id, PeerSignup.deleted_at.is_(None)))
+    supporter = result.scalar_one_or_none()
+    if not supporter:
+        raise HTTPException(status_code=404, detail="Supporter application not found.")
+    if supporter.status != "draft":
+        raise HTTPException(status_code=409, detail="Only a draft application can be submitted.")
+    now = datetime.now(timezone.utc)
+    supporter.policy_version = payload.policy_version
+    supporter.policy_accepted_at = now
+    supporter.status = "submitted"
+    _status_history(db, actor, "supporter", str(supporter_id), "draft", "submitted")
+    _audit(db, actor, "supporter.application.submitted", "supporter", str(supporter_id), {"from": "draft", "to": "submitted"})
     await db.commit()
     _send_email(settings.ADMIN_EMAIL, "application", str(supporter_id))
-    return {"supporter_id": str(supporter_id), "status": "pending", "access_token": create_peer_token("supporter", str(supporter_id)), "token_type": "bearer"}
+    return {"supporter_id": str(supporter_id), "status": "submitted"}
+
+
+@router.post("/peer-signups/{supporter_id}/transition")
+async def transition_supporter_application(supporter_id: uuid.UUID, payload: SupporterTransitionRequest, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_supporter_signup), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerSignup).where(PeerSignup.supporter_id == supporter_id, PeerSignup.deleted_at.is_(None)))
+    supporter = result.scalar_one_or_none()
+    if not supporter:
+        raise HTTPException(status_code=404, detail="Supporter application not found.")
+    await _transition_supporter(db, supporter, actor, payload.target_status, payload.reason_code)
+    await db.commit()
+    return {"supporter_id": str(supporter_id), "status": supporter.status}
+
+
+@router.post("/peer-signups/{supporter_id}/identity-verification")
+async def record_supporter_identity_verification(supporter_id: uuid.UUID, payload: IdentityVerificationEvidenceRequest, actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_supporter_signup), db: AsyncSession = Depends(get_db)):
+    if settings.is_production:
+        raise HTTPException(status_code=503, detail="Cornell OIDC identity verification integration is required before production verification.")
+    result = await db.execute(select(PeerSignup).where(PeerSignup.supporter_id == supporter_id, PeerSignup.deleted_at.is_(None)))
+    supporter = result.scalar_one_or_none()
+    if not supporter:
+        raise HTTPException(status_code=404, detail="Supporter application not found.")
+    if supporter.status != "identity_pending":
+        raise HTTPException(status_code=409, detail="Identity evidence may be recorded only while identity verification is pending.")
+    supporter.identity_verified_at = datetime.now(timezone.utc)
+    supporter.identity_verification_method = "manual_nonproduction_review"
+    supporter.identity_subject_hash = _protected_hash("cornell-identity", payload.verification_reference)
+    supporter.identity_verified_by = actor.subject_id
+    _audit(db, actor, "supporter.identity.manual_nonproduction_recorded", "supporter", str(supporter_id))
+    await db.commit()
+    return {"supporter_id": str(supporter_id), "identity_status": "manual_nonproduction_recorded", "production_eligible": False}
+
+
+@router.post("/peer-signups/{supporter_id}/reference-invitations", status_code=201)
+async def create_reference_invitation(supporter_id: uuid.UUID, payload: ReferenceInvitationRequest, request: Request, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_supporter_signup), db: AsyncSession = Depends(get_db)):
+    if actor.role != "administrator" and (actor.role != "supporter" or actor.subject_id != str(supporter_id)):
+        raise HTTPException(status_code=403, detail="Only the applicant or an administrator may invite a reference.")
+    await enforce_persistent_rate_limit(db, "reference-invitation", actor.subject_id, 3, settings.PEER_RATE_LIMIT_WINDOW_SECONDS)
+    result = await db.execute(select(PeerSignup).where(PeerSignup.supporter_id == supporter_id, PeerSignup.deleted_at.is_(None)))
+    supporter = result.scalar_one_or_none()
+    if not supporter:
+        raise HTTPException(status_code=404, detail="Supporter application not found.")
+    if supporter.status != "reference_pending":
+        raise HTTPException(status_code=409, detail="References may be invited only after identity verification.")
+    existing_result = await db.execute(select(SupporterReferenceInvitation).where(
+        SupporterReferenceInvitation.supporter_id == supporter_id,
+        SupporterReferenceInvitation.status.in_(["pending", "accepted"]),
+        SupporterReferenceInvitation.deleted_at.is_(None),
+    ))
+    if existing_result.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="An active or completed reference invitation already exists.")
+    invitation_id = uuid.uuid4()
+    token = token_urlsafe(32)
+    invitation = SupporterReferenceInvitation(
+        invitation_id=invitation_id,
+        supporter_id=supporter_id,
+        token_hash=_protected_hash("reference-invitation", token),
+        invitee_email_encrypted=encrypt_private_data({"email": payload.email}),
+        status="pending",
+        expires_at=_expires(settings.PEER_REFERENCE_INVITATION_DAYS),
+    )
+    db.add(invitation)
+    _audit(db, actor, "supporter.reference.invited", "reference_invitation", str(invitation_id), {"supporter_id": str(supporter_id), "invitation_id": str(invitation_id)})
+    await db.commit()
+    _send_reference_invitation(payload.email, token)
+    return {"invitation_id": str(invitation_id), "status": "pending", "expires_at": invitation.expires_at.isoformat()}
+
+
+@router.get("/peer-signups/{supporter_id}/reference-invitations")
+async def get_reference_invitations(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_workflow), db: AsyncSession = Depends(get_db)):
+    if actor.role != "administrator" and (actor.role != "supporter" or actor.subject_id != str(supporter_id)):
+        raise HTTPException(status_code=403, detail="Only the applicant or an administrator may view reference invitation status.")
+    result = await db.execute(select(SupporterReferenceInvitation).where(
+        SupporterReferenceInvitation.supporter_id == supporter_id,
+        SupporterReferenceInvitation.deleted_at.is_(None),
+    ).order_by(SupporterReferenceInvitation.created_at.desc()))
+    response = []
+    for invitation in result.scalars().all():
+        item = {
+            "invitation_id": str(invitation.invitation_id),
+            "status": invitation.status,
+            "created_at": invitation.created_at.isoformat() if invitation.created_at else None,
+            "expires_at": invitation.expires_at.isoformat() if invitation.expires_at else None,
+            "responded_at": invitation.responded_at.isoformat() if invitation.responded_at else None,
+        }
+        if actor.role == "administrator":
+            item["private"] = {
+                "invitee": decrypt_private_data(invitation.invitee_email_encrypted),
+                "response": decrypt_private_data(invitation.response_encrypted),
+            }
+        response.append(item)
+    _audit(db, actor, "supporter.reference.status_read", "supporter", str(supporter_id))
+    await db.commit()
+    return response
+
+
+@router.post("/peer/reference-invitations/respond", dependencies=[Depends(require_supporter_signup)])
+async def respond_to_reference_invitation(payload: ReferenceDecisionRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    await enforce_persistent_rate_limit(db, "reference-response", _client_ip(request), 5, settings.PEER_RATE_LIMIT_WINDOW_SECONDS)
+    token_hash = _protected_hash("reference-invitation", payload.token)
+    result = await db.execute(select(SupporterReferenceInvitation).where(
+        SupporterReferenceInvitation.token_hash == token_hash,
+        SupporterReferenceInvitation.status == "pending",
+        SupporterReferenceInvitation.deleted_at.is_(None),
+    ))
+    invitation = result.scalar_one_or_none()
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Reference invitation not found or already used.")
+    expires_at = invitation.expires_at if invitation.expires_at.tzinfo else invitation.expires_at.replace(tzinfo=timezone.utc)
+    if expires_at <= datetime.now(timezone.utc):
+        invitation.status = "expired"
+        invitation.invitee_email_encrypted = encrypt_private_data({"expired": True})
+        await db.commit()
+        raise HTTPException(status_code=410, detail="Reference invitation has expired.")
+    now = datetime.now(timezone.utc)
+    invitation.responded_at = now
+    if payload.consent:
+        invitation.status = "accepted"
+        invitation.consented_at = now
+        invitation.response_encrypted = encrypt_private_data({"relationship": payload.relationship, "statement": payload.statement})
+    else:
+        invitation.status = "declined"
+        invitation.invitee_email_encrypted = encrypt_private_data({"declined": True})
+        invitation.response_encrypted = None
+    _audit_reference(db, f"supporter.reference.{invitation.status}", invitation)
+    await db.commit()
+    return {"invitation_id": str(invitation.invitation_id), "status": invitation.status}
+
+
+@router.post("/peer-signups/{supporter_id}/training-completion")
+async def record_training_completion(supporter_id: uuid.UUID, payload: TrainingCompletionRequest, actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_supporter_signup), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PeerSignup).where(PeerSignup.supporter_id == supporter_id, PeerSignup.deleted_at.is_(None)))
+    supporter = result.scalar_one_or_none()
+    if not supporter:
+        raise HTTPException(status_code=404, detail="Supporter application not found.")
+    if supporter.status != "training_pending":
+        raise HTTPException(status_code=409, detail="Training evidence may be recorded only while training is pending.")
+    supporter.training_requirements_version = payload.requirements_version
+    supporter.training_modules_completed = payload.completed_modules
+    supporter.training_completed_at = datetime.now(timezone.utc)
+    supporter.training_evidence_hash = _protected_hash("supporter-training-evidence", payload.evidence_reference)
+    supporter.training_verified_by = actor.subject_id
+    _audit(db, actor, "supporter.training.requirements_recorded", "supporter", str(supporter_id))
+    await db.commit()
+    return {"supporter_id": str(supporter_id), "training_requirements_status": "complete", "requirements_version": payload.requirements_version}
 
 
 @router.post("/peer/requesters", dependencies=[Depends(require_peer_connect)], status_code=201)
@@ -337,7 +719,7 @@ async def register_requester(payload: RequesterRegistrationRequest, request: Req
     return {"requester_id": str(requester_id), "access_token": create_peer_token("requester", str(requester_id)), "token_type": "bearer"}
 
 
-@router.post("/peer/auth/login", dependencies=[Depends(require_peer_connect)])
+@router.post("/peer/auth/login")
 async def peer_login(payload: PeerLoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
     await enforce_persistent_rate_limit(db, "peer-login", _client_ip(request), settings.ADMIN_LOGIN_MAX_ATTEMPTS, settings.ADMIN_LOGIN_WINDOW_SECONDS)
     password_hash: str | None = None
@@ -354,7 +736,7 @@ async def peer_login(payload: PeerLoginRequest, request: Request, db: AsyncSessi
             result = await db.execute(select(PeerSignup).where(PeerSignup.supporter_id == subject_uuid, PeerSignup.deleted_at.is_(None), PeerSignup.retention_expires_at > datetime.now(timezone.utc)))
             record = result.scalar_one_or_none()
             password_hash = record.credential_hash if record else None
-            active = bool(record and record.status not in {"withdrawn", "deleted"})
+            active = bool(record and record.status not in {"withdrawn", "rejected", "deleted", "expired"})
         if subject_uuid and payload.role == "requester":
             result = await db.execute(select(PeerRequester).where(PeerRequester.requester_id == subject_uuid, PeerRequester.deleted_at.is_(None), PeerRequester.retention_expires_at > datetime.now(timezone.utc)))
             record = result.scalar_one_or_none()
@@ -368,8 +750,23 @@ async def peer_login(payload: PeerLoginRequest, request: Request, db: AsyncSessi
 @router.get("/peer-supporters", dependencies=[Depends(require_peer_connect)])
 async def get_supporters(db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)
+    consented_reference_exists = select(SupporterReferenceInvitation.invitation_id).where(
+        SupporterReferenceInvitation.supporter_id == PeerSignup.supporter_id,
+        SupporterReferenceInvitation.status == "accepted",
+        SupporterReferenceInvitation.consented_at.is_not(None),
+        SupporterReferenceInvitation.deleted_at.is_(None),
+    ).exists()
     result = await db.execute(select(PeerSignup).where(
         PeerSignup.status == "approved",
+        PeerSignup.policy_version == SUPPORTER_POLICY_VERSION,
+        PeerSignup.policy_accepted_at.is_not(None),
+        PeerSignup.identity_verified_at.is_not(None),
+        PeerSignup.identity_verification_method == "cornell_oidc",
+        PeerSignup.identity_subject_hash.is_not(None),
+        PeerSignup.training_requirements_version == SUPPORTER_TRAINING_VERSION,
+        PeerSignup.training_completed_at.is_not(None),
+        PeerSignup.training_evidence_hash.is_not(None),
+        consented_reference_exists,
         PeerSignup.deleted_at.is_(None),
         PeerSignup.withdrawn_at.is_(None),
         PeerSignup.retention_expires_at > now,
@@ -378,7 +775,7 @@ async def get_supporters(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/peer/supporters/{supporter_id}/private")
-async def get_supporter_private(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+async def get_supporter_private(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_workflow), db: AsyncSession = Depends(get_db)):
     authorize_self_or_staff(actor, str(supporter_id))
     if actor.role == "supporter":
         supporter = await _active_supporter(db, supporter_id, approved=False)
@@ -413,11 +810,7 @@ async def approve_signup(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends
     supporter = result.scalar_one_or_none()
     if not supporter:
         raise HTTPException(status_code=404, detail="Supporter not found.")
-    previous = supporter.status
-    supporter.status = "approved"
-    supporter.approved = True
-    _status_history(db, actor, "supporter", str(supporter_id), previous, "approved")
-    _audit(db, actor, "supporter.approved", "supporter", str(supporter_id))
+    await _transition_supporter(db, supporter, actor, "approved", "requirements_complete")
     await db.commit()
     private = _supporter_private(supporter)
     _send_email(str(private.get("email") or ""), "approval", str(supporter_id))
@@ -584,19 +977,35 @@ async def resolve_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(re
 
 
 @router.post("/peer/supporters/{supporter_id}/withdraw")
-async def withdraw_supporter(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
-    authorize_self_or_staff(actor, str(supporter_id))
+async def withdraw_supporter(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_actor), db: AsyncSession = Depends(get_db)):
+    if actor.role != "administrator" and (actor.role != "supporter" or actor.subject_id != str(supporter_id)):
+        raise HTTPException(status_code=403, detail="Only the supporter or an administrator may withdraw an application.")
     result = await db.execute(select(PeerSignup).where(PeerSignup.supporter_id == supporter_id, PeerSignup.deleted_at.is_(None)))
     supporter = result.scalar_one_or_none()
     if not supporter:
         raise HTTPException(status_code=404, detail="Supporter not found.")
     previous = supporter.status
+    if not transition_allowed(previous, "withdrawn"):
+        raise HTTPException(status_code=409, detail=f"Supporter application cannot move from {previous} to withdrawn.")
     supporter.status = "withdrawn"
     supporter.approved = False
     supporter.withdrawn_at = datetime.now(timezone.utc)
     supporter.private_data_encrypted = None
     supporter.credential_hash = None
+    supporter.identity_subject_hash = None
+    supporter.identity_verified_at = None
+    supporter.identity_verification_method = None
+    supporter.identity_verified_by = None
     supporter.email = supporter.phone = supporter.ref_name = supporter.ref_phone = supporter.ref_email = supporter.ref_relationship = None
+    invitation_result = await db.execute(select(SupporterReferenceInvitation).where(
+        SupporterReferenceInvitation.supporter_id == supporter_id,
+        SupporterReferenceInvitation.deleted_at.is_(None),
+    ))
+    for invitation in invitation_result.scalars().all():
+        invitation.status = "revoked"
+        invitation.invitee_email_encrypted = encrypt_private_data({"revoked": True})
+        invitation.response_encrypted = None
+        invitation.deleted_at = datetime.now(timezone.utc)
     _status_history(db, actor, "supporter", str(supporter_id), previous, "withdrawn")
     _audit(db, actor, "supporter.withdrawn", "supporter", str(supporter_id))
     await db.commit()
@@ -621,7 +1030,7 @@ async def withdraw_requester(requester_id: uuid.UUID, actor: PeerPrincipal = Dep
 
 
 @router.delete("/peer-signups/{supporter_id}")
-async def delete_signup(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_supporter_signup), db: AsyncSession = Depends(get_db)):
+async def delete_signup(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_administrator), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PeerSignup).where(PeerSignup.supporter_id == supporter_id, PeerSignup.deleted_at.is_(None)))
     supporter = result.scalar_one_or_none()
     if not supporter:
@@ -631,10 +1040,23 @@ async def delete_signup(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends(
     supporter.deleted_at = datetime.now(timezone.utc)
     supporter.private_data_encrypted = None
     supporter.credential_hash = None
+    supporter.identity_subject_hash = None
+    supporter.identity_verified_at = None
+    supporter.identity_verification_method = None
+    supporter.identity_verified_by = None
     supporter.email = supporter.phone = supporter.ref_name = supporter.ref_phone = supporter.ref_email = supporter.ref_relationship = None
     supporter.name = "Deleted supporter"
     supporter.about = supporter.major = None
     supporter.locations = supporter.availability = supporter.interests = []
+    invitation_result = await db.execute(select(SupporterReferenceInvitation).where(
+        SupporterReferenceInvitation.supporter_id == supporter_id,
+        SupporterReferenceInvitation.deleted_at.is_(None),
+    ))
+    for invitation in invitation_result.scalars().all():
+        invitation.status = "deleted"
+        invitation.invitee_email_encrypted = encrypt_private_data({"deleted": True})
+        invitation.response_encrypted = None
+        invitation.deleted_at = datetime.now(timezone.utc)
     _status_history(db, actor, "supporter", str(supporter_id), None, "deleted")
     _audit(db, actor, "supporter.deleted", "supporter", str(supporter_id))
     await db.commit()
@@ -676,7 +1098,7 @@ async def delete_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(req
 @router.post("/peer/retention/purge")
 async def purge_expired_peer_data(actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)
-    purged = {"supporters": 0, "requesters": 0, "requests": 0, "reports": 0}
+    purged = {"supporters": 0, "requesters": 0, "requests": 0, "reports": 0, "reference_invitations": 0}
     model_fields = (
         (PeerSignup, "supporters"),
         (PeerRequester, "requesters"),
@@ -691,6 +1113,10 @@ async def purge_expired_peer_data(actor: PeerPrincipal = Depends(require_peer_ad
             if isinstance(record, PeerSignup):
                 record.private_data_encrypted = None
                 record.credential_hash = None
+                record.identity_subject_hash = None
+                record.identity_verified_at = None
+                record.identity_verification_method = None
+                record.identity_verified_by = None
                 record.email = record.phone = record.ref_name = record.ref_phone = record.ref_email = record.ref_relationship = None
                 record.name = "Expired supporter"
                 record.about = record.major = None
@@ -706,6 +1132,16 @@ async def purge_expired_peer_data(actor: PeerPrincipal = Depends(require_peer_ad
                 record.private_data_encrypted = None
                 record.reporter_email = record.reason = None
             purged[label] += 1
+    invitation_result = await db.execute(select(SupporterReferenceInvitation).where(
+        SupporterReferenceInvitation.expires_at <= now,
+        SupporterReferenceInvitation.deleted_at.is_(None),
+    ))
+    for invitation in invitation_result.scalars().all():
+        invitation.status = "expired"
+        invitation.invitee_email_encrypted = encrypt_private_data({"expired": True})
+        invitation.response_encrypted = None
+        invitation.deleted_at = now
+        purged["reference_invitations"] += 1
     audit_result = await db.execute(delete(PeerAuditLog).where(PeerAuditLog.retention_expires_at <= now))
     history_result = await db.execute(delete(PeerStatusHistory).where(PeerStatusHistory.retention_expires_at <= now))
     rate_result = await db.execute(delete(RateLimitBucket).where(RateLimitBucket.expires_at <= now))
@@ -718,7 +1154,7 @@ async def purge_expired_peer_data(actor: PeerPrincipal = Depends(require_peer_ad
 
 
 @router.get("/peer/status-history/{entity_id}")
-async def get_status_history(entity_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+async def get_status_history(entity_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_actor), _: None = Depends(require_peer_workflow), db: AsyncSession = Depends(get_db)):
     authorize_self_or_staff(actor, str(entity_id))
     result = await db.execute(select(PeerStatusHistory).where(PeerStatusHistory.entity_id == str(entity_id)).order_by(PeerStatusHistory.changed_at.asc()))
     _audit(db, actor, "status_history.read", "peer_entity", str(entity_id))

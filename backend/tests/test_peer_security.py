@@ -50,8 +50,13 @@ class FakeDb:
         self.bucket = None
 
     async def execute(self, statement):
-        if "rate_limit_buckets" in str(statement):
+        sql = str(statement)
+        if "rate_limit_buckets" in sql:
             return FakeResult([self.bucket] if self.bucket else [])
+        if "FROM peer_signups" in sql:
+            return FakeResult(self.items)
+        if "supporter_reference_invitations" in sql:
+            return FakeResult([])
         return FakeResult(self.items)
 
     def add(self, value):
@@ -289,10 +294,6 @@ def valid_signup_payload():
         "availability": ["Weekday afternoons"],
         "interests": ["Reading"],
         "about": "I can listen.",
-        "reference_name": "Reference Person",
-        "reference_phone": "+16072552222",
-        "reference_email": "reference@cornell.edu",
-        "reference_relationship": "Advisor",
     }
 
 
