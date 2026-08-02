@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { featureFlags } from "../../config/featureFlags"
-import type { Resource, SafetyAssessment } from "../../checkin/localRecommendations"
-import { EmergencyActions } from "../shared/EmergencyHelp"
+import type { SafetyAssessment } from "../../checkin/localRecommendations"
+import type { ResourceRecord } from "../../resources/registry.ts"
+import { CrisisContactActions, EmergencyActions } from "../shared/EmergencyHelp"
 
 const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
@@ -84,7 +85,7 @@ function PeerConnectSuggestion() {
 }
 
 interface ResourceItemProps {
-  resource: Resource
+  resource: ResourceRecord
   primary?: boolean
   onSaved?: () => void
 }
@@ -94,9 +95,9 @@ function ResourceItem(props: ResourceItemProps) {
   const primary = props.primary
 
   function saveResource() {
-    const text = [r.name, r.tagline, r.phone ? "Phone: " + r.phone : null, r.hours ? "Hours: " + r.hours : null, r.how_to_access, r.url].filter(Boolean).join("\n")
+    const text = [r.officialName, r.description, r.phone ? "Phone: " + r.phone : null, "Hours: " + r.hours, r.accessInstructions, r.url].filter(Boolean).join("\n")
     if (navigator.share) {
-      navigator.share({ title: r.name, text }).catch(() => {})
+      navigator.share({ title: r.officialName, text }).catch(() => {})
     } else {
       navigator.clipboard.writeText(text).then(() => { if (props.onSaved) props.onSaved() }).catch(() => {})
     }
@@ -107,8 +108,8 @@ function ResourceItem(props: ResourceItemProps) {
       <div style={{ borderRadius: "20px", overflow: "hidden", marginBottom: "12px", boxShadow: "0 8px 32px rgba(255,90,95,0.25)" }}>
         <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "24px 20px 20px" }}>
           <p style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>One option to explore</p>
-          <p style={{ fontSize: "22px", fontWeight: 800, color: "#ffffff", marginBottom: "6px" }}>{r.name}</p>
-          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", lineHeight: 1.5, marginBottom: "16px" }}>{r.tagline}</p>
+          <p style={{ fontSize: "22px", fontWeight: 800, color: "#ffffff", marginBottom: "6px" }}>{r.officialName}</p>
+          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", lineHeight: 1.5, marginBottom: "16px" }}>{r.description}</p>
           {r.phone && (
             <a href={"tel:" + r.phone} style={{ display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontWeight: 700, fontSize: "15px", textDecoration: "none" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
@@ -117,8 +118,9 @@ function ResourceItem(props: ResourceItemProps) {
           )}
         </div>
         <div style={{ backgroundColor: "#ffffff", padding: "16px 20px" }}>
-          {r.hours && <p style={{ fontSize: "13px", color: "#717171", marginBottom: "8px" }}><span style={{ fontWeight: 600, color: "#222222" }}>Hours: </span>{r.hours}</p>}
-          {r.how_to_access && <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>{r.how_to_access}</p>}
+          <p style={{ fontSize: "13px", color: "#717171", marginBottom: "8px" }}><span style={{ fontWeight: 600, color: "#222222" }}>Hours: </span>{r.hours} ({r.timezone})</p>
+          <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>{r.accessInstructions}</p>
+          <p style={{ fontSize: "11px", color: "#b0b0b0", marginBottom: "10px" }}>{r.verificationDate ? `Last verified ${r.verificationDate} by ${r.verifier}` : `Verification pending · ${r.verifier}`}</p>
           <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
             {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: CORAL, fontWeight: 600, textDecoration: "underline" }}>Visit website</a>}
             <button onClick={saveResource} style={{ fontSize: "13px", color: "#717171", backgroundColor: "transparent", border: "none", textDecoration: "underline", padding: 0, cursor: "pointer" }}>Save</button>
@@ -130,10 +132,10 @@ function ResourceItem(props: ResourceItemProps) {
 
   return (
     <div style={{ borderRadius: "16px", padding: "18px", backgroundColor: "#ffffff", marginBottom: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
-      <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>{r.name}</p>
-      <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5, marginBottom: "10px" }}>{r.tagline}</p>
+      <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "4px" }}>{r.officialName}</p>
+      <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5, marginBottom: "10px" }}>{r.description}</p>
       {r.phone && <a href={"tel:" + r.phone} style={{ fontSize: "14px", fontWeight: 700, color: CORAL, display: "block", marginBottom: "6px" }}>{r.phone}</a>}
-      {r.hours && <p style={{ fontSize: "12px", color: "#b0b0b0", marginBottom: "8px" }}>{r.hours}</p>}
+      <p style={{ fontSize: "12px", color: "#b0b0b0", marginBottom: "8px" }}>{r.hours} · {r.verificationDate ? `Verified ${r.verificationDate}` : "Verification pending"}</p>
       {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: CORAL, fontWeight: 600, textDecoration: "underline" }}>Visit website</a>}
     </div>
   )
@@ -143,8 +145,8 @@ interface ResultCardProps {
   result: {
     safety: SafetyAssessment
     recommendation: {
-      primary: Resource
-      secondary: Resource[]
+      primary: ResourceRecord
+      secondary: ResourceRecord[]
       why: string
       show_peer_connect: boolean
     }
@@ -169,12 +171,12 @@ export default function ResultCard(props: ResultCardProps) {
     try {
       const h = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
       if (h.some((entry: { id?: string }) => entry.id === props.checkinId)) return
-      const entry = { id: props.checkinId, date: new Date().toISOString(), mood: moodScore, resource: tr.primary.name }
+      const entry = { id: props.checkinId, date: new Date().toISOString(), mood: moodScore, resource: tr.primary.officialName }
       localStorage.setItem("cornellpulse_history", JSON.stringify([entry, ...h].slice(0, 20)))
     } catch {
       return
     }
-  }, [moodScore, props.checkinId, tr.primary.name])
+  }, [moodScore, props.checkinId, tr.primary.officialName])
 
   function showToast(msg: string) {
     setToast(msg)
@@ -197,7 +199,7 @@ export default function ResultCard(props: ResultCardProps) {
         <div style={{ backgroundColor: "#FFF0F0", border: "1.5px solid #FF5A5F", borderRadius: "16px", padding: "18px", marginBottom: "20px" }}>
           <p style={{ fontSize: "14px", fontWeight: 800, color: CORAL, marginBottom: "6px" }}>Would immediate support be useful?</p>
           <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "12px" }}>A low mood selection or ambiguous wording prompted this check-in. The system cannot determine whether you are in danger. Call or text 988 for crisis support, or call 911 if there is an immediate safety threat.</p>
-          <div style={{ display: "flex", gap: "8px" }}><a href="tel:988" style={{ flex: 1, backgroundColor: CORAL, color: "#ffffff", padding: "10px", borderRadius: "10px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call 988</a><a href="sms:988?body=Hello%2C%20I%20need%20support." style={{ flex: 1, backgroundColor: "#ffffff", color: CORAL, padding: "10px", borderRadius: "10px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Text 988</a></div>
+          <CrisisContactActions />
         </div>
       )}
 
@@ -230,7 +232,7 @@ export default function ResultCard(props: ResultCardProps) {
       {tr.secondary.length > 0 && (
         <div style={{ marginTop: "16px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Other resources to explore</p>
-          {tr.secondary.map(r => <ResourceItem key={r.resource_id} resource={r} />)}
+          {tr.secondary.map(r => <ResourceItem key={r.id} resource={r} />)}
         </div>
       )}
 

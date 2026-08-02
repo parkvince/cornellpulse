@@ -1,10 +1,23 @@
 import { Link } from "react-router-dom"
 import { featureFlags } from "../config/featureFlags"
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { getResource } from "../resources/registry.ts"
 
 const CORAL = "#FF5A5F"
 
 interface CheckIn { date: string; mood: number; resource: string }
+
+const featuredResources = ["caps_access", "lets_talk", "ears", "cornell_health_247"].map(getResource)
+const crisisResource = getResource("988_lifeline")
+
+function loadLastCheckIn(): CheckIn | null {
+  try {
+    const history = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
+    return Array.isArray(history) && history.length > 0 ? history[0] : null
+  } catch {
+    return null
+  }
+}
 
 function moodColor(m: number) {
   if (m >= 7) return "#00A699"
@@ -28,14 +41,7 @@ function timeAgo(d: string) {
 }
 
 export default function HomePage() {
-  const [last, setLast] = useState<CheckIn | null>(null)
-
-  useEffect(() => {
-    try {
-      const h = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
-      if (h.length > 0) setLast(h[0])
-    } catch {}
-  }, [])
+  const [last] = useState<CheckIn | null>(loadLastCheckIn)
 
   function handleShare() {
     if (navigator.share) {
@@ -100,20 +106,15 @@ export default function HomePage() {
             <Link to="/resources" style={{ fontSize: "13px", fontWeight: 600, color: CORAL }}>See all →</Link>
           </div>
           <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
-            {[
-              { label: "CAPS Individual Therapy", sub: "One-on-one counseling" },
-              { label: "Let's Talk Drop-In", sub: "No appointment needed" },
-              { label: "EARS Peer Counseling", sub: "Sun-Thu 9pm-1am" },
-              { label: "Cornell Health 24/7", sub: "Any time, any day" },
-            ].map((r, idx) => (
-              <Link key={r.label} to="/resources" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < 3 ? "1px solid #f5f5f5" : "none", textDecoration: "none" }}>
+            {featuredResources.map((resource, idx) => (
+              <Link key={resource.id} to="/resources" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < featuredResources.length - 1 ? "1px solid #f5f5f5" : "none", textDecoration: "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
                   </div>
                   <div>
-                    <p style={{ fontSize: "14px", fontWeight: 500, color: "#222222", marginBottom: "1px" }}>{r.label}</p>
-                    <p style={{ fontSize: "12px", color: "#717171" }}>{r.sub}</p>
+                    <p style={{ fontSize: "14px", fontWeight: 500, color: "#222222", marginBottom: "1px" }}>{resource.officialName}</p>
+                    <p style={{ fontSize: "12px", color: "#717171" }}>{resource.verificationDate ? `Verified ${resource.verificationDate}` : "Verification pending"}</p>
                   </div>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
@@ -152,7 +153,7 @@ export default function HomePage() {
                 <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)" }}>Available 24/7</p>
               </div>
             </div>
-            <a href="tel:988" style={{ backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700 }}>Call 988</a>
+            <a href={`tel:${crisisResource.phone}`} style={{ backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700 }}>Call {crisisResource.phone}</a>
           </div>
 
           <button onClick={handleShare} style={{ width: "100%", padding: "14px 20px", backgroundColor: "#ffffff", borderRadius: "16px", border: "1px solid #f0f0f0", boxShadow: "0 2px 12px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>

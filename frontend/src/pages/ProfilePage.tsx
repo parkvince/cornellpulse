@@ -1,7 +1,10 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
+import { getResource } from "../resources/registry.ts"
 
 const CORAL = "#FF5A5F"
+const emergency = getResource("emergency_911")
+const publicSafety = getResource("cornell_public_safety")
 
 interface CheckIn { id?: string; date: string; mood: number; resource: string }
 
@@ -140,7 +143,7 @@ const [confirmClear, setConfirmClear] = useState(false)
               <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222" }}>CornellPulse</p>
             </div>
             <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>Built independently by Cornell students. Not affiliated with or endorsed by Cornell University. Not a diagnosis or clinically validated assessment.</p>
-            <p style={{ fontSize: "12px", color: "#b0b0b0" }}>For an immediate emergency call 911. On the Ithaca campus, call Cornell Public Safety at 607-255-1111.</p>
+            <p style={{ fontSize: "12px", color: "#b0b0b0" }}>For an immediate emergency call {emergency.phone}. On the Ithaca campus, call {publicSafety.officialName} at {publicSafety.phone}.</p>
           </div>
         </div>
       </div>

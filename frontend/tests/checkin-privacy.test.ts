@@ -5,6 +5,7 @@ import test from "node:test"
 
 import { submitAggregateContribution } from "../src/api/client.ts"
 import { assessSafetySignal, buildLocalRecommendation } from "../src/checkin/localRecommendations.ts"
+import { getResource } from "../src/resources/registry.ts"
 
 const SENSITIVE_CANARY = "SENSITIVE_CANARY_free_text_741"
 
@@ -75,11 +76,10 @@ test("empty and ambiguous input are handled without clinical certainty", () => {
 })
 
 test("emergency text actions use sms links with prefilled text", () => {
-  const source = readFileSync(join(process.cwd(), "src", "components", "shared", "EmergencyHelp.tsx"), "utf8")
-  assert.equal(source.includes("sms:988?body=Hello%2C%20I%20need%20support."), true)
-  assert.equal(source.includes("href: \"tel:911\""), true)
-  assert.equal(source.includes("href: \"tel:6072551111\""), true)
-  assert.equal(source.includes("href: \"tel:6072555155\""), true)
+  assert.deepEqual(getResource("988_lifeline").textAction, { number: "988", prefilledText: "Hello, I need support." })
+  assert.equal(getResource("emergency_911").phone, "911")
+  assert.equal(getResource("cornell_public_safety").phone, "607-255-1111")
+  assert.equal(getResource("cornell_health_247").phone, "607-255-5155")
 })
 
 test("check-in source never writes free text or drafts to browser storage", () => {

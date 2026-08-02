@@ -7,16 +7,7 @@ export interface LocalCheckInInput {
   freeText: string
 }
 
-export interface Resource {
-  resource_id: string
-  name: string
-  tagline: string
-  phone?: string
-  url?: string
-  hours?: string
-  how_to_access?: string
-  tags: string[]
-}
+import { getResource, type ResourceRecord } from "../resources/registry.ts"
 
 export type SafetySignal = "urgent" | "check-in" | "none"
 
@@ -25,13 +16,8 @@ export interface SafetyAssessment {
   reason: "explicit-language" | "ambiguous-language" | "low-mood" | "none"
 }
 
-const RESOURCES: Record<string, Resource> = {
-  cornell_health: { resource_id: "cornell_health", name: "Cornell Health 24/7 phone consultation", tagline: "Call any time to consult with a medical or mental health provider.", phone: "607-255-5155", url: "https://health.cornell.edu/get-care/247-phone-consultation", hours: "24/7 phone consultation", how_to_access: "Call 607-255-5155 and follow the prompts. This is consultation, not emergency dispatch.", tags: ["24/7", "health"] },
-  ears: { resource_id: "ears", name: "EARS Peer Counseling", tagline: "Peer counseling with trained Cornell students.", phone: "607-255-4050", url: "https://ears.cornell.edu", hours: "Check current hours", how_to_access: "Call EARS or review its current options.", tags: ["peer", "talk"] },
-  learning_strategies: { resource_id: "learning_strategies", name: "Learning Strategies Center", tagline: "Academic support, study strategies, and tutoring resources.", url: "https://lsc.cornell.edu", how_to_access: "Review current programs and appointment options online.", tags: ["academics"] },
-  basic_needs: { resource_id: "basic_needs", name: "Cornell Basic Needs", tagline: "Support for food, housing, finances, and other essential needs.", url: "https://basicneeds.cornell.edu", how_to_access: "Review current assistance options online.", tags: ["financial", "housing"] },
-  identity_support: { resource_id: "identity_support", name: "Cornell identity and belonging resources", tagline: "Explore community and support resources related to identity and belonging.", url: "https://scl.cornell.edu/identity-resources", how_to_access: "Review current campus identity-resource options.", tags: ["identity", "belonging"] },
-}
+const RECOMMENDATION_RESOURCE_IDS = ["cornell_health_247", "ears", "learning_strategies", "basic_needs", "identity_support"] as const
+const recommendationResources = Object.fromEntries(RECOMMENDATION_RESOURCE_IDS.map(id => [id, getResource(id)])) as Record<typeof RECOMMENDATION_RESOURCE_IDS[number], ResourceRecord>
 
 const EXPLICIT_SAFETY_PATTERNS = [
   /\b(?:i\s*(?:am|'m)\s*)?(?:going to|gonna|planning to|plan to|intend to)\s+(?:kill|hurt)\s+myself\b/i,
@@ -68,14 +54,14 @@ export function assessSafetySignal(freeText: string, mood: number): SafetyAssess
 
 export function buildLocalRecommendation(input: LocalCheckInInput) {
   const safety = assessSafetySignal(input.freeText, input.mood)
-  let primary = RESOURCES.cornell_health
+  let primary = recommendationResources.cornell_health_247
 
-  if (input.triggers.includes("financial") || input.triggers.includes("housing")) primary = RESOURCES.basic_needs
-  else if (input.triggers.includes("identity") || input.triggers.includes("discrimination")) primary = RESOURCES.identity_support
-  else if (input.triggers.includes("academics") || input.workload === "unbearable") primary = RESOURCES.learning_strategies
-  else if (input.wantsToTalk || input.triggers.includes("loneliness") || input.triggers.includes("social")) primary = RESOURCES.ears
+  if (input.triggers.includes("financial") || input.triggers.includes("housing")) primary = recommendationResources.basic_needs
+  else if (input.triggers.includes("identity") || input.triggers.includes("discrimination")) primary = recommendationResources.identity_support
+  else if (input.triggers.includes("academics") || input.workload === "unbearable") primary = recommendationResources.learning_strategies
+  else if (input.wantsToTalk || input.triggers.includes("loneliness") || input.triggers.includes("social")) primary = recommendationResources.ears
 
-  const secondary = Object.values(RESOURCES).filter(resource => resource.resource_id !== primary.resource_id).slice(0, 2)
+  const secondary = Object.values(recommendationResources).filter(resource => resource.id !== primary.id).slice(0, 2)
   return {
     safety,
     recommendation: {

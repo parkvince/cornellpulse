@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react"
 import { featureFlags } from "../config/featureFlags"
+import { getResource } from "../resources/registry.ts"
 
 const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
+const crisisResource = getResource("988_lifeline")
+const healthResource = getResource("cornell_health_247")
 
 const AVATAR_COLORS = ["#FF5A5F", "#00A699", "#FC642D", "#7B68EE", "#20B2AA", "#FF6B6B", "#4ECDC4"]
 
@@ -147,7 +150,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, preferred_time: form.preferred_times.join(", "), supporter_name: supporter.name }),
       })
-    } catch {}
+    } catch { /* Peer Connect remains feature-gated during safety review. */ }
     setLoading(false)
     setDone(true)
   }
@@ -162,7 +165,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
           <p style={{ fontSize: "13px", color: "#717171", marginBottom: "16px" }}>This goes directly to our team and is kept confidential.</p>
           <textarea value={reportReason} onChange={e => setReportReason(e.target.value)} placeholder="What happened?" rows={4} style={{ width: "100%", padding: "12px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", resize: "none", marginBottom: "16px", fontFamily: "DM Sans, sans-serif" }} />
           <button onClick={async () => {
-            try { await fetch(`${API_URL}/report-supporter`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ supporter_name: supporter.name, reporter_email: form.requester_email, reason: reportReason }) }) } catch {}
+            try { await fetch(`${API_URL}/report-supporter`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ supporter_name: supporter.name, reporter_email: form.requester_email, reason: reportReason }) }) } catch { /* Peer Connect remains feature-gated during safety review. */ }
             setShowReport(false); onSubmit()
           }} disabled={!reportReason.trim()} style={{ width: "100%", padding: "14px", backgroundColor: reportReason.trim() ? CORAL : "#ebebeb", color: reportReason.trim() ? "#fff" : "#b0b0b0", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: reportReason.trim() ? "pointer" : "default" }}>
             Submit report
@@ -335,7 +338,7 @@ function SignupForm() {
   async function handleSubmit() {
     try {
       await fetch(`${API_URL}/peer-signup`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, major: form.majors.join(", ") }) })
-    } catch {}
+    } catch { /* Supporter signup remains feature-gated during safety review. */ }
     setSubmitted(true)
   }
 
@@ -587,7 +590,7 @@ export default function PeerPage() {
             {!loading && filtered.map((s, i) => <SupporterCard key={i} supporter={s} onRequest={setSelectedSupporter} />)}
 
             <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "14px 16px", marginBottom: "24px", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-              <p style={{ fontSize: "12px", color: "#b0b0b0", lineHeight: 1.6 }}>All peer supporters have been vetted and approved. If you are in crisis please call 988 or Cornell Health at 607-255-5155.</p>
+              <p style={{ fontSize: "12px", color: "#b0b0b0", lineHeight: 1.6 }}>If you need crisis support, call or text {crisisResource.phone}. For 24/7 consultation, call {healthResource.officialName} at {healthResource.phone}.</p>
             </div>
           </div>
         )}

@@ -1,48 +1,45 @@
 import { useEffect, useRef, useState } from "react"
+import { getResource } from "../../resources/registry.ts"
 
 const CORAL = "#FF5A5F"
 
-const emergencyContacts = {
-  emergency: {
-    label: "911",
-    description: "Immediate threat to life or a medical, mental health, fire, or safety emergency.",
-    href: "tel:911",
-  },
-  publicSafety: {
-    label: "Cornell Public Safety / Cornell Police",
-    description: "Campus emergency dispatch and public-safety response. From a cell phone on the Ithaca campus: 607-255-1111.",
-    href: "tel:6072551111",
-  },
-  crisis: {
-    label: "988 Suicide & Crisis Lifeline",
-    description: "Call or text 988 for crisis support from a trained counselor, 24/7.",
-    callHref: "tel:988",
-    textHref: "sms:988?body=Hello%2C%20I%20need%20support.",
-  },
-  health: {
-    label: "Cornell Health",
-    description: "24/7 phone consultation for a physical or mental health concern; not emergency dispatch.",
-    href: "tel:6072555155",
-  },
-} as const
+const emergency = getResource("emergency_911")
+const publicSafety = getResource("cornell_public_safety")
+const crisis = getResource("988_lifeline")
+const health = getResource("cornell_health_247")
+
+function callHref(resource: typeof emergency): string {
+  return `tel:${resource.phone?.replace(/-/g, "")}`
+}
+
+function textHref(resource: typeof crisis): string {
+  if (!resource.textAction) throw new Error(`${resource.id} has no text action`)
+  return `sms:${resource.textAction.number}?body=${encodeURIComponent(resource.textAction.prefilledText)}`
+}
 
 export function EmergencyActions() {
   return (
     <div style={{ display: "grid", gap: "8px" }}>
-      <a href={emergencyContacts.emergency.href} style={{ display: "block", backgroundColor: CORAL, color: "#ffffff", padding: "12px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "14px", textDecoration: "none" }}>Call 911</a>
-      <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.45 }}>{emergencyContacts.emergency.description}</p>
+      <a href={callHref(emergency)} style={{ display: "block", backgroundColor: CORAL, color: "#ffffff", padding: "12px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "14px", textDecoration: "none" }}>Call {emergency.phone}</a>
+      <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.45 }}>{emergency.description}</p>
 
-      <a href={emergencyContacts.publicSafety.href} style={{ display: "block", border: `2px solid ${CORAL}`, color: CORAL, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call Cornell Public Safety · 607-255-1111</a>
-      <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.45 }}>{emergencyContacts.publicSafety.description}</p>
+      <a href={callHref(publicSafety)} style={{ display: "block", border: `2px solid ${CORAL}`, color: CORAL, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call {publicSafety.officialName} · {publicSafety.phone}</a>
+      <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.45 }}>{publicSafety.description}</p>
 
-      <div style={{ display: "flex", gap: "8px" }}>
-        <a href={emergencyContacts.crisis.callHref} style={{ flex: 1, display: "block", backgroundColor: "#FFF0F0", color: CORAL, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call 988</a>
-        <a href={emergencyContacts.crisis.textHref} style={{ flex: 1, display: "block", backgroundColor: "#FFF0F0", color: CORAL, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Text 988</a>
-      </div>
-      <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.45 }}>{emergencyContacts.crisis.description}</p>
+      <CrisisContactActions />
+      <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.45 }}>{crisis.description}</p>
 
-      <a href={emergencyContacts.health.href} style={{ display: "block", border: "2px solid #ebebeb", color: "#222222", padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call Cornell Health · 607-255-5155</a>
-      <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.45 }}>{emergencyContacts.health.description}</p>
+      <a href={callHref(health)} style={{ display: "block", border: "2px solid #ebebeb", color: "#222222", padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call {health.officialName} · {health.phone}</a>
+      <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.45 }}>{health.description}</p>
+    </div>
+  )
+}
+
+export function CrisisContactActions() {
+  return (
+    <div style={{ display: "flex", gap: "8px" }}>
+      <a href={callHref(crisis)} style={{ flex: 1, display: "block", backgroundColor: "#FFF0F0", color: CORAL, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call {crisis.phone}</a>
+      <a href={textHref(crisis)} style={{ flex: 1, display: "block", backgroundColor: "#FFF0F0", color: CORAL, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Text {crisis.textAction?.number}</a>
     </div>
   )
 }
