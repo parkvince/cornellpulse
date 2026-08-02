@@ -66,7 +66,7 @@ function BottomNav() {
           <circle cx="12" cy="8" r="4"/>
           <path d="M6 20v-2a6 6 0 0112 0v2"/>
         </svg>
-        <span>Profile</span>
+        <span>History &amp; Privacy</span>
       </Link>
 
     </div>

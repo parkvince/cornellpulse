@@ -3,22 +3,12 @@ import { featureFlags } from "../config/featureFlags"
 import { useState } from "react"
 import { getResource } from "../resources/registry.ts"
 import { resourcePath } from "../resources/directory.ts"
+import { loadLocalHistory, reminderIsDue, updatePlanEntry, type LocalPlanEntry } from "../history/localHistory.ts"
 
 const CORAL = "#FF5A5F"
 
-interface CheckIn { date: string; mood: number; resource: string }
-
 const featuredResources = ["caps_access", "lets_talk", "ears", "cornell_health_247"].map(getResource)
 const crisisResource = getResource("988_lifeline")
-
-function loadLastCheckIn(): CheckIn | null {
-  try {
-    const history = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
-    return Array.isArray(history) && history.length > 0 ? history[0] : null
-  } catch {
-    return null
-  }
-}
 
 function moodColor(m: number) {
   if (m >= 7) return "#00A699"
@@ -42,7 +32,13 @@ function timeAgo(d: string) {
 }
 
 export default function HomePage() {
-  const [last] = useState<CheckIn | null>(loadLastCheckIn)
+  const [history, setHistory] = useState<LocalPlanEntry[]>(loadLocalHistory)
+  const last = history[0] || null
+  const activePlan = history.find(entry => entry.status === "saved")
+
+  function updatePlan(id: string, status: "completed" | "dismissed") {
+    setHistory(updatePlanEntry(id, { status, reminderAt: undefined }))
+  }
 
   function handleShare() {
     if (navigator.share) {
@@ -81,9 +77,20 @@ export default function HomePage() {
       </div>
 
       <div style={{ padding: "24px 20px 0" }}>
+        {activePlan && (
+          <section aria-labelledby="next-step-home" style={{ marginBottom: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}><p id="next-step-home" style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em" }}>Your next step</p><Link to="/profile" style={{ fontSize: "12px", fontWeight: 700, color: CORAL }}>History &amp; Privacy</Link></div>
+            <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: reminderIsDue(activePlan) ? `1.5px solid ${CORAL}` : "1px solid transparent" }}>
+              <p style={{ fontSize: "16px", fontWeight: 800, color: "#222222", lineHeight: 1.35, marginBottom: "5px" }}>{activePlan.resource}</p>
+              {activePlan.reminderAt && <p role={reminderIsDue(activePlan) ? "status" : undefined} style={{ fontSize: "12px", color: reminderIsDue(activePlan) ? CORAL : "#717171", marginBottom: "10px" }}>{reminderIsDue(activePlan) ? "Your local reminder is due." : `Local reminder: ${new Date(activePlan.reminderAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}</p>}
+              <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}><button type="button" onClick={() => updatePlan(activePlan.id, "completed")} style={{ flex: 1, padding: "10px", border: "none", borderRadius: "10px", backgroundColor: CORAL, color: "#ffffff", fontSize: "12px", fontWeight: 700 }}>Complete</button><button type="button" onClick={() => updatePlan(activePlan.id, "dismissed")} style={{ flex: 1, padding: "10px", border: "1.5px solid #ebebeb", borderRadius: "10px", backgroundColor: "#ffffff", color: "#717171", fontSize: "12px", fontWeight: 700 }}>Dismiss</button></div>
+            </div>
+          </section>
+        )}
+
         {last && (
           <div style={{ marginBottom: "24px" }}>
-            <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Last check-in</p>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Latest saved mood</p>
             <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>

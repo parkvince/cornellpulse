@@ -4,6 +4,7 @@ import { getPrivacyPreferences } from "../privacy/preferences"
 import { callHref, filterResources, getAvailability, isResourceStale, resourcePath, textHref, type ResourceFilters } from "../resources/directory.ts"
 import { ACTIVE_RESOURCES, RESOURCE_CATEGORIES, getResource } from "../resources/registry.ts"
 import { useOnlineStatus } from "../resources/useOnlineStatus.ts"
+import { recordLocalMeasurement, type ResourceAction } from "../privacy/measurement.ts"
 
 const CORAL = "#FF5A5F"
 const CATS = ["All", ...RESOURCE_CATEGORIES] as const
@@ -19,7 +20,9 @@ const FILTER_GROUPS = [
 ] as const
 
 function track(resourceId: string, action: string) {
+  if (["call", "text", "book", "directions", "website", "details"].includes(action)) recordLocalMeasurement("resource_action", action as ResourceAction)
   if (!getPrivacyPreferences().resourceAnalytics) return
+  if (action !== "call" && action !== "website") return
   fetch((import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1") + "/track-click", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -125,7 +128,7 @@ export default function ResourcesPage() {
               <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.5, marginBottom: "4px" }}><strong style={{ color: "#222222" }}>Cost:</strong> {resource.cost}</p>
               <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.5, marginBottom: "9px" }}><strong style={{ color: "#222222" }}>Access:</strong> {resource.modalities.map(value => value.replace("_", " ")).join(", ")}</p>
               <p style={{ fontSize: "11px", color: isResourceStale(resource, now) ? "#b07000" : "#008577", marginBottom: "12px" }}>{verifiedLabel(resource.verificationDate)}</p>
-              <Link to={resourcePath(resource)} style={{ display: "block", padding: "10px 14px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "10px", fontSize: "13px", fontWeight: 700, textAlign: "center" }}>View details and actions</Link>
+              <Link to={resourcePath(resource)} onClick={() => track(resource.id, "details")} style={{ display: "block", padding: "10px 14px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "10px", fontSize: "13px", fontWeight: 700, textAlign: "center" }}>View details and actions</Link>
             </article>
           )
         })}

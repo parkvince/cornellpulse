@@ -69,7 +69,7 @@ test("save plan writes only the explicitly selected local summary", () => {
   const values = new Map<string, string>()
   const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) }
   const saved = saveLocalPlan("checkin-1", 6, getResource("caps_access"), storage, new Date("2026-08-02T12:00:00Z"))
-  assert.deepEqual(saved, { id: "checkin-1", date: "2026-08-02T12:00:00.000Z", mood: 6, resource: "Cornell Health CAPS access appointment", resourceId: "caps_access" })
+  assert.deepEqual(saved, { id: "checkin-1", date: "2026-08-02T12:00:00.000Z", mood: 6, resource: "Cornell Health CAPS access appointment", resourceId: "caps_access", status: "saved", updatedAt: "2026-08-02T12:00:00.000Z" })
   assert.deepEqual(JSON.parse(values.get("cornellpulse_history") || "[]"), [saved])
   assert.equal(JSON.stringify(saved).includes("freeText"), false)
 })

@@ -7,6 +7,8 @@ import ResultCard from "./ResultCard"
 import { submitAggregateContribution } from "../../api/client"
 import { buildLocalRecommendation } from "../../checkin/localRecommendations"
 import { getPrivacyPreferences } from "../../privacy/preferences"
+import { recordLocalMeasurement } from "../../privacy/measurement"
+import { deletePlanEntry } from "../../history/localHistory"
 
 const TOTAL_STEPS = 4
 const DRAFT_KEY = "cornellpulse_checkin_draft_v2"
@@ -97,8 +99,7 @@ export default function CheckInFlow() {
   function deleteCurrentCheckin() {
     if (!confirm("Delete this check-in from this device?")) return
     try {
-      const history = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]") as Array<{ id?: string }>
-      localStorage.setItem("cornellpulse_history", JSON.stringify(history.filter(entry => entry.id !== checkinId)))
+      deletePlanEntry(checkinId)
     } catch {
       localStorage.removeItem("cornellpulse_history")
     }
@@ -111,6 +112,7 @@ export default function CheckInFlow() {
     setResult(localResult)
     setFreeText("")
     sessionStorage.removeItem(DRAFT_KEY)
+    recordLocalMeasurement("checkin_completion")
 
     if (getPrivacyPreferences().aggregateContribution) {
       setAggregateNotice("Sending the optional four-field aggregate contribution...")

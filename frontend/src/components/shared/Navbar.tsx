@@ -8,6 +8,7 @@ export default function Navbar() {
     { path: "/checkin", label: "Check In" },
     { path: "/heatmap", label: "Campus Map" },
     { path: "/resources", label: "Resources" },
+    { path: "/profile", label: "History & Privacy" },
   ]
 
   return (

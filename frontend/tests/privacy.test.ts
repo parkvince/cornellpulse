@@ -27,17 +27,18 @@ function sourceText(directory: string): string {
 
 
 test("optional privacy choices default off, including malformed stored values", () => {
-  assert.deepEqual(parsePrivacyPreferences(null), { aggregateContribution: false, resourceAnalytics: false })
-  assert.deepEqual(parsePrivacyPreferences("not-json"), { aggregateContribution: false, resourceAnalytics: false })
-  assert.deepEqual(parsePrivacyPreferences(JSON.stringify({ aggregateContribution: "yes", resourceAnalytics: 1 })), { aggregateContribution: false, resourceAnalytics: false })
+  assert.deepEqual(parsePrivacyPreferences(null), { aggregateContribution: false, resourceAnalytics: false, productMeasurement: false })
+  assert.deepEqual(parsePrivacyPreferences("not-json"), { aggregateContribution: false, resourceAnalytics: false, productMeasurement: false })
+  assert.deepEqual(parsePrivacyPreferences(JSON.stringify({ aggregateContribution: "yes", resourceAnalytics: 1, productMeasurement: "on" })), { aggregateContribution: false, resourceAnalytics: false, productMeasurement: false })
 })
 
 
 test("privacy choices require explicit true values and device clearing removes known keys", () => {
   const local = memoryStorage({ cornellpulse_history: "[]", cornellpulse_onboarded: "true" })
   const session = memoryStorage({ cornellpulse_checkin_draft: "{}", cornellpulse_checkin_draft_v2: "{}", cornellpulse_result_saved: "1" })
-  savePrivacyPreferences({ aggregateContribution: true, resourceAnalytics: false }, local)
+  savePrivacyPreferences({ aggregateContribution: true, resourceAnalytics: false, productMeasurement: true }, local)
   assert.equal(JSON.parse(local.values.get("cornellpulse_privacy_preferences") || "{}").aggregateContribution, true)
+  assert.equal(JSON.parse(local.values.get("cornellpulse_privacy_preferences") || "{}").productMeasurement, true)
 
   clearCornellPulseDeviceData(local, session)
   assert.equal(local.values.size, 0)

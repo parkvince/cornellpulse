@@ -1,5 +1,6 @@
 import type { QualifiedResourceOption } from "./localRecommendations"
 import type { ResourceRecord } from "../resources/registry.ts"
+import { savePlanEntry, type LocalPlanEntry } from "../history/localHistory.ts"
 
 function isHttpUrl(value: unknown): value is string {
   if (typeof value !== "string") return false
@@ -44,14 +45,6 @@ export function bookingHref(resource: ResourceRecord): string | undefined {
   return resource.appointmentRequirement === "required" && isHttpUrl(resource.url) ? resource.url : undefined
 }
 
-export interface LocalPlanEntry {
-  id: string
-  date: string
-  mood: number
-  resource: string
-  resourceId: string
-}
-
 export function saveLocalPlan(
   checkinId: string,
   mood: number,
@@ -59,9 +52,6 @@ export function saveLocalPlan(
   storage: Pick<Storage, "getItem" | "setItem"> = localStorage,
   now = new Date(),
 ): LocalPlanEntry {
-  const parsed = JSON.parse(storage.getItem("cornellpulse_history") || "[]")
-  const history = Array.isArray(parsed) ? parsed.filter((entry: { id?: string }) => entry.id !== checkinId) : []
   const entry = { id: checkinId, date: now.toISOString(), mood, resource: resource.officialName, resourceId: resource.id }
-  storage.setItem("cornellpulse_history", JSON.stringify([entry, ...history].slice(0, 20)))
-  return entry
+  return savePlanEntry(entry, storage, now)
 }

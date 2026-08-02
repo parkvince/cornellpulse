@@ -6,10 +6,11 @@ const CORAL = "#FF5A5F"
 const CONTACT_EMAIL = (import.meta.env.VITE_PRIVACY_CONTACT_EMAIL || "").trim()
 
 const sections = [
-  { title: "What stays on this device", body: "Structured unfinished choices are kept temporarily in this tab so Back and refresh work; optional free text is excluded from that draft and cleared after the local result is created. A result is not added to history automatically. If you choose a next step and explicitly save it, up to 20 plan summaries can be kept in local storage until you clear them, clear browser/app data, or uninstall the app. Results feedback stays only in the open page and is not saved or sent." },
+  { title: "What stays on this device", body: "Structured unfinished choices are kept temporarily in this tab so Back and refresh work; optional free text is excluded from that draft and cleared after the local result is created. A result is not added to history automatically. If you explicitly save a next step, up to 20 plan summaries, mood numbers, local reminders, and follow-up answers can be kept. The default retention is 90 days and can be changed in History & Privacy. Results feedback stays only in the open page and is not saved or sent." },
   { title: "What a check-in sends", body: "Recommendations are generated on this device. Stress triggers, talk preference, and optional free text are not sent to the check-in API. Free text is not placed in local storage, session storage, history, analytics events, or an application database." },
   { title: "Optional aggregate contribution", body: "Off by default. If you opt in, a future check-in sends only mood score, sleep category, workload category, and college category to hourly combined totals. It does not send free text, triggers, talk preference, a recommendation, a distress category, or a session token. Existing combined totals cannot be separated back into an individual contribution, so withdrawing stops future contributions but cannot remove earlier totals." },
   { title: "Optional resource analytics", body: "If you opt in, clicking a resource phone or website action sends the resource identifier and action type to the backend. These events are stored without an account identifier, but ordinary network and hosting logs may still contain technical metadata such as IP address, timestamp, path, and user agent." },
+  { title: "Optional product measurement", body: "Off by default. If enabled, CornellPulse keeps only local counters for completed check-ins, resource-action types, successful contact, and repeat use. These counters do not contain resource IDs, raw answers, free text, names, emails, or phone numbers, and the current code does not upload them." },
   { title: "Peer and supporter information", body: "If Peer Connect is enabled, supporter applications store name, Cornell email, phone, year, major, locations, availability, interests, profile text, and reference name/contact/relationship. Connection requests store requester contact details, meeting preferences, and messages. Safety reports store the supporter name, reason, and optional reporter email. Administrators can review, update status, and delete these records." },
   { title: "Retention and deletion limits", body: "Administrator session cookies expire after 15 minutes by default. The current code does not automatically expire database aggregates, resource-click events, supporter applications, connection requests, reports, provider logs, or email copies. Those records remain until an authorized operator or service provider deletes them. Database deletion does not automatically erase copies already sent through email, backups, or provider logs." },
   { title: "Third parties", body: "The deployment uses a hosting environment, PostgreSQL-compatible database, and Resend for configured peer-workflow emails. The current application has no active Redis integration. Following phone numbers or external links sends data directly to those outside services under their own practices. CornellPulse does not currently include a third-party browser analytics SDK." },
@@ -30,7 +31,7 @@ export default function PrivacyPage() {
 
   function clearDeviceData() {
     clearCornellPulseDeviceData()
-    setPreferences({ aggregateContribution: false, resourceAnalytics: false })
+    setPreferences({ aggregateContribution: false, resourceAnalytics: false, productMeasurement: false })
     setConfirmClear(false)
     setCleared(true)
   }
@@ -51,9 +52,13 @@ export default function PrivacyPage() {
               <input type="checkbox" checked={preferences.aggregateContribution} onChange={event => updatePreference("aggregateContribution", event.target.checked)} style={{ marginTop: "3px", accentColor: CORAL }} />
               <span><span style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>Contribute to campus aggregates</span><span style={{ display: "block", fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Off by default. When on, future check-ins send only mood, sleep, workload, and college categories to hourly combined totals.</span></span>
             </label>
-            <label style={{ padding: "16px 20px", display: "flex", gap: "12px", alignItems: "flex-start", cursor: "pointer" }}>
+            <label style={{ padding: "16px 20px", borderBottom: "1px solid #f5f5f5", display: "flex", gap: "12px", alignItems: "flex-start", cursor: "pointer" }}>
               <input type="checkbox" checked={preferences.resourceAnalytics} onChange={event => updatePreference("resourceAnalytics", event.target.checked)} style={{ marginTop: "3px", accentColor: CORAL }} />
               <span><span style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>Share resource-click analytics</span><span style={{ display: "block", fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Off by default. When on, future phone and website clicks send the resource and action type.</span></span>
+            </label>
+            <label style={{ padding: "16px 20px", display: "flex", gap: "12px", alignItems: "flex-start", cursor: "pointer" }}>
+              <input type="checkbox" checked={preferences.productMeasurement} onChange={event => updatePreference("productMeasurement", event.target.checked)} style={{ marginTop: "3px", accentColor: CORAL }} />
+              <span><span style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>Keep privacy-minimized measurement on this device</span><span style={{ display: "block", fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Off by default. When on, local counters measure check-in completion, action types, successful contact, and repeat use. They are not uploaded.</span></span>
             </label>
           </div>
           {saved && <p role="status" style={{ fontSize: "12px", color: "#00A699", marginTop: "8px" }}>Preference saved on this device. Turning a choice off stops future optional collection.</p>}
@@ -80,7 +85,7 @@ export default function PrivacyPage() {
           </div>
         </section>
 
-        <Link to="/profile" style={{ display: "block", textAlign: "center", color: "#717171", fontSize: "13px", fontWeight: 600, padding: "8px", marginBottom: "16px", textDecoration: "none" }}>Back to profile</Link>
+        <Link to="/profile" style={{ display: "block", textAlign: "center", color: "#717171", fontSize: "13px", fontWeight: 600, padding: "8px", marginBottom: "16px", textDecoration: "none" }}>Back to History &amp; Privacy</Link>
       </div>
     </div>
   )

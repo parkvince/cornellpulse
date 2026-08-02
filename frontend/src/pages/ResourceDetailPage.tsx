@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router-dom"
 import { callHref, getAvailability, isResourceStale, textHref } from "../resources/directory.ts"
 import { RESOURCE_BY_ID } from "../resources/registry.ts"
 import { useOnlineStatus } from "../resources/useOnlineStatus.ts"
+import { recordLocalMeasurement } from "../privacy/measurement.ts"
 
 const CORAL = "#FF5A5F"
 
@@ -72,14 +73,14 @@ export default function ResourceDetailPage() {
         </div>
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "14px" }}>
-          {callHref(resource) && <a href={callHref(resource)} style={{ padding: "11px 16px", backgroundColor: resource.category === "Crisis" ? CORAL : "#FFF0F0", color: resource.category === "Crisis" ? "#ffffff" : CORAL, borderRadius: "10px", fontSize: "13px", fontWeight: 700 }}>Call {resource.phone}</a>}
-          {textHref(resource) && <a href={textHref(resource)} style={{ padding: "11px 16px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "10px", fontSize: "13px", fontWeight: 700 }}>Text {resource.textAction?.number}</a>}
-          {resource.url && <a href={resource.url} target="_blank" rel="noopener noreferrer" style={{ padding: "11px 16px", border: "1.5px solid #ebebeb", color: "#717171", borderRadius: "10px", fontSize: "13px", fontWeight: 600 }}>Visit service</a>}
+          {callHref(resource) && <a href={callHref(resource)} onClick={() => recordLocalMeasurement("resource_action", "call")} style={{ padding: "11px 16px", backgroundColor: resource.category === "Crisis" ? CORAL : "#FFF0F0", color: resource.category === "Crisis" ? "#ffffff" : CORAL, borderRadius: "10px", fontSize: "13px", fontWeight: 700 }}>Call {resource.phone}</a>}
+          {textHref(resource) && <a href={textHref(resource)} onClick={() => recordLocalMeasurement("resource_action", "text")} style={{ padding: "11px 16px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "10px", fontSize: "13px", fontWeight: 700 }}>Text {resource.textAction?.number}</a>}
+          {resource.url && <a href={resource.url} target="_blank" rel="noopener noreferrer" onClick={() => recordLocalMeasurement("resource_action", "website")} style={{ padding: "11px 16px", border: "1.5px solid #ebebeb", color: "#717171", borderRadius: "10px", fontSize: "13px", fontWeight: 600 }}>Visit service</a>}
         </div>
 
         <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "16px", border: "1px solid #f0f0f0" }}>
           <p style={{ fontSize: "12px", color: "#717171", marginBottom: "8px" }}>Last verified {verifiedLabel(resource.verificationDate)} by {resource.verifier}.</p>
-          <a href={resource.officialSourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: CORAL, fontSize: "13px", fontWeight: 700, textDecoration: "underline" }}>Open official source</a>
+          <a href={resource.officialSourceUrl} target="_blank" rel="noopener noreferrer" onClick={() => recordLocalMeasurement("resource_action", "website")} style={{ color: CORAL, fontSize: "13px", fontWeight: 700, textDecoration: "underline" }}>Open official source</a>
         </div>
 
       </div>

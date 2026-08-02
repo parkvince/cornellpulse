@@ -5,6 +5,8 @@ import { bookingHref, directionsHref, prepareResultOptions, saveLocalPlan } from
 import { callHref, resourcePath, textHref } from "../../resources/directory.ts"
 import { useOnlineStatus } from "../../resources/useOnlineStatus"
 import { CrisisContactActions } from "../shared/EmergencyHelp"
+import { loadLocalHistory } from "../../history/localHistory.ts"
+import { recordLocalMeasurement, type ResourceAction } from "../../privacy/measurement.ts"
 
 const CORAL = "#FF5A5F"
 
@@ -39,15 +41,16 @@ interface ResourceOptionProps {
   selected: boolean
   online: boolean
   onSelect: () => void
+  onAction: (action: ResourceAction) => void
 }
 
-function ExternalAction(props: { href: string; label: string; online: boolean }) {
+function ExternalAction(props: { href: string; label: string; online: boolean; onAction: () => void }) {
   const style = { fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", textDecoration: "none", border: "1px solid #ebebeb" }
   if (!props.online) return <span aria-disabled="true" title="Requires an internet connection" style={{ ...style, color: "#9b9b9b", backgroundColor: "#f5f5f5" }}>{props.label}</span>
-  return <a href={props.href} target="_blank" rel="noopener noreferrer" style={{ ...style, color: CORAL, backgroundColor: "#ffffff" }}>{props.label}</a>
+  return <a href={props.href} target="_blank" rel="noopener noreferrer" onClick={props.onAction} style={{ ...style, color: CORAL, backgroundColor: "#ffffff" }}>{props.label}</a>
 }
 
-function ResourceOptionCard({ option, selected, online, onSelect }: ResourceOptionProps) {
+function ResourceOptionCard({ option, selected, online, onSelect, onAction }: ResourceOptionProps) {
   const resource = option.resource
   const call = callHref(resource)
   const text = textHref(resource)
@@ -71,12 +74,12 @@ function ResourceOptionCard({ option, selected, online, onSelect }: ResourceOpti
       </dl>
 
       <div aria-label={`Actions for ${resource.officialName}`} style={{ display: "flex", gap: "7px", flexWrap: "wrap", marginBottom: "13px" }}>
-        {call && <a href={call} style={{ fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, textDecoration: "none" }}>Call</a>}
-        {text && <a href={text} style={{ fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, textDecoration: "none" }}>Text</a>}
-        {book && <ExternalAction href={book} label="Book / access" online={online} />}
-        {directions && <ExternalAction href={directions} label="Directions" online={online} />}
-        <ExternalAction href={resource.officialSourceUrl} label="Official website" online={online} />
-        <Link to={resourcePath(resource)} style={{ fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", color: "#717171", textDecoration: "none", border: "1px solid #ebebeb" }}>Full details</Link>
+        {call && <a href={call} onClick={() => onAction("call")} style={{ fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, textDecoration: "none" }}>Call</a>}
+        {text && <a href={text} onClick={() => onAction("text")} style={{ fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, textDecoration: "none" }}>Text</a>}
+        {book && <ExternalAction href={book} label="Book / access" online={online} onAction={() => onAction("book")} />}
+        {directions && <ExternalAction href={directions} label="Directions" online={online} onAction={() => onAction("directions")} />}
+        <ExternalAction href={resource.officialSourceUrl} label="Official website" online={online} onAction={() => onAction("website")} />
+        <Link to={resourcePath(resource)} onClick={() => onAction("details")} style={{ fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", color: "#717171", textDecoration: "none", border: "1px solid #ebebeb" }}>Full details</Link>
       </div>
 
       <button type="button" aria-pressed={selected} onClick={onSelect} style={{ width: "100%", padding: "12px", borderRadius: "12px", border: selected ? `2px solid ${CORAL}` : "2px solid #ebebeb", backgroundColor: selected ? "#FFF0F0" : "#ffffff", color: selected ? CORAL : "#717171", fontSize: "13px", fontWeight: 800, cursor: "pointer" }}>
@@ -101,7 +104,10 @@ export default function ResultCard(props: ResultCardProps) {
     const selected = options.find(option => option.resource.id === selectedId)
     if (!selected) return
     try {
+      const currentHistory = loadLocalHistory()
+      const isRepeat = currentHistory.length > 0 && !currentHistory.some(entry => entry.id === props.checkinId)
       saveLocalPlan(props.checkinId, moodScore, selected.resource)
+      if (isRepeat) recordLocalMeasurement("repeat_use")
       setSaveStatus("Plan saved on this device. It is available in your local check-in history.")
     } catch {
       setSaveStatus("This browser could not save the plan. Check storage permissions and try again.")
@@ -141,7 +147,7 @@ export default function ResultCard(props: ResultCardProps) {
 
       {options.length > 0 ? (
         <section aria-label="Qualified resource options">
-          {options.map(option => <ResourceOptionCard key={option.resource.id} option={option} selected={selectedId === option.resource.id} online={online} onSelect={() => { setSelectedId(option.resource.id); setSaveStatus("") }} />)}
+          {options.map(option => <ResourceOptionCard key={option.resource.id} option={option} selected={selectedId === option.resource.id} online={online} onSelect={() => { setSelectedId(option.resource.id); setSaveStatus("") }} onAction={action => recordLocalMeasurement("resource_action", action)} />)}
         </section>
       ) : (
         <div role="alert" style={{ backgroundColor: "#ffffff", borderRadius: "18px", padding: "20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", marginBottom: "16px" }}>
