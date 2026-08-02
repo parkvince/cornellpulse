@@ -1,9 +1,18 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Link } from "react-router-dom"
 
 const CORAL = "#FF5A5F"
 
-interface CheckIn { date: string; mood: number; resource: string }
+interface CheckIn { id?: string; date: string; mood: number; resource: string }
+
+function loadHistory(): CheckIn[] {
+  try {
+    const value = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
+    return Array.isArray(value) ? value : []
+  } catch {
+    return []
+  }
+}
 
 function moodColor(m: number) {
   if (m >= 7) return "#00A699"
@@ -27,18 +36,13 @@ function timeAgo(d: string) {
 }
 
 export default function ProfilePage() {
-  const [history, setHistory] = useState<CheckIn[]>([])
+  const [history, setHistory] = useState<CheckIn[]>(loadHistory)
   const [cleared, setCleared] = useState(false)
-
-  useEffect(() => {
-    try { setHistory(JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")) } catch {}
-  }, [])
 
 const [confirmClear, setConfirmClear] = useState(false)
 
   function clearHistory() {
     localStorage.removeItem("cornellpulse_history")
-    sessionStorage.removeItem("cornellpulse_result_saved")
     setHistory([])
     setCleared(true)
     setConfirmClear(false)
@@ -54,7 +58,7 @@ const [confirmClear, setConfirmClear] = useState(false)
       <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Your space</p>
         <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "8px" }}>Profile</h1>
-        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>The history shown on this page is stored on this device. Submitted check-ins are sent to the server for resource matching.</p>
+        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>The history shown on this page stays on this device. Recommendations are generated here, without sending your check-in answers.</p>
       </div>
 
       <div style={{ padding: "24px 20px 0" }}>
@@ -74,7 +78,7 @@ const [confirmClear, setConfirmClear] = useState(false)
                           </div>
             <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
               {history.slice(0, 10).map((c, idx) => (
-                <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < Math.min(history.length, 10) - 1 ? "1px solid #f5f5f5" : "none" }}>
+                <div key={c.id || `${c.date}-${idx}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: idx < Math.min(history.length, 10) - 1 ? "1px solid #f5f5f5" : "none" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                     <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: moodColor(c.mood) + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <span style={{ fontSize: "16px", fontWeight: 800, color: moodColor(c.mood) }}>{c.mood}</span>

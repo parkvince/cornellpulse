@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from enum import Enum
 
@@ -48,16 +48,13 @@ class StressTrigger(str, Enum):
     discrimination = "discrimination"
     nothing_specific = "nothing_specific"
 
-class CheckInRequest(BaseModel):
+class AggregateContributionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     mood_score: int
     sleep_category: SleepCategory
     workload_category: WorkloadCategory
-    stress_triggers: Optional[List[StressTrigger]] = None
-    wants_to_talk: Optional[bool] = None
-    free_text: Optional[str] = None
     college: CollegeEnum
-    session_token: str
-    contribute_aggregate: bool = False
 
 class ResourceResult(BaseModel):
     resource_id: str
@@ -76,6 +73,5 @@ class TriageResult(BaseModel):
     why: str
     show_peer_connect: bool
 
-class CheckInResponse(BaseModel):
-    triage_result: TriageResult
+class AggregateContributionResponse(BaseModel):
     aggregate_updated: bool

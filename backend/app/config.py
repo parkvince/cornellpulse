@@ -4,7 +4,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     DATABASE_URL: str = "postgresql+asyncpg://cpulse_user:yourpassword@localhost:5432/cornellpulse"
-    REDIS_URL: str = "redis://localhost:6379/0"
     ADMIN_SESSION_SECRET: str = ""
     ADMIN_PASSWORD_HASH: str = ""
     ADMIN_SESSION_MINUTES: int = 15

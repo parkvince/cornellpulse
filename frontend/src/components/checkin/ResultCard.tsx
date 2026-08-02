@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { featureFlags } from "../../config/featureFlags"
+import type { Resource } from "../../checkin/localRecommendations"
 
 const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
@@ -12,9 +13,17 @@ function moodColor(m: number) {
   return "#c0392b"
 }
 
+interface PeerSupporter {
+  name: string
+  year: string
+  major?: string
+  about?: string
+  interests?: string[]
+}
+
 function PeerConnectSuggestion() {
   const navigate = useNavigate()
-  const [supporter, setSupporter] = useState<any>(null)
+  const [supporter, setSupporter] = useState<PeerSupporter | null>(null)
 
   useEffect(() => {
     fetch(`${API_URL}/peer-supporters`)
@@ -73,7 +82,13 @@ function PeerConnectSuggestion() {
   )
 }
 
-function ResourceItem(props: any) {
+interface ResourceItemProps {
+  resource: Resource
+  primary?: boolean
+  onSaved?: () => void
+}
+
+function ResourceItem(props: ResourceItemProps) {
   const r = props.resource
   const primary = props.primary
 
@@ -123,22 +138,42 @@ function ResourceItem(props: any) {
   )
 }
 
-export default function ResultCard(props: any) {
+interface ResultCardProps {
+  result: {
+    triage_result: {
+      primary: Resource
+      secondary: Resource[]
+      crisis_flag: boolean
+      distress_level: string
+      why: string
+      show_peer_connect: boolean
+    }
+  }
+  moodScore: number
+  triggers: string[]
+  wantsToTalk: boolean | null
+  checkinId: string
+  aggregateNotice: string
+  onRestart: () => void
+  onDelete: () => void
+}
+
+export default function ResultCard(props: ResultCardProps) {
   const tr = props.result.triage_result
   const [toast, setToast] = useState("")
   const [feedback, setFeedback] = useState("")
   const moodScore = props.moodScore || 5
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("cornellpulse_result_saved")
-    if (saved) return
     try {
       const h = JSON.parse(localStorage.getItem("cornellpulse_history") || "[]")
-      const entry = { date: new Date().toISOString(), mood: moodScore, distress_level: tr.distress_level, resource: tr.primary.name }
+      if (h.some((entry: { id?: string }) => entry.id === props.checkinId)) return
+      const entry = { id: props.checkinId, date: new Date().toISOString(), mood: moodScore, distress_level: tr.distress_level, resource: tr.primary.name }
       localStorage.setItem("cornellpulse_history", JSON.stringify([entry, ...h].slice(0, 20)))
-      sessionStorage.setItem("cornellpulse_result_saved", "1")
-    } catch {}
-  }, [])
+    } catch {
+      return
+    }
+  }, [moodScore, props.checkinId, tr.distress_level, tr.primary.name])
 
   function showToast(msg: string) {
     setToast(msg)
@@ -188,7 +223,7 @@ export default function ResultCard(props: any) {
       {tr.secondary.length > 0 && (
         <div style={{ marginTop: "16px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Other options</p>
-          {tr.secondary.map((r: any) => <ResourceItem key={r.resource_id} resource={r} />)}
+          {tr.secondary.map(r => <ResourceItem key={r.resource_id} resource={r} />)}
         </div>
       )}
 
@@ -223,11 +258,15 @@ export default function ResultCard(props: any) {
         </div>
       )}
 
-      <button onClick={() => { sessionStorage.removeItem("cornellpulse_result_saved"); props.onRestart() }} style={{ marginTop: "4px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
+      <p role="status" style={{ fontSize: "12px", color: "#717171", textAlign: "center", margin: "12px 0 8px" }}>{props.aggregateNotice}</p>
+      <button onClick={props.onDelete} style={{ width: "100%", padding: "12px", backgroundColor: "transparent", color: CORAL, border: "2px solid #ebebeb", borderRadius: "14px", fontSize: "13px", fontWeight: 700, cursor: "pointer", marginBottom: "8px" }}>
+        Delete this check-in
+      </button>
+      <button onClick={props.onRestart} style={{ marginTop: "4px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
         Check in again
       </button>
       <Link to="/" style={{ display: "block", textAlign: "center", fontSize: "13px", fontWeight: 600, color: "#717171", marginTop: "12px", padding: "8px", textDecoration: "none" }}>← Back to home</Link>
-      <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "6px" }}>Submitted answers were processed by the server. See Privacy & Data for storage and contribution details.</p>
+      <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "6px" }}>Your recommendation was generated on this device. Only an optional four-field aggregate is sent when you have enabled that choice.</p>
 
       {toast && (
         <div style={{ position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)", backgroundColor: CORAL, color: "#ffffff", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" }}>

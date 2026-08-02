@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from datetime import datetime, timezone
 from app.models.db_models import CollegeHourAggregate, CampusHourAggregate
-from app.models.schemas import CheckInRequest
+from app.models.schemas import AggregateContributionRequest
 
 SLEEP_SCORES = {
     "under_4": 1.0,
@@ -18,7 +18,7 @@ WORKLOAD_SCORES = {
     "unbearable": 1.0,
 }
 
-async def update_aggregates(request: CheckInRequest, distress_level: str, resource_id: str, db: AsyncSession):
+async def update_aggregates(request: AggregateContributionRequest, db: AsyncSession):
     now = datetime.now(timezone.utc)
     hour_bucket = now.replace(minute=0, second=0, microsecond=0)
 
@@ -42,10 +42,6 @@ async def update_aggregates(request: CheckInRequest, distress_level: str, resour
             mood_sum=request.mood_score,
             sleep_score_sum=sleep_score,
             workload_score_sum=workload_score,
-            distress_level_high=1 if distress_level == "high" else 0,
-            distress_level_mod=1 if distress_level == "moderate" else 0,
-            distress_level_low=1 if distress_level == "low" else 0,
-            resource_routed={resource_id: 1},
         )
         db.add(row)
     else:
@@ -53,15 +49,6 @@ async def update_aggregates(request: CheckInRequest, distress_level: str, resour
         row.mood_sum += request.mood_score
         row.sleep_score_sum += sleep_score
         row.workload_score_sum += workload_score
-        if distress_level == "high":
-            row.distress_level_high += 1
-        elif distress_level == "moderate":
-            row.distress_level_mod += 1
-        else:
-            row.distress_level_low += 1
-        routed = dict(row.resource_routed or {})
-        routed[resource_id] = routed.get(resource_id, 0) + 1
-        row.resource_routed = routed
 
     campus_result = await db.execute(
         select(CampusHourAggregate).where(

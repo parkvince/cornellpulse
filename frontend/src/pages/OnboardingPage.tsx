@@ -62,7 +62,7 @@ export default function OnboardingPage() {
             {[
               { heading: "Not a clinical service", body: "CornellPulse is a resource navigation tool. It does not provide therapy, counseling, or medical advice." },
               { heading: "Not affiliated with Cornell University", body: "This app was built independently by Cornell students. It is not an official Cornell product." },
-              { heading: "Know what is transmitted", body: "Submitted check-ins are processed by the server. Optional aggregate contribution and resource-click analytics are controlled from Privacy & Data and start off." },
+              { heading: "Know what is transmitted", body: "Check-in recommendations are generated on this device. Optional aggregate contribution and resource-click analytics are controlled from Privacy & Data and start off." },
               { heading: "In an emergency", body: "If you are in immediate danger, call 911 or Cornell Police at 607-255-1111. This app cannot dispatch help." },
             ].map(item => (
               <div key={item.heading} style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "14px 16px", border: "1px solid #ebebeb" }}>

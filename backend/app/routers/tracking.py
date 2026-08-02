@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.database import get_db
@@ -9,6 +9,8 @@ from app.auth import require_admin
 router = APIRouter()
 
 class ClickRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     resource_id: str
     action: str
     consent_granted: bool = False
