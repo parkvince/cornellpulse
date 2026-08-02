@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
+import { featureFlags } from "../../config/featureFlags"
 
 const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
@@ -180,7 +181,7 @@ export default function ResultCard(props: any) {
 
       <ResourceItem resource={tr.primary} primary={true} onSaved={() => showToast("Copied to clipboard")} />
 
-      {(tr.show_peer_connect || props.wantsToTalk) && (
+      {featureFlags.peerConnect && (tr.show_peer_connect || props.wantsToTalk) && (
         <PeerConnectSuggestion />
       )}
 
@@ -218,7 +219,7 @@ export default function ResultCard(props: any) {
         <div style={{ marginTop: "10px", backgroundColor: "#f9f9f9", borderRadius: "16px", padding: "16px", marginBottom: "10px" }}>
           <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222", marginBottom: "8px" }}>Sorry about that. Try one of these instead:</p>
           <Link to="/resources" style={{ display: "block", padding: "12px", border: "2px solid #ebebeb", borderRadius: "12px", textAlign: "center", fontSize: "14px", fontWeight: 600, color: CORAL, marginBottom: "8px" }}>Browse all resources</Link>
-          <Link to="/peer" style={{ display: "block", padding: "12px", border: "2px solid #ebebeb", borderRadius: "12px", textAlign: "center", fontSize: "14px", fontWeight: 600, color: "#717171" }}>Talk to a peer supporter</Link>
+          {featureFlags.peerConnect && <Link to="/peer" style={{ display: "block", padding: "12px", border: "2px solid #ebebeb", borderRadius: "12px", textAlign: "center", fontSize: "14px", fontWeight: 600, color: "#717171" }}>Talk to a peer supporter</Link>}
         </div>
       )}
 

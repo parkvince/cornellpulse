@@ -7,6 +7,10 @@ import PeerPage from "./pages/PeerPage"
 import AdminPage from "./pages/AdminPage"
 import OnboardingPage from "./pages/OnboardingPage"
 import ProfilePage from "./pages/ProfilePage"
+import PeerSignupPage from "./pages/PeerSignupPage"
+import FeatureUnavailablePage from "./pages/FeatureUnavailablePage"
+import NotFoundPage from "./pages/NotFoundPage"
+import { featureFlags } from "./config/featureFlags"
 
 const CORAL = "#FF5A5F"
 
@@ -45,14 +49,14 @@ function BottomNav() {
         <span style={{ fontSize: "10px", fontWeight: 600, color: active("/checkin") ? CORAL : "#717171" }}>Check In</span>
       </Link>
 
-      <Link to="/peer" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", color: active("/peer") ? CORAL : "#717171", fontSize: "10px", fontWeight: active("/peer") ? 600 : 400, textDecoration: "none" }}>
+      {featureFlags.peerConnect && <Link to="/peer" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", color: active("/peer") ? CORAL : "#717171", fontSize: "10px", fontWeight: active("/peer") ? 600 : 400, textDecoration: "none" }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/peer") ? CORAL : "#717171"} strokeWidth="1.8">
           <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
           <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
         </svg>
         <span>Connect</span>
-      </Link>
+      </Link>}
 
       <Link to="/profile" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", color: active("/profile") ? CORAL : "#717171", fontSize: "10px", fontWeight: active("/profile") ? 600 : 400, textDecoration: "none" }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/profile") ? CORAL : "#717171"} strokeWidth="1.8">
@@ -83,9 +87,11 @@ export default function App() {
           <Route path="/" element={onboarded ? <HomePage /> : <Navigate to="/onboarding" />} />
           <Route path="/checkin" element={<CheckInPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
-          <Route path="/peer" element={<PeerPage />} />
+          <Route path="/peer" element={featureFlags.peerConnect ? <PeerPage /> : <FeatureUnavailablePage feature="Peer Connect" />} />
+          <Route path="/peer/signup" element={featureFlags.supporterSignup ? <PeerSignupPage /> : <FeatureUnavailablePage feature="Supporter signup" />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin" element={featureFlags.publicAdmin ? <AdminPage /> : <FeatureUnavailablePage feature="Admin" />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
       <BottomNav />

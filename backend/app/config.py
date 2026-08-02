@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "dev"
     RESEND_API_KEY: str = ""
     ADMIN_EMAIL: str = ""
+    FEATURE_PEER_CONNECT: bool = False
+    FEATURE_SUPPORTER_SIGNUP: bool = False
 
     class Config:
         env_file = ".env"

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom"
+import { featureFlags } from "../config/featureFlags"
 import { useEffect, useState } from "react"
 
 const CORAL = "#FF5A5F"
@@ -124,7 +125,7 @@ export default function HomePage() {
         <div style={{ marginBottom: "24px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Quick access</p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+          {featureFlags.peerConnect && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
             <Link to="/peer" style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 16px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", textDecoration: "none" }}>
               <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
@@ -139,7 +140,7 @@ export default function HomePage() {
               <p style={{ fontSize: "13px", fontWeight: 700, color: "#222222", marginBottom: "3px" }}>Talk to someone</p>
               <p style={{ fontSize: "11px", color: "#717171" }}>Find a peer supporter</p>
             </Link>
-          </div>
+          </div>}
 
           <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", borderRadius: "20px", padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

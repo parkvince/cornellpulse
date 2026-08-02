@@ -2,7 +2,8 @@ import { useState, useEffect } from "react"
 
 const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
-const ADMIN_PASSWORD = "cornellpulse2026"
+// The legacy client-side gate is intentionally non-functional. Do not put credentials in frontend code.
+const ADMIN_PASSWORD = ""
 
 const AVATAR_COLORS = ["#FF5A5F", "#00A699", "#FC642D", "#7B68EE", "#20B2AA", "#FF6B6B", "#4ECDC4"]
 function avatarColor(name: string) {
@@ -42,7 +43,7 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("all")
 
   function login() {
-    if (password === ADMIN_PASSWORD) { setAuthed(true); setError("") }
+    if (ADMIN_PASSWORD && password === ADMIN_PASSWORD) { setAuthed(true); setError("") }
     else setError("Incorrect password.")
   }
 

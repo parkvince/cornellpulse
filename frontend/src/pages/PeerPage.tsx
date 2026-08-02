@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { featureFlags } from "../config/featureFlags"
 
 const CORAL = "#FF5A5F"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
@@ -535,9 +536,9 @@ export default function PeerPage() {
           <button onClick={() => setTab("find")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "find" ? CORAL : "#ffffff", color: tab === "find" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "find" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
             Find a supporter
           </button>
-          <button onClick={() => setTab("signup")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "signup" ? CORAL : "#ffffff", color: tab === "signup" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "signup" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
+          {featureFlags.supporterSignup && <button onClick={() => setTab("signup")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "signup" ? CORAL : "#ffffff", color: tab === "signup" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "signup" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
             Become a supporter
-          </button>
+          </button>}
         </div>
 
         {tab === "find" && (
@@ -579,7 +580,7 @@ export default function PeerPage() {
               <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "32px 20px", textAlign: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
                 <p style={{ fontSize: "16px", fontWeight: 700, color: "#222222", marginBottom: "8px" }}>No supporters yet</p>
                 <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6, marginBottom: "20px" }}>Be the first to sign up and help other students.</p>
-                <button onClick={() => setTab("signup")} style={{ padding: "12px 24px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Sign up as a supporter</button>
+                {featureFlags.supporterSignup && <button onClick={() => setTab("signup")} style={{ padding: "12px 24px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Sign up as a supporter</button>}
               </div>
             )}
 
@@ -591,7 +592,7 @@ export default function PeerPage() {
           </div>
         )}
 
-        {tab === "signup" && <SignupForm />}
+        {featureFlags.supporterSignup && tab === "signup" && <SignupForm />}
       </div>
     </div>
   )
