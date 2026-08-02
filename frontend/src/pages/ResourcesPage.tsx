@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { getPrivacyPreferences } from "../privacy/preferences"
 
 const CORAL = "#FF5A5F"
 const CATS = ["All", "Cornell", "Crisis", "Community", "Stress Relief", "Physical"]
@@ -41,10 +42,11 @@ const resources = [
 ]
 
 function track(resourceId: string, action: string) {
+  if (!getPrivacyPreferences().resourceAnalytics) return
   fetch((import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1") + "/track-click", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ resource_id: resourceId, action }),
+    body: JSON.stringify({ resource_id: resourceId, action, consent_granted: true }),
   }).catch(() => {})
 }
 
@@ -64,7 +66,7 @@ export default function ResourcesPage() {
 <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 24px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
             <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Resources</p>
         <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", marginBottom: "4px" }}>Resources for every kind of moment.</h1>
-        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", marginBottom: "16px" }}>Free, anonymous, ready when you are.</p>
+        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", marginBottom: "16px" }}>Free resource navigation, ready when you are.</p>
         <div style={{ position: "relative" }}>
           <svg style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." style={{ width: "100%", padding: "12px 14px 12px 40px", border: "none", borderRadius: "12px", fontSize: "15px", backgroundColor: "#ffffff", color: "#222222" }} />

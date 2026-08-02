@@ -54,7 +54,7 @@ const [confirmClear, setConfirmClear] = useState(false)
       <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Your space</p>
         <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "8px" }}>Profile</h1>
-        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>Everything here is stored only on your device. Nothing is ever sent to our servers.</p>
+        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>The history shown on this page is stored on this device. Submitted check-ins are sent to the server for resource matching.</p>
       </div>
 
       <div style={{ padding: "24px 20px 0" }}>
@@ -110,13 +110,17 @@ const [confirmClear, setConfirmClear] = useState(false)
           <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Privacy</p>
           <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #f5f5f5" }}>
-              <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>Your data</p>
-              <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>CornellPulse never stores your check-in answers on our servers. Everything stays on your device.</p>
+              <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>Local check-in history</p>
+              <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Up to 20 result summaries can be stored on this device until you clear them or remove browser/app data.</p>
             </div>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #f5f5f5" }}>
-              <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>Anonymous aggregate data</p>
-              <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>We collect only anonymous mood averages by college to understand campus wellness trends. Nothing is tied to you.</p>
+              <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "4px" }}>Server processing and optional contribution</p>
+              <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>Check-ins are transmitted for matching. Aggregate contribution and resource-click analytics are separate, optional choices that start off.</p>
             </div>
+            <Link to="/privacy" style={{ width: "100%", padding: "16px 20px", textAlign: "left", backgroundColor: "transparent", borderBottom: "1px solid #f5f5f5", display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none" }}>
+              <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222" }}>Privacy & Data controls</p>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+            </Link>
             <button onClick={resetOnboarding} style={{ width: "100%", padding: "16px 20px", textAlign: "left", backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222" }}>View intro again</p>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>

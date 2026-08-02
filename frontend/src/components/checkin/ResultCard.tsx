@@ -227,7 +227,7 @@ export default function ResultCard(props: any) {
         Check in again
       </button>
       <Link to="/" style={{ display: "block", textAlign: "center", fontSize: "13px", fontWeight: 600, color: "#717171", marginTop: "12px", padding: "8px", textDecoration: "none" }}>← Back to home</Link>
-      <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "6px" }}>Your responses were not saved to our servers.</p>
+      <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "6px" }}>Submitted answers were processed by the server. See Privacy & Data for storage and contribution details.</p>
 
       {toast && (
         <div style={{ position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)", backgroundColor: CORAL, color: "#ffffff", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" }}>

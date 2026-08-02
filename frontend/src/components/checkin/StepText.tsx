@@ -7,7 +7,7 @@ export default function StepText({ value, onChange, college, onCollegeChange, co
     <div>
       <p style={{ fontSize: "12px", fontWeight: 600, color: CORAL, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Step 4 of 4</p>
       <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#222222", lineHeight: 1.2, marginBottom: "6px" }}>Anything else on your mind?</h2>
-      <p style={{ fontSize: "14px", color: "#717171", marginBottom: "24px" }}>Optional. Never saved anywhere.</p>
+      <p style={{ fontSize: "14px", color: "#717171", marginBottom: "24px" }}>Optional. Sent to the server for this resource match; the application does not intentionally write raw check-in text to its database.</p>
 
       <textarea value={value} onChange={e => onChange(e.target.value)} maxLength={500} placeholder="You can write anything here..." rows={4} style={{ width: "100%", padding: "16px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", resize: "none", marginBottom: "6px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }} />
       <p style={{ fontSize: "12px", color: "#b0b0b0", textAlign: "right", marginBottom: "20px" }}>{value.length}/500</p>

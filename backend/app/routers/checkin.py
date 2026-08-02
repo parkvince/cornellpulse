@@ -32,16 +32,17 @@ async def submit_checkin(
 
     triage_result = run_triage(request)
 
-    await update_aggregates(
-        request=request,
-        distress_level=triage_result.distress_level,
-        resource_id=triage_result.primary.resource_id,
-        db=db
-    )
+    if request.contribute_aggregate:
+        await update_aggregates(
+            request=request,
+            distress_level=triage_result.distress_level,
+            resource_id=triage_result.primary.resource_id,
+            db=db
+        )
 
     await r.setex(dedup_key, 1800, "1")
 
     return CheckInResponse(
         triage_result=triage_result,
-        aggregate_updated=True
+        aggregate_updated=request.contribute_aggregate
     )

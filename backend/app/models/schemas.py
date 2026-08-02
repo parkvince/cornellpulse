@@ -57,6 +57,7 @@ class CheckInRequest(BaseModel):
     free_text: Optional[str] = None
     college: CollegeEnum
     session_token: str
+    contribute_aggregate: bool = False
 
 class ResourceResult(BaseModel):
     resource_id: str

@@ -10,6 +10,7 @@ import ProfilePage from "./pages/ProfilePage"
 import PeerSignupPage from "./pages/PeerSignupPage"
 import FeatureUnavailablePage from "./pages/FeatureUnavailablePage"
 import NotFoundPage from "./pages/NotFoundPage"
+import PrivacyPage from "./pages/PrivacyPage"
 import { featureFlags } from "./config/featureFlags"
 
 const CORAL = "#FF5A5F"
@@ -90,6 +91,7 @@ export default function App() {
           <Route path="/peer" element={featureFlags.peerConnect ? <PeerPage /> : <FeatureUnavailablePage feature="Peer Connect" />} />
           <Route path="/peer/signup" element={featureFlags.supporterSignup ? <PeerSignupPage /> : <FeatureUnavailablePage feature="Supporter signup" />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/admin" element={featureFlags.publicAdmin ? <AdminPage /> : <FeatureUnavailablePage feature="Admin" />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

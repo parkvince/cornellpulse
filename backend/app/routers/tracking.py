@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -11,9 +11,12 @@ router = APIRouter()
 class ClickRequest(BaseModel):
     resource_id: str
     action: str
+    consent_granted: bool = False
 
 @router.post("/track-click")
 async def track_click(request: ClickRequest, db: AsyncSession = Depends(get_db)):
+    if not request.consent_granted:
+        raise HTTPException(status_code=400, detail="Analytics consent is required")
     click = ResourceClick(resource_id=request.resource_id, action=request.action)
     db.add(click)
     await db.commit()

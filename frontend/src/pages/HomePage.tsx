@@ -41,7 +41,7 @@ export default function HomePage() {
     if (navigator.share) {
       navigator.share({
         title: "CornellPulse",
-        text: "A free anonymous mental health navigator for Cornell students.",
+        text: "A free mental health resource navigator for Cornell students.",
         url: window.location.origin,
       }).catch(() => {})
     } else {

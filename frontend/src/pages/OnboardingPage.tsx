@@ -23,8 +23,8 @@ const slides = [
   },
   {
     tag: "Privacy",
-    title: "Completely anonymous. Always.",
-    body: "We never store your name, email, or any personal information. Nothing is ever sold or shared.",
+    title: "Clear choices about your data.",
+    body: "Check-ins are sent to the server for resource matching. Optional aggregate contribution and resource-click analytics are off until you choose to enable them.",
     bg: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)",
   },
   {
@@ -62,7 +62,7 @@ export default function OnboardingPage() {
             {[
               { heading: "Not a clinical service", body: "CornellPulse is a resource navigation tool. It does not provide therapy, counseling, or medical advice." },
               { heading: "Not affiliated with Cornell University", body: "This app was built independently by Cornell students. It is not an official Cornell product." },
-              { heading: "Your data stays on your device", body: "Your check-in responses are never stored on our servers. Only anonymous aggregate data is collected." },
+              { heading: "Know what is transmitted", body: "Submitted check-ins are processed by the server. Optional aggregate contribution and resource-click analytics are controlled from Privacy & Data and start off." },
               { heading: "In an emergency", body: "If you are in immediate danger, call 911 or Cornell Police at 607-255-1111. This app cannot dispatch help." },
             ].map(item => (
               <div key={item.heading} style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "14px 16px", border: "1px solid #ebebeb" }}>
@@ -70,6 +70,7 @@ export default function OnboardingPage() {
                 <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.55 }}>{item.body}</p>
               </div>
             ))}
+            <a href="/privacy" style={{ color: CORAL, fontSize: "13px", fontWeight: 700, textAlign: "center", padding: "8px", textDecoration: "none" }}>Review Privacy &amp; Data choices</a>
           </div>
         ) : (
           <p style={{ fontSize: "17px", color: "rgba(255,255,255,0.9)", lineHeight: 1.65 }}>{slide.body}</p>

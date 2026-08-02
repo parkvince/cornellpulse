@@ -5,6 +5,7 @@ import StepTrigger from "./StepTrigger"
 import StepText from "./StepText"
 import ResultCard from "./ResultCard"
 import { submitCheckin } from "../../api/client"
+import { getPrivacyPreferences } from "../../privacy/preferences"
 
 const TOTAL_STEPS = 4
 
@@ -108,6 +109,7 @@ export default function CheckInFlow() {
     setError("")
     try {
       const token = crypto.randomUUID()
+      const privacyPreferences = getPrivacyPreferences()
       const data = await submitCheckin({
         mood_score: mood,
         sleep_category: sleep,
@@ -117,6 +119,7 @@ export default function CheckInFlow() {
         free_text: freeText || undefined,
         college: college || "other",
         session_token: token,
+        contribute_aggregate: privacyPreferences.aggregateContribution,
       })
       setResult(data)
       sessionStorage.removeItem("cornellpulse_checkin_draft")

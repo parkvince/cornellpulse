@@ -9,7 +9,7 @@ validate_security_settings()
 
 app = FastAPI(
     title="CornellPulse API",
-    description="Anonymous campus wellness navigator for Cornell students",
+    description="Campus wellness resource navigator for Cornell students",
     version="1.0.0"
 )
 
