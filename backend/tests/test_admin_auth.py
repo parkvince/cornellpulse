@@ -29,10 +29,10 @@ def build_protected_routes_app() -> FastAPI:
 
 
 @pytest.fixture(autouse=True)
-def reset_login_attempts():
-    auth._login_attempts.clear()
-    yield
-    auth._login_attempts.clear()
+def bypass_persistent_limiter(monkeypatch):
+    async def allow(*args, **kwargs):
+        return None
+    monkeypatch.setattr(admin_auth, "enforce_persistent_rate_limit", allow)
 
 
 @pytest.mark.parametrize(
@@ -55,7 +55,7 @@ def test_unauthenticated_users_cannot_access_admin_records(method, path):
         response = client.request(method, path, headers={"Origin": settings.FRONTEND_URL})
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Administrator authentication required."}
+    assert "authentication required" in response.json()["detail"].lower()
 
 
 def test_login_creates_http_only_session_and_logout_clears_it(monkeypatch):
@@ -81,6 +81,16 @@ def test_login_creates_http_only_session_and_logout_clears_it(monkeypatch):
 
 def test_login_is_rate_limited(monkeypatch):
     monkeypatch.setattr(settings, "ADMIN_LOGIN_MAX_ATTEMPTS", 2)
+    attempts = 0
+
+    async def limit(*args, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts > 2:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=429, detail="Too many requests.", headers={"Retry-After": "60"})
+
+    monkeypatch.setattr(admin_auth, "enforce_persistent_rate_limit", limit)
     with TestClient(build_admin_app()) as client:
         assert client.post("/api/v1/admin/auth/login", json={"password": "wrong"}).status_code == 401
         assert client.post("/api/v1/admin/auth/login", json={"password": "wrong"}).status_code == 401

@@ -1,15 +1,17 @@
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import (
     clear_admin_cookie,
-    clear_login_attempts,
     create_admin_token,
-    enforce_login_rate_limit,
     require_admin,
     set_admin_cookie,
     verify_admin_password,
 )
+from app.config import settings
+from app.database import get_db
+from app.services.rate_limits import enforce_persistent_rate_limit
 
 
 router = APIRouter(prefix="/admin/auth", tags=["admin-auth"])
@@ -20,13 +22,12 @@ class AdminLoginRequest(BaseModel):
 
 
 @router.post("/login")
-async def login(payload: AdminLoginRequest, request: Request, response: Response):
+async def login(payload: AdminLoginRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     client_ip = request.client.host if request.client else "unknown"
-    enforce_login_rate_limit(client_ip)
+    await enforce_persistent_rate_limit(db, "admin-login", client_ip, settings.ADMIN_LOGIN_MAX_ATTEMPTS, settings.ADMIN_LOGIN_WINDOW_SECONDS)
     if not verify_admin_password(payload.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
 
-    clear_login_attempts(client_ip)
     set_admin_cookie(response, create_admin_token())
     return {"authenticated": True}
 

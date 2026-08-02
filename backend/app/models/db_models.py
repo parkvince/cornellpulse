@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ARRAY, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ARRAY, Boolean, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
@@ -62,36 +62,66 @@ class PeerSignup(Base):
     __tablename__ = "peer_signups"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    supporter_id = Column(UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4)
     name = Column(String(200), nullable=False)
-    email = Column(String(200), nullable=False)
-    phone = Column(String(50), nullable=False)
+    email = Column(String(200), nullable=True)  # Legacy only; new writes use private_data_encrypted.
+    phone = Column(String(50), nullable=True)  # Legacy only; new writes use private_data_encrypted.
     year = Column(String(50), nullable=False)
     major = Column(String(200))
     locations = Column(JSONB, default=list)
     availability = Column(JSONB, default=list)
     interests = Column(JSONB, default=list)
     about = Column(Text)
-    ref_name = Column(String(200), nullable=False)
-    ref_phone = Column(String(50), nullable=False)
-    ref_email = Column(String(200), nullable=False)
+    ref_name = Column(String(200), nullable=True)  # Legacy encrypted-data migration source.
+    ref_phone = Column(String(50), nullable=True)
+    ref_email = Column(String(200), nullable=True)
     ref_relationship = Column(String(200))
     approved = Column(Boolean, default=False)
+    status = Column(String(32), nullable=False, default="pending")
+    credential_hash = Column(String(60), nullable=True)
+    private_data_encrypted = Column(Text, nullable=True)
     submitted_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    retention_expires_at = Column(DateTime(timezone=True), nullable=True)
+    withdrawn_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PeerRequester(Base):
+    __tablename__ = "peer_requesters"
+
+    requester_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    credential_hash = Column(String(60), nullable=True)
+    private_data_encrypted = Column(Text, nullable=False)
+    status = Column(String(32), nullable=False, default="active")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    retention_expires_at = Column(DateTime(timezone=True), nullable=False)
+    withdrawn_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class PeerConnectRequest(Base):
     __tablename__ = "peer_connect_requests"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    supporter_name = Column(String(200), nullable=False)
-    requester_name = Column(String(200), nullable=False)
-    requester_email = Column(String(200), nullable=False)
+    request_id = Column(UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4)
+    supporter_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    requester_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    supporter_name = Column(String(200), nullable=True)  # Legacy name reference; never used by new writes.
+    requester_name = Column(String(200), nullable=True)  # Legacy PII migration source.
+    requester_email = Column(String(200), nullable=True)
     requester_phone = Column(String(50))
-    preferred_location = Column(String(200), nullable=False)
-    preferred_time = Column(String(100), nullable=False)
+    preferred_location = Column(String(200), nullable=True)
+    preferred_time = Column(String(100), nullable=True)
     message = Column(Text)
+    private_data_encrypted = Column(Text, nullable=True)
     status = Column(String(50), default="pending")
     requested_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    retention_expires_at = Column(DateTime(timezone=True), nullable=True)
+    withdrawn_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
 class ResourceClick(Base):
     __tablename__ = "resource_clicks"
@@ -106,8 +136,57 @@ class SupporterReport(Base):
     __tablename__ = "supporter_reports"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    supporter_name = Column(String(200), nullable=False)
+    report_id = Column(UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4)
+    supporter_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    reporter_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    supporter_name = Column(String(200), nullable=True)  # Legacy name reference.
     reporter_email = Column(String(200))
-    reason = Column(Text, nullable=False)
+    reason = Column(Text, nullable=True)  # Legacy PII migration source.
+    private_data_encrypted = Column(Text, nullable=True)
     reported_at = Column(DateTime(timezone=True), server_default=func.now())
     resolved = Column(Boolean, default=False)
+    status = Column(String(32), nullable=False, default="open")
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    retention_expires_at = Column(DateTime(timezone=True), nullable=True)
+    withdrawn_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PeerAuditLog(Base):
+    __tablename__ = "peer_audit_logs"
+
+    audit_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    actor_role = Column(String(32), nullable=False)
+    actor_id = Column(String(64), nullable=False)
+    action = Column(String(80), nullable=False)
+    target_type = Column(String(40), nullable=False)
+    target_id = Column(String(64), nullable=False)
+    event_metadata = Column(JSONB, nullable=False, default=dict)
+    occurred_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    retention_expires_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class PeerStatusHistory(Base):
+    __tablename__ = "peer_status_history"
+
+    history_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entity_type = Column(String(40), nullable=False)
+    entity_id = Column(String(64), nullable=False, index=True)
+    previous_status = Column(String(32), nullable=True)
+    new_status = Column(String(32), nullable=False)
+    actor_role = Column(String(32), nullable=False)
+    actor_id = Column(String(64), nullable=False)
+    changed_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    retention_expires_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class RateLimitBucket(Base):
+    __tablename__ = "rate_limit_buckets"
+    __table_args__ = (UniqueConstraint("scope", "subject_hash", name="uq_rate_limit_scope_subject"),)
+
+    bucket_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scope = Column(String(80), nullable=False)
+    subject_hash = Column(String(64), nullable=False)
+    window_started_at = Column(DateTime(timezone=True), nullable=False)
+    count = Column(Integer, nullable=False, default=0)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
