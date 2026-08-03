@@ -8,6 +8,7 @@ Base = declarative_base()
 
 class CollegeHourAggregate(Base):
     __tablename__ = "college_hour_aggregates"
+    __table_args__ = (UniqueConstraint("college", "hour_bucket", name="uq_college_hour_aggregate_bucket"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     college = Column(String(50), nullable=False)
@@ -34,6 +35,15 @@ class CampusHourAggregate(Base):
     sleep_score_sum = Column(Float, default=0, nullable=False)
     workload_score_sum = Column(Float, default=0, nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AggregateContributionReceipt(Base):
+    __tablename__ = "aggregate_contribution_receipts"
+
+    receipt_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    contribution_hash = Column(String(64), nullable=False, unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
 
 
 class PushSubscriber(Base):

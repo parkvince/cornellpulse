@@ -17,14 +17,14 @@ import {
 import { recordLocalMeasurement } from "../privacy/measurement.ts"
 import { ACTIVE_RESOURCES, getResource } from "../resources/registry.ts"
 
-const CORAL = "#FF5A5F"
+const CORAL = "#C83C42"
 const emergency = getResource("emergency_911")
 const publicSafety = getResource("cornell_public_safety")
 
 function moodColor(mood: number) {
-  if (mood >= 7) return "#00A699"
-  if (mood >= 5) return "#FC642D"
-  if (mood >= 3) return "#FF5A5F"
+  if (mood >= 7) return "#007A70"
+  if (mood >= 5) return "#A9461E"
+  if (mood >= 3) return "#C83C42"
   return "#c0392b"
 }
 
@@ -111,7 +111,7 @@ export default function ProfilePage() {
 
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
-      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "250px" }}>
+      <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "250px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Your device</p>
         <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "8px" }}>History &amp; Privacy</h1>
         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.82)", lineHeight: 1.5 }}>Review saved plans and mood trends locally. Raw check-in answers are not added to this history or uploaded for these features.</p>
@@ -135,7 +135,7 @@ export default function ProfilePage() {
         <section aria-labelledby="saved-plans-heading" style={{ marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <p id="saved-plans-heading" style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em" }}>Saved next steps</p>
-            <span style={{ fontSize: "11px", color: "#9b9b9b" }}>{history.length}/{MAX_HISTORY_ENTRIES}</span>
+            <span style={{ fontSize: "11px", color: "#717171" }}>{history.length}/{MAX_HISTORY_ENTRIES}</span>
           </div>
 
           {history.length === 0 ? <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "28px 20px", textAlign: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
@@ -144,7 +144,7 @@ export default function ProfilePage() {
             <Link to="/checkin" style={{ display: "inline-block", backgroundColor: CORAL, color: "#ffffff", padding: "12px 24px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, textDecoration: "none" }}>Start a check-in</Link>
           </div> : history.map(entry => <article key={entry.id} style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", marginBottom: "10px", border: reminderIsDue(entry) ? `1.5px solid ${CORAL}` : "1px solid transparent" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "8px" }}>
-              <div><p style={{ fontSize: "15px", fontWeight: 800, color: "#222222", lineHeight: 1.35 }}>{entry.resource}</p><p style={{ fontSize: "11px", color: "#9b9b9b", marginTop: "3px" }}>{localDate(entry.date)} · mood {entry.mood}/10</p></div>
+              <div><p style={{ fontSize: "15px", fontWeight: 800, color: "#222222", lineHeight: 1.35 }}>{entry.resource}</p><p style={{ fontSize: "11px", color: "#717171", marginTop: "3px" }}>{localDate(entry.date)} · mood {entry.mood}/10</p></div>
               <span style={{ backgroundColor: entry.status === "saved" ? "#FFF0F0" : "#f5f5f5", color: entry.status === "saved" ? CORAL : "#717171", borderRadius: "999px", padding: "4px 8px", height: "fit-content", fontSize: "10px", fontWeight: 800, textTransform: "capitalize" }}>{entry.status}</span>
             </div>
 
@@ -167,7 +167,7 @@ export default function ProfilePage() {
 
             <label htmlFor={`reminder-${entry.id}`} style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#222222", marginBottom: "5px" }}>Optional local reminder</label>
             <div style={{ display: "flex", gap: "7px", marginBottom: "13px" }}><input id={`reminder-${entry.id}`} type="datetime-local" value={toDateTimeInput(entry.reminderAt)} onChange={event => update(entry.id, { reminderAt: event.target.value ? new Date(event.target.value).toISOString() : undefined, status: "saved" }, event.target.value ? "Local reminder saved. CornellPulse does not send notifications." : "Reminder removed.")} style={{ flex: 1, minWidth: 0, padding: "9px", border: "1px solid #ebebeb", borderRadius: "10px", fontSize: "12px" }} />{entry.reminderAt && <button type="button" onClick={() => update(entry.id, { reminderAt: undefined }, "Reminder removed.")} style={secondaryButton}>Remove</button>}</div>
-            <p style={{ fontSize: "11px", color: "#9b9b9b", lineHeight: 1.45, marginTop: "-7px", marginBottom: "13px" }}>Shown only when you open CornellPulse on this device; no push notification is scheduled.</p>
+            <p style={{ fontSize: "11px", color: "#717171", lineHeight: 1.45, marginTop: "-7px", marginBottom: "13px" }}>Shown only when you open CornellPulse on this device; no push notification is scheduled.</p>
 
             <fieldset style={{ border: "none", padding: 0, margin: "0 0 12px" }}><legend style={{ fontSize: "12px", fontWeight: 700, color: "#222222", marginBottom: "6px" }}>Did you contact this resource?</legend><div style={{ display: "flex", gap: "7px" }}><button type="button" aria-pressed={entry.contacted === "contacted"} onClick={() => setContacted(entry, true)} style={secondaryButton}>Yes</button><button type="button" aria-pressed={entry.contacted === "not_contacted"} onClick={() => setContacted(entry, false)} style={secondaryButton}>Not yet</button></div></fieldset>
             {entry.contacted === "contacted" && <fieldset style={{ border: "none", padding: 0, margin: 0 }}><legend style={{ fontSize: "12px", fontWeight: 700, color: "#222222", marginBottom: "6px" }}>Did it feel like a fit?</legend><div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>{([['fit', 'Yes'], ['unsure', 'Not sure'], ['not_fit', 'No']] as [FitOutcome, string][]).map(([value, label]) => <button key={value} type="button" aria-pressed={entry.fit === value} onClick={() => update(entry.id, { fit: value }, "Follow-up saved only on this device.")} style={secondaryButton}>{label}</button>)}</div></fieldset>}
@@ -180,8 +180,8 @@ export default function ProfilePage() {
             <label htmlFor="history-retention" style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#222222", marginBottom: "6px" }}>Keep local history for</label>
             <select id="history-retention" value={retention === null ? "forever" : retention} onChange={event => changeRetention(event.target.value)} style={{ width: "100%", padding: "11px", border: "1px solid #ebebeb", borderRadius: "10px", backgroundColor: "#ffffff", marginBottom: "8px" }}><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option><option value="forever">Until I delete it</option></select>
             <p style={{ fontSize: "11px", color: "#717171", lineHeight: 1.5, marginBottom: "13px" }}>Default: 90 days. At most {MAX_HISTORY_ENTRIES} plans are kept. Changing to a shorter period deletes older entries immediately.</p>
-            <button type="button" onClick={downloadExport} disabled={history.length === 0} style={{ width: "100%", padding: "12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: history.length ? CORAL : "#9b9b9b", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Export local history as JSON</button>
-            {confirmClear ? <div style={{ display: "flex", gap: "8px" }}><button type="button" onClick={clearHistory} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "10px", backgroundColor: CORAL, color: "#ffffff", fontSize: "13px", fontWeight: 700 }}>Clear all history</button><button type="button" onClick={() => setConfirmClear(false)} style={{ flex: 1, padding: "12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: "#717171", fontSize: "13px", fontWeight: 600 }}>Cancel</button></div> : <button type="button" onClick={() => setConfirmClear(true)} disabled={history.length === 0} style={{ width: "100%", padding: "12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: history.length ? CORAL : "#9b9b9b", fontSize: "13px", fontWeight: 700 }}>Clear local history</button>}
+            <button type="button" onClick={downloadExport} disabled={history.length === 0} style={{ width: "100%", padding: "12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: history.length ? CORAL : "#717171", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Export local history as JSON</button>
+            {confirmClear ? <div style={{ display: "flex", gap: "8px" }}><button type="button" onClick={clearHistory} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "10px", backgroundColor: CORAL, color: "#ffffff", fontSize: "13px", fontWeight: 700 }}>Clear all history</button><button type="button" onClick={() => setConfirmClear(false)} style={{ flex: 1, padding: "12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: "#717171", fontSize: "13px", fontWeight: 600 }}>Cancel</button></div> : <button type="button" onClick={() => setConfirmClear(true)} disabled={history.length === 0} style={{ width: "100%", padding: "12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: history.length ? CORAL : "#717171", fontSize: "13px", fontWeight: 700 }}>Clear local history</button>}
           </div>
         </section>
 
@@ -194,7 +194,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        <div style={{ marginBottom: "24px", backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}><div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}><img src="/logo.png" alt="" width={20} height={20} /><p style={{ fontSize: "14px", fontWeight: 700, color: "#222222" }}>CornellPulse</p></div><p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>No account is created. CornellPulse is not a diagnosis or clinically validated assessment.</p><p style={{ fontSize: "12px", color: "#b0b0b0" }}>For an immediate emergency call {emergency.phone}. On the Ithaca campus, call {publicSafety.officialName} at {publicSafety.phone}.</p></div>
+        <div style={{ marginBottom: "24px", backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}><div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}><img src="/logo.png" alt="" width={20} height={20} /><p style={{ fontSize: "14px", fontWeight: 700, color: "#222222" }}>CornellPulse</p></div><p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>No account is created. CornellPulse is not a diagnosis or clinically validated assessment.</p><p style={{ fontSize: "12px", color: "#717171" }}>For an immediate emergency call {emergency.phone}. On the Ithaca campus, call {publicSafety.officialName} at {publicSafety.phone}.</p></div>
       </div>
     </div>
   )

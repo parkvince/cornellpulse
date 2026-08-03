@@ -1,0 +1,77 @@
+import AxeBuilder from "@axe-core/playwright"
+import { expect, test, type Page } from "@playwright/test"
+
+async function completeOnboarding(page: Page) {
+  await page.goto("/onboarding")
+  for (let step = 0; step < 4; step += 1) await page.getByRole("button", { name: "Next" }).click()
+  await page.getByRole("button", { name: /I understand/ }).click()
+  await expect(page.getByRole("heading", { name: /Find the right support/ })).toBeVisible()
+}
+
+async function expectNoSeriousAxeViolations(page: Page) {
+  const results = await new AxeBuilder({ page }).analyze()
+  const serious = results.violations.filter(violation => ["serious", "critical"].includes(violation.impact || ""))
+  expect(serious, JSON.stringify(serious, null, 2)).toEqual([])
+}
+
+test("onboarding, navigation, emergency dialog, resources, privacy, and disabled routes", async ({ page }) => {
+  await completeOnboarding(page)
+  await expectNoSeriousAxeViolations(page)
+  await page.getByRole("button", { name: "Immediate help" }).click()
+  await expect(page.getByRole("dialog", { name: "Get immediate help" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Close immediate help" })).toBeFocused()
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("dialog", { name: "Get immediate help" })).toBeHidden()
+  await expect(page.getByRole("button", { name: "Immediate help" })).toBeFocused()
+  await page.getByRole("link", { name: "Resources" }).click()
+  await expectNoSeriousAxeViolations(page)
+  await page.getByLabel("Search resources").fill("988")
+  await expect(page.getByText("988 Suicide & Crisis Lifeline", { exact: true })).toBeVisible()
+  await page.getByRole("link", { name: "View details and actions" }).click()
+  await expect(page.getByRole("heading", { name: "988 Suicide & Crisis Lifeline" })).toBeVisible()
+  await page.goto("/privacy")
+  await expect(page.getByRole("heading", { name: /Privacy/ })).toBeVisible()
+  await expectNoSeriousAxeViolations(page)
+  await page.goto("/peer")
+  await expect(page.getByRole("heading", { name: "Coming back after safety review" })).toBeVisible()
+  await page.goto("/admin")
+  await expect(page.getByRole("heading", { name: "Coming back after safety review" })).toBeVisible()
+  await page.goto("/not-a-real-route")
+  await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible()
+})
+
+test("check-in completes locally and results can be saved", async ({ page }) => {
+  await completeOnboarding(page)
+  await page.getByRole("link", { name: "Start a check-in" }).first().click()
+  await page.getByRole("radio", { name: /6: Getting through it/ }).check()
+  await page.getByRole("button", { name: "Continue" }).click()
+  await page.getByRole("radio", { name: "6 to 8 hours" }).check()
+  await page.getByRole("radio", { name: /Moderate/ }).check()
+  await page.getByRole("button", { name: "Continue" }).click()
+  await page.getByRole("checkbox", { name: "Academics" }).check()
+  await page.getByRole("radio", { name: "Not right now" }).check()
+  await page.getByRole("button", { name: "Continue" }).click()
+  await page.getByRole("button", { name: "Find resources" }).click()
+  await expect(page.getByRole("heading", { name: /Choose a next step/ })).toBeVisible()
+  await page.getByRole("button", { name: "Choose this as my next step" }).first().click()
+  await page.getByRole("button", { name: "Save this plan on this device" }).click()
+  await expect(page.getByText("Plan saved on this device. It is available in your local check-in history.", { exact: true })).toBeVisible()
+})
+
+test("offline state is explicit and local resources remain readable", async ({ page, context }) => {
+  await completeOnboarding(page)
+  await page.goto("/resources")
+  await context.setOffline(true)
+  await page.reload().catch(() => undefined)
+  await expect(page.getByText(/You’re offline/).first()).toBeVisible()
+  await expect(page.getByText("988 Suicide & Crisis Lifeline", { exact: true })).toBeVisible()
+  await context.setOffline(false)
+})
+
+test("manifest is valid install metadata", async ({ request }) => {
+  const response = await request.get("/manifest.webmanifest")
+  expect(response.ok()).toBeTruthy()
+  const manifest = await response.json()
+  expect(manifest.name).toBe("CornellPulse")
+  expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({ sizes: "192x192" }), expect.objectContaining({ sizes: "512x512" })]))
+})

@@ -13,7 +13,9 @@ test("requester flow does not collect or submit direct contact fields", () => {
 })
 
 test("request success is shown only after server confirmation", () => {
-  assert.match(source, /!response\.ok \|\| data\.status !== "pending" \|\| !data\.request_id/)
+  assert.match(source, /requestJson<\{ request_id: string; status: ConnectionState \}>\("\/peer-connect"/)
+  assert.match(source, /isConnectionStatusResponse\(value\) && hasString\(value, "request_id"\)/)
+  assert.match(source, /data\.status !== "pending"/)
   assert.match(source, /setConnectionState\("failed"\)/)
   assert.doesNotMatch(source, /catch \{[^}]*setDone\(true\)/s)
 })

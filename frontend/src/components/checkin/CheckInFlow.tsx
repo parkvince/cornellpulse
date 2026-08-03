@@ -15,6 +15,7 @@ const DRAFT_KEY = "cornellpulse_checkin_draft_v2"
 const STEP_LABELS = ["How today feels", "Sleep and workload", "What is weighing on you", "Optional context"]
 
 interface StructuredDraft {
+  checkinId: string
   step: number
   mood: number | null
   sleep: string
@@ -25,11 +26,12 @@ interface StructuredDraft {
 }
 
 function loadDraft(): StructuredDraft {
-  const empty: StructuredDraft = { step: 1, mood: null, sleep: "", workload: "", triggers: [], wantsToTalk: null, college: "" }
+  const empty: StructuredDraft = { checkinId: crypto.randomUUID(), step: 1, mood: null, sleep: "", workload: "", triggers: [], wantsToTalk: null, college: "" }
   try {
     const parsed = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || "null") as Partial<StructuredDraft> | null
     if (!parsed || typeof parsed !== "object") return empty
     return {
+      checkinId: typeof parsed.checkinId === "string" && /^[0-9a-f-]{36}$/i.test(parsed.checkinId) ? parsed.checkinId : empty.checkinId,
       step: typeof parsed.step === "number" && parsed.step >= 1 && parsed.step <= TOTAL_STEPS ? parsed.step : 1,
       mood: typeof parsed.mood === "number" && parsed.mood >= 1 && parsed.mood <= 10 ? parsed.mood : null,
       sleep: typeof parsed.sleep === "string" ? parsed.sleep : "",
@@ -54,7 +56,7 @@ export default function CheckInFlow() {
   const [freeText, setFreeText] = useState("")
   const [college, setCollege] = useState(initialDraft.college)
   const [result, setResult] = useState<ReturnType<typeof buildLocalRecommendation> | null>(null)
-  const [checkinId, setCheckinId] = useState(() => crypto.randomUUID())
+  const [checkinId, setCheckinId] = useState(initialDraft.checkinId)
   const [aggregateNotice, setAggregateNotice] = useState("")
   const stepContainerRef = useRef<HTMLDivElement>(null)
 
@@ -69,9 +71,9 @@ export default function CheckInFlow() {
   ]
 
   useEffect(() => {
-    const draft: StructuredDraft = { step, mood, sleep, workload, triggers, wantsToTalk, college }
+    const draft: StructuredDraft = { checkinId, step, mood, sleep, workload, triggers, wantsToTalk, college }
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
-  }, [college, mood, sleep, step, triggers, wantsToTalk, workload])
+  }, [checkinId, college, mood, sleep, step, triggers, wantsToTalk, workload])
 
   useEffect(() => {
     const appScroller = document.getElementById("app-scroll-container")
@@ -121,7 +123,7 @@ export default function CheckInFlow() {
         sleep_category: sleep,
         workload_category: workload,
         college: college || "other",
-      }).then(() => setAggregateNotice("Optional aggregate contribution sent.")).catch(() => setAggregateNotice("Your local recommendation is ready, but the optional aggregate contribution could not be sent."))
+      }, fetch, undefined, checkinId).then(() => setAggregateNotice("Optional aggregate contribution sent.")).catch(() => setAggregateNotice("Your local recommendation is ready, but the optional aggregate contribution could not be sent."))
     } else {
       setAggregateNotice("No aggregate contribution was sent.")
     }
@@ -136,10 +138,10 @@ export default function CheckInFlow() {
       <div style={{ marginBottom: "28px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", marginBottom: "10px" }}>Part {step} of {TOTAL_STEPS} · {STEP_LABELS[step - 1]}</p>
         <div role="progressbar" aria-label="Check-in progress" aria-valuemin={1} aria-valuemax={TOTAL_STEPS} aria-valuenow={step} aria-valuetext={`Part ${step} of ${TOTAL_STEPS}: ${STEP_LABELS[step - 1]}`} style={{ height: "6px", backgroundColor: "#f0f0f0", borderRadius: "6px" }}>
-          <div style={{ height: "6px", backgroundColor: "#FF5A5F", borderRadius: "6px", width: `${(step / TOTAL_STEPS) * 100}%`, transition: "width 0.25s ease" }} />
+          <div style={{ height: "6px", backgroundColor: "#C83C42", borderRadius: "6px", width: `${(step / TOTAL_STEPS) * 100}%`, transition: "width 0.25s ease" }} />
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginTop: "8px" }}>
-          <p style={{ fontSize: "11px", color: "#717171", lineHeight: 1.5 }}>Your choices are kept temporarily in this tab so Back and refresh work. Optional written context is never included in that draft.</p>
+          <p style={{ fontSize: "11px", color: "#717171", lineHeight: 1.5 }}>Your choices and a random duplicate-prevention ID are kept temporarily in this tab so Back and refresh work. Optional written context is never included.</p>
           <button type="button" onClick={deleteCurrentCheckin} style={{ backgroundColor: "transparent", border: "none", color: "#717171", fontSize: "11px", fontWeight: 600, cursor: "pointer", padding: 0, flexShrink: 0 }}>Delete this check-in</button>
         </div>
       </div>

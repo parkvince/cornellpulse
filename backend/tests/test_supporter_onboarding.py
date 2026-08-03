@@ -241,7 +241,7 @@ async def test_draft_submission_requires_current_policy_and_owner(onboarding_set
         "reporting_policy_accepted": True,
         "withdrawal_controls_acknowledged": True,
     })
-    monkeypatch.setattr(peer, "_send_email", lambda *_: None)
+    monkeypatch.setattr(peer, "_send_email", lambda *_: {"status": "skipped", "provider_message_id": None, "error_code": "test"})
     response = await peer.submit_supporter_application(record.supporter_id, payload, PeerPrincipal(str(record.supporter_id), "supporter"), None, db)
     assert response["status"] == "submitted"
     assert record.policy_accepted_at is not None
@@ -273,7 +273,7 @@ async def test_reference_invitation_token_is_hashed_and_response_is_encrypted_af
         return None
 
     monkeypatch.setattr(peer, "enforce_persistent_rate_limit", no_rate_limit)
-    monkeypatch.setattr(peer, "_send_reference_invitation", lambda email, token: captured.update({"email": email, "token": token}))
+    monkeypatch.setattr(peer, "_send_reference_invitation", lambda email, token, invitation_id: captured.update({"email": email, "token": token, "invitation_id": invitation_id}) or {"status": "provider_accepted", "provider_message_id": "test", "error_code": None})
     created = await peer.create_reference_invitation(
         record.supporter_id,
         peer.ReferenceInvitationRequest(email="reference@example.edu"),

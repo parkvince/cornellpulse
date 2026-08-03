@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-const CORAL = "#FF5A5F"
+const CORAL = "#C83C42"
 
 interface Props {
   values: string[]

@@ -6,6 +6,7 @@ Peer Connect, supporter signup, and the public admin UI are disabled by default 
 - Apply `backend/migrations/20260802_supporter_onboarding.sql`, quarantine legacy reference records so they cannot satisfy consent gates, and complete an approved deletion/notification decision for that pre-consent data.
 - Apply `backend/migrations/20260803_connection_relay.sql`; verify legacy requests become unavailable rather than appearing accepted or pending; exercise double opt-in, block/report, relay encryption, and expiry under concurrency.
 - Apply `backend/migrations/20260803_peer_safety_operations.sql`; validate triage assignment, encrypted notes/resolutions, bidirectional blocks, suspension/reinstatement, notification failure states, and retention on a backed-up staging copy.
+- Apply `backend/migrations/20260803_reliability_readiness.sql`; verify duplicate aggregate rows are reconciled before the unique index is created, then load-test aggregate idempotency and database-backed limits under concurrency.
 - Integrate an authorized Cornell OIDC/SAML identity provider, including server-side assertion validation and revocation handling. The current manual non-production evidence route is deliberately not production-eligible.
 - Establish credential enrollment/reset procedures for migrated supporters, requesters, moderators, withdrawals, and deletion requests.
 - Review the implemented collection, encryption, retention, deletion, audit, status-history, and minimal email-notification boundaries with qualified privacy/security reviewers.
@@ -13,6 +14,9 @@ Peer Connect, supporter signup, and the public admin UI are disabled by default 
 - Schedule the administrator-only cleanup for expired peer records, audit logs, status history, and rate-limit buckets; exercise concurrency and failover against the production PostgreSQL topology.
 - Rotate any credential ever committed or shared, remove it from repository history where appropriate, and use deployment secret storage.
 - Validate privacy language, crisis guidance, resource accuracy, accessibility, monitoring, backups, and recovery in a production-like environment.
+- Configure and exercise required PostgreSQL, Redis, and email dependencies through `/api/v1/health/ready`; provider acceptance is not proof of email delivery.
+- Run the updated backend authorization/outage suite, full browser end-to-end/axe matrix, current npm and Python vulnerability scanners, and an assistive-technology pass in an environment that permits those tools. Do not release from a static-only result.
+- Complete a tested dependency refresh beyond the urgent `python-jose` 3.5.0 security update; the wider FastAPI/Pydantic/SQLAlchemy upgrade needs its own compatibility cycle.
 - Require a documented safety/privacy sign-off before enabling any feature flag in production.
 - Complete every licensed-professional and Cornell Health review item in `SAFETY_REVIEW.md`; automated phrase tests are not clinical validation.
 

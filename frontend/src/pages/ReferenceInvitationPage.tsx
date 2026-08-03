@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react"
 import { useLocation } from "react-router-dom"
+import { requestJson } from "../api/client"
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
-const CORAL = "#FF5A5F"
+const CORAL = "#C83C42"
 
 export default function ReferenceInvitationPage() {
   const location = useLocation()
@@ -23,17 +23,15 @@ export default function ReferenceInvitationPage() {
     setLoading(true)
     setError("")
     try {
-      const response = await fetch(`${API_URL}/peer/reference-invitations/respond`, {
+      const payload = await requestJson<{ status: string }>("/peer/reference-invitations/respond", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(decision === "accept"
+        body: decision === "accept"
           ? { token, consent: true, relationship: relationship.trim(), statement: statement.trim() }
-          : { token, consent: false }),
+          : { token, consent: false },
+        idempotencyKey: token,
+        validate: (value): value is { status: string } => !!value && typeof value === "object" && typeof (value as { status?: unknown }).status === "string",
       })
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null) as { detail?: string } | null
-        throw new Error(payload?.detail || "This invitation could not be updated.")
-      }
+      if (payload.status !== (decision === "accept" ? "accepted" : "declined")) throw new Error("The server did not confirm this response.")
       setResult(decision === "accept" ? "accepted" : "declined")
       window.history.replaceState(null, "", location.pathname)
       setRelationship("")
@@ -74,11 +72,11 @@ export default function ReferenceInvitationPage() {
           <input id="reference-relationship" value={relationship} onChange={event => setRelationship(event.target.value)} maxLength={100} style={{ width: "100%", padding: "12px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", marginBottom: "14px" }} />
           <label htmlFor="reference-statement" style={{ display: "block", fontSize: "14px", fontWeight: 700, color: "#222222", marginBottom: "6px" }}>Reference statement</label>
           <textarea id="reference-statement" value={statement} onChange={event => setStatement(event.target.value)} maxLength={500} rows={5} style={{ width: "100%", padding: "12px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", resize: "vertical" }} />
-          <p style={{ fontSize: "12px", color: "#b0b0b0", marginTop: "6px" }}>At least 20 characters. This encrypted response is available only to authorized administrators.</p>
+          <p style={{ fontSize: "12px", color: "#717171", marginTop: "6px" }}>At least 20 characters. This encrypted response is available only to authorized administrators.</p>
         </div>
       )}
 
-      <button onClick={submitDecision} disabled={!canSubmit || loading} style={{ width: "100%", padding: "15px", border: 0, borderRadius: "12px", backgroundColor: canSubmit && !loading ? CORAL : "#ebebeb", color: canSubmit && !loading ? "#ffffff" : "#b0b0b0", fontSize: "15px", fontWeight: 700 }}>{loading ? "Submitting..." : decision === "decline" ? "Decline invitation" : "Submit consented response"}</button>
+      <button onClick={submitDecision} disabled={!canSubmit || loading} style={{ width: "100%", padding: "15px", border: 0, borderRadius: "12px", backgroundColor: canSubmit && !loading ? CORAL : "#ebebeb", color: canSubmit && !loading ? "#ffffff" : "#717171", fontSize: "15px", fontWeight: 700 }}>{loading ? "Submitting..." : decision === "decline" ? "Decline invitation" : "Submit consented response"}</button>
     </div>
   )
 }

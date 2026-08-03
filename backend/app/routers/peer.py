@@ -1,3 +1,4 @@
+import asyncio
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -80,6 +81,7 @@ from app.services.supporter_onboarding import (
 
 router = APIRouter()
 FROM_EMAIL = "CornellPulse <onboarding@resend.dev>"
+resend.default_http_client = resend.RequestsClient(timeout=settings.EMAIL_TIMEOUT_SECONDS)
 EMAIL_RE = re.compile(r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$")
 PHONE_RE = re.compile(r"^\+?[1-9][0-9]{7,14}$")
 CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
@@ -440,7 +442,10 @@ def _send_email(to: str, template: Literal["application", "approval", "connectio
     body = f"<p>A CornellPulse peer workflow record requires attention.</p><p>Reference: <code>{email_html(record_id)}</code></p>"
     try:
         resend.api_key = settings.RESEND_API_KEY
-        response = resend.Emails.send({"from": FROM_EMAIL, "to": to, "subject": subject_by_template[template], "html": body})
+        response = resend.Emails.send(
+            {"from": FROM_EMAIL, "to": to, "subject": subject_by_template[template], "html": body},
+            {"idempotency_key": f"{template}-{record_id}"[:256]},
+        )
         provider_id = response.get("id") if isinstance(response, dict) else getattr(response, "id", None)
         if not provider_id:
             return {"status": "failed", "provider_message_id": None, "error_code": "provider_response_unconfirmed"}
@@ -484,9 +489,9 @@ def _notification_summary(notification: PeerNotification) -> dict:
     }
 
 
-def _send_reference_invitation(to: str, token: str) -> None:
+def _send_reference_invitation(to: str, token: str, invitation_id: str) -> dict[str, str | None]:
     if not settings.RESEND_API_KEY or not EMAIL_RE.fullmatch(to) or "\r" in to or "\n" in to:
-        return
+        return {"status": "skipped", "provider_message_id": None, "error_code": "not_configured_or_invalid_recipient"}
     # URL fragments are not sent in HTTP requests, reducing capability-token exposure in access logs.
     invitation_url = f"{settings.FRONTEND_URL.rstrip('/')}/peer/reference#token={token}"
     body = (
@@ -496,10 +501,17 @@ def _send_reference_invitation(to: str, token: str) -> None:
     )
     try:
         resend.api_key = settings.RESEND_API_KEY
-        resend.Emails.send({"from": FROM_EMAIL, "to": to, "subject": "CornellPulse reference consent invitation", "html": body})
+        response = resend.Emails.send(
+            {"from": FROM_EMAIL, "to": to, "subject": "CornellPulse reference consent invitation", "html": body},
+            {"idempotency_key": f"reference-{invitation_id}"[:256]},
+        )
+        provider_id = response.get("id") if isinstance(response, dict) else getattr(response, "id", None)
+        if not provider_id:
+            return {"status": "failed", "provider_message_id": None, "error_code": "provider_response_unconfirmed"}
+        return {"status": "provider_accepted", "provider_message_id": str(provider_id)[:128], "error_code": None}
     except Exception:
         # Do not log invitation tokens, recipient addresses, or provider payloads.
-        return
+        return {"status": "failed", "provider_message_id": None, "error_code": "provider_request_failed"}
 
 
 def _audit(db: AsyncSession, actor: PeerPrincipal, action: str, target_type: str, target_id: str, metadata: dict | None = None) -> None:
@@ -857,8 +869,10 @@ async def submit_supporter_application(supporter_id: uuid.UUID, payload: Support
     _status_history(db, actor, "supporter", str(supporter_id), "draft", "submitted")
     _audit(db, actor, "supporter.application.submitted", "supporter", str(supporter_id), {"from": "draft", "to": "submitted"})
     await db.commit()
-    _send_email(settings.ADMIN_EMAIL, "application", str(supporter_id))
-    return {"supporter_id": str(supporter_id), "status": "submitted"}
+    attempt = await asyncio.to_thread(_send_email, settings.ADMIN_EMAIL, "application", str(supporter_id))
+    notification = _record_notification(db, "supporter_application_submitted", "supporter", str(supporter_id), "administrator", "administrator", attempt)
+    await db.commit()
+    return {"supporter_id": str(supporter_id), "status": "submitted", "notification": _notification_summary(notification)}
 
 
 @router.post("/peer-signups/{supporter_id}/transition")
@@ -922,8 +936,10 @@ async def create_reference_invitation(supporter_id: uuid.UUID, payload: Referenc
     db.add(invitation)
     _audit(db, actor, "supporter.reference.invited", "reference_invitation", str(invitation_id), {"supporter_id": str(supporter_id), "invitation_id": str(invitation_id)})
     await db.commit()
-    _send_reference_invitation(payload.email, token)
-    return {"invitation_id": str(invitation_id), "status": "pending", "expires_at": invitation.expires_at.isoformat()}
+    attempt = await asyncio.to_thread(_send_reference_invitation, payload.email, token, str(invitation_id))
+    notification = _record_notification(db, "reference_invitation_created", "reference_invitation", str(invitation_id), "reference", str(invitation_id), attempt)
+    await db.commit()
+    return {"invitation_id": str(invitation_id), "status": "pending", "expires_at": invitation.expires_at.isoformat(), "notification": _notification_summary(notification)}
 
 
 @router.get("/peer-signups/{supporter_id}/reference-invitations")
@@ -1123,7 +1139,7 @@ async def get_supporter_private(supporter_id: uuid.UUID, actor: PeerPrincipal = 
 
 
 @router.get("/peer-signups")
-async def get_signups(actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_supporter_signup), db: AsyncSession = Depends(get_db)):
+async def get_signups(actor: PeerPrincipal = Depends(require_peer_staff), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PeerSignup).where(PeerSignup.deleted_at.is_(None)).order_by(PeerSignup.submitted_at.desc()))
     response = []
     for supporter in result.scalars().all():
@@ -1145,8 +1161,10 @@ async def approve_signup(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends
     await _transition_supporter(db, supporter, actor, "approved", "requirements_complete")
     await db.commit()
     private = _supporter_private(supporter)
-    _send_email(str(private.get("email") or ""), "approval", str(supporter_id))
-    return {"supporter_id": str(supporter_id), "status": "approved"}
+    attempt = await asyncio.to_thread(_send_email, str(private.get("email") or ""), "approval", str(supporter_id))
+    notification = _record_notification(db, "supporter_application_approved", "supporter", str(supporter_id), "supporter", str(supporter_id), attempt)
+    await db.commit()
+    return {"supporter_id": str(supporter_id), "status": "approved", "notification": _notification_summary(notification)}
 
 
 @router.post("/peer-connect", dependencies=[Depends(require_peer_connect)], status_code=201)
@@ -1200,7 +1218,7 @@ async def peer_connect(payload: ConnectRequest, request: Request, actor: PeerPri
         await db.rollback()
         raise HTTPException(status_code=409, detail="An active request already exists for this supporter.") from exc
     supporter_private = _supporter_private(supporter)
-    attempt = _send_email(str(supporter_private.get("email") or ""), "connection", str(request_id))
+    attempt = await asyncio.to_thread(_send_email, str(supporter_private.get("email") or ""), "connection", str(request_id))
     notification = _record_notification(db, "connection_request_submitted", "connection_request", str(request_id), "supporter", str(payload.supporter_id), attempt)
     await db.commit()
     response = _connection_summary(connection, include_details=False)
@@ -1218,7 +1236,7 @@ async def get_public_meeting_options():
 
 
 @router.get("/peer-requests")
-async def get_requests(actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+async def get_requests(actor: PeerPrincipal = Depends(require_peer_staff), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.deleted_at.is_(None)).order_by(PeerConnectRequest.requested_at.desc()))
     response = []
     for connection in result.scalars().all():
@@ -1260,7 +1278,7 @@ async def get_requester_requests(requester_id: uuid.UUID, actor: PeerPrincipal =
 
 
 @router.post("/peer-requests/{request_id}/resolve")
-async def resolve_request(request_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+async def resolve_request(request_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_staff), db: AsyncSession = Depends(get_db)):
     return await _change_request_status(request_id, "unavailable", actor, db)
 
 
@@ -1446,7 +1464,7 @@ async def report_connection(request_id: uuid.UUID, payload: ConnectionSafetyRepo
     except IntegrityError as exc:
         await db.rollback()
         raise HTTPException(status_code=409, detail="An active safety report already exists for this connection.") from exc
-    attempt = _send_email(settings.PEER_SAFETY_CONTACT_EMAIL, "report", str(report_id))
+    attempt = await asyncio.to_thread(_send_email, settings.PEER_SAFETY_CONTACT_EMAIL, "report", str(report_id))
     notification = _record_notification(db, "safety_report_submitted", "connection_report", str(report_id), "operator", "safety_contact", attempt)
     await db.commit()
     return {"connection_report_id": str(report_id), "request_id": str(request_id), "status": "submitted", "notification": _notification_summary(notification)}
@@ -1631,7 +1649,7 @@ async def update_peer_subject_safety_status(subject_role: Literal["supporter", "
             for connection in connection_result.scalars().all():
                 await _transition_connection(db, connection, actor, "unavailable")
     await db.commit()
-    attempt = _send_email(settings.PEER_SAFETY_CONTACT_EMAIL, "report", str(subject_id))
+    attempt = await asyncio.to_thread(_send_email, settings.PEER_SAFETY_CONTACT_EMAIL, "report", str(subject_id))
     notification = _record_notification(db, f"participant_{payload.action}ed", subject_role, str(subject_id), "operator", "safety_contact", attempt)
     await db.commit()
     return {"subject_role": subject_role, "subject_id": str(subject_id), "status": subject.status, "notification": _notification_summary(notification)}
@@ -1656,7 +1674,7 @@ async def report_supporter(payload: ReportRequest, request: Request, actor: Peer
 
 
 @router.get("/reports")
-async def get_reports(actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+async def get_reports(actor: PeerPrincipal = Depends(require_peer_staff), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(SupporterReport).where(SupporterReport.deleted_at.is_(None)).order_by(SupporterReport.reported_at.desc()))
     response = []
     for report in result.scalars().all():
@@ -1667,7 +1685,7 @@ async def get_reports(actor: PeerPrincipal = Depends(require_peer_staff), _: Non
 
 
 @router.post("/reports/{report_id}/resolve")
-async def resolve_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_staff), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+async def resolve_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_staff), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(SupporterReport).where(SupporterReport.report_id == report_id, SupporterReport.deleted_at.is_(None)))
     report = result.scalar_one_or_none()
     if not report:
@@ -1787,7 +1805,7 @@ async def delete_signup(supporter_id: uuid.UUID, actor: PeerPrincipal = Depends(
 
 
 @router.delete("/peer-requests/{request_id}")
-async def delete_request(request_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+async def delete_request(request_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_administrator), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PeerConnectRequest).where(PeerConnectRequest.request_id == request_id, PeerConnectRequest.deleted_at.is_(None)))
     connection = result.scalar_one_or_none()
     if not connection:
@@ -1814,7 +1832,7 @@ async def delete_request(request_id: uuid.UUID, actor: PeerPrincipal = Depends(r
 
 
 @router.delete("/peer/connection-reports/{report_id}")
-async def delete_connection_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+async def delete_connection_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_administrator), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PeerConnectionReport).where(PeerConnectionReport.connection_report_id == report_id, PeerConnectionReport.deleted_at.is_(None)))
     report = result.scalar_one_or_none()
     if not report:
@@ -1837,7 +1855,7 @@ async def delete_connection_report(report_id: uuid.UUID, actor: PeerPrincipal = 
 
 
 @router.delete("/reports/{report_id}")
-async def delete_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_administrator), _: None = Depends(require_peer_connect), db: AsyncSession = Depends(get_db)):
+async def delete_report(report_id: uuid.UUID, actor: PeerPrincipal = Depends(require_peer_administrator), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(SupporterReport).where(SupporterReport.report_id == report_id, SupporterReport.deleted_at.is_(None)))
     report = result.scalar_one_or_none()
     if not report:

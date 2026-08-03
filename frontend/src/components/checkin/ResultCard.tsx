@@ -8,12 +8,12 @@ import { CrisisContactActions } from "../shared/EmergencyHelp"
 import { loadLocalHistory } from "../../history/localHistory.ts"
 import { recordLocalMeasurement, type ResourceAction } from "../../privacy/measurement.ts"
 
-const CORAL = "#FF5A5F"
+const CORAL = "#C83C42"
 
 function moodColor(mood: number) {
-  if (mood >= 7) return "#00A699"
-  if (mood >= 5) return "#FC642D"
-  if (mood >= 3) return "#FF5A5F"
+  if (mood >= 7) return "#007A70"
+  if (mood >= 5) return "#A9461E"
+  if (mood >= 3) return "#C83C42"
   return "#c0392b"
 }
 
@@ -46,7 +46,7 @@ interface ResourceOptionProps {
 
 function ExternalAction(props: { href: string; label: string; online: boolean; onAction: () => void }) {
   const style = { fontSize: "12px", fontWeight: 700, padding: "9px 11px", borderRadius: "10px", textDecoration: "none", border: "1px solid #ebebeb" }
-  if (!props.online) return <span aria-disabled="true" title="Requires an internet connection" style={{ ...style, color: "#9b9b9b", backgroundColor: "#f5f5f5" }}>{props.label}</span>
+  if (!props.online) return <span aria-disabled="true" title="Requires an internet connection" style={{ ...style, color: "#717171", backgroundColor: "#f5f5f5" }}>{props.label}</span>
   return <a href={props.href} target="_blank" rel="noopener noreferrer" onClick={props.onAction} style={{ ...style, color: CORAL, backgroundColor: "#ffffff" }}>{props.label}</a>
 }
 
@@ -117,14 +117,14 @@ export default function ResultCard(props: ResultCardProps) {
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh", padding: "24px 20px 32px" }}>
       {safety.signal === "urgent" && (
-        <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "2px solid #FF5A5F", borderRadius: "16px", padding: "20px", marginBottom: "20px" }}>
+        <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "2px solid #C83C42", borderRadius: "16px", padding: "20px", marginBottom: "20px" }}>
           <p style={{ fontSize: "15px", fontWeight: 800, color: CORAL, marginBottom: "8px" }}>Some words you entered may point to an immediate safety concern</p>
           <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>This automated check can be wrong and is not a diagnosis or clinical assessment. Call 911 if you may act now or cannot stay safe. The options below are separate crisis pathways, not ordinary recommendations.</p>
         </div>
       )}
 
       {safety.signal === "check-in" && (
-        <div role="status" style={{ backgroundColor: "#FFF0F0", border: "1.5px solid #FF5A5F", borderRadius: "16px", padding: "18px", marginBottom: "20px" }}>
+        <div role="status" style={{ backgroundColor: "#FFF0F0", border: "1.5px solid #C83C42", borderRadius: "16px", padding: "18px", marginBottom: "20px" }}>
           <p style={{ fontSize: "14px", fontWeight: 800, color: CORAL, marginBottom: "6px" }}>Would immediate support be useful?</p>
           <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6 }}>A low mood selection or ambiguous wording prompted this check-in. CornellPulse cannot determine whether you are in danger. The immediate-support options below are separate from ordinary resource suggestions.</p>
         </div>
@@ -181,7 +181,7 @@ export default function ResultCard(props: ResultCardProps) {
       <button type="button" onClick={props.onDelete} style={{ width: "100%", padding: "12px", backgroundColor: "transparent", color: CORAL, border: "2px solid #ebebeb", borderRadius: "14px", fontSize: "13px", fontWeight: 700, cursor: "pointer", marginBottom: "8px" }}>Delete this check-in</button>
       <button type="button" onClick={props.onRestart} style={{ marginTop: "4px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Check in again</button>
       <Link to="/" style={{ display: "block", textAlign: "center", fontSize: "13px", fontWeight: 600, color: "#717171", marginTop: "12px", padding: "8px", textDecoration: "none" }}>← Back to home</Link>
-      <p style={{ fontSize: "11px", color: "#b0b0b0", textAlign: "center", marginTop: "6px" }}>Options were generated on this device. Only an optional four-field aggregate is sent when you have enabled that choice.</p>
+      <p style={{ fontSize: "11px", color: "#717171", textAlign: "center", marginTop: "6px" }}>Options were generated on this device. Only an optional four-field aggregate is sent when you have enabled that choice.</p>
     </div>
   )
 }

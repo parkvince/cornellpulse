@@ -384,7 +384,7 @@ def test_notification_failure_is_recorded_without_claiming_delivery(lifecycle, m
     app, db, requester_id, supporter_id = lifecycle
     monkeypatch.setattr(settings, "RESEND_API_KEY", "test-provider-key")
 
-    def provider_failure(_payload):
+    def provider_failure(_payload, _options=None):
         raise RuntimeError("provider unavailable")
 
     monkeypatch.setattr(peer.resend.Emails, "send", provider_failure)
@@ -407,7 +407,7 @@ def test_notification_failure_is_recorded_without_claiming_delivery(lifecycle, m
 def test_notification_provider_acceptance_is_not_reported_as_delivery(lifecycle, monkeypatch):
     app, _db, requester_id, supporter_id = lifecycle
     monkeypatch.setattr(settings, "RESEND_API_KEY", "test-provider-key")
-    monkeypatch.setattr(peer.resend.Emails, "send", lambda _payload: {"id": "provider-message-123"})
+    monkeypatch.setattr(peer.resend.Emails, "send", lambda _payload, _options=None: {"id": "provider-message-123"})
     with TestClient(app) as client:
         request_id, requester_token, _ = _create_accepted_connection(client, requester_id, supporter_id)
         response = client.post(f"/api/v1/peer-requests/{request_id}/report", headers={"Authorization": f"Bearer {requester_token}"}, json={"reason": "A detailed safety report requiring an operator notification."})

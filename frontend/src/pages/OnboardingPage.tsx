@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { getResource } from "../resources/registry.ts"
 
-const CORAL = "#FF5A5F"
+const CORAL = "#C83C42"
 const emergency = getResource("emergency_911")
 const publicSafety = getResource("cornell_public_safety")
 
@@ -10,25 +10,25 @@ const slides = [
     tag: "Welcome",
     title: "Find the right support, right now.",
     body: "CornellPulse helps you explore support resources based on the choices you enter.",
-    bg: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)",
+    bg: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)",
   },
   {
     tag: "Resources",
     title: "A curated Cornell and Ithaca resource registry.",
     body: "Browse Cornell and Ithaca options, then decide which resources may fit what you need.",
-    bg: "linear-gradient(135deg, #00A699 0%, #007A73 100%)",
+    bg: "linear-gradient(135deg, #007A70 0%, #007A73 100%)",
   },
   {
     tag: "Connect",
     title: "Talk to a peer who gets it.",
     body: "Peer Connect is unavailable while identity, conduct, training, and safety requirements are reviewed.",
-    bg: "linear-gradient(135deg, #FC642D 0%, #FF5A5F 100%)",
+    bg: "linear-gradient(135deg, #A9461E 0%, #C83C42 100%)",
   },
   {
     tag: "Privacy",
     title: "Clear choices about your data.",
     body: "Recommendations are generated on your device. Optional aggregate contribution and resource-click analytics are off until you choose to enable them.",
-    bg: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)",
+    bg: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)",
   },
   {
     tag: "Before you start",
@@ -51,7 +51,7 @@ export default function OnboardingPage() {
   const isLight = slide.isDisclosure
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: slide.isDisclosure ? "#ffffff" : slide.bg }}>
+    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: slide.isDisclosure ? "#ffffff" : slide.bg }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "60px 28px 28px" }}>
         <span style={{ fontSize: "11px", fontWeight: 700, color: isLight ? CORAL : "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "20px", display: "block" }}>
           {slide.tag}
@@ -81,7 +81,7 @@ export default function OnboardingPage() {
       </div>
 
       <div style={{ padding: "0 28px 48px" }}>
-        <div style={{ display: "flex", gap: "5px", marginBottom: "28px" }}>
+        <div role="progressbar" aria-label="Onboarding progress" aria-valuemin={1} aria-valuemax={slides.length} aria-valuenow={i + 1} aria-valuetext={`Page ${i + 1} of ${slides.length}`} style={{ display: "flex", gap: "5px", marginBottom: "28px" }}>
           {slides.map((_, idx) => (
             <div key={idx} style={{ height: "3px", flex: idx === i ? 4 : 1, borderRadius: "2px", backgroundColor: idx <= i ? (isLight ? CORAL : "#ffffff") : (isLight ? "#ebebeb" : "rgba(255,255,255,0.3)"), transition: "flex 0.4s ease" }} />
           ))}

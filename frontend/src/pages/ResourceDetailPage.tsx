@@ -4,7 +4,7 @@ import { RESOURCE_BY_ID } from "../resources/registry.ts"
 import { useOnlineStatus } from "../resources/useOnlineStatus.ts"
 import { recordLocalMeasurement } from "../privacy/measurement.ts"
 
-const CORAL = "#FF5A5F"
+const CORAL = "#C83C42"
 
 const LABELS: Record<string, string> = {
   required: "Appointment required",
@@ -46,7 +46,7 @@ export default function ResourceDetailPage() {
 
   return (
     <div style={{ paddingBottom: "24px" }}>
-      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 28px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
+      <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 20px 28px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
         <Link to="/resources" style={{ display: "inline-block", color: "rgba(255,255,255,0.9)", fontSize: "13px", marginBottom: "14px" }}>← All resources</Link>
         <p style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>{resource.category}</p>
         <h1 style={{ fontSize: "27px", fontWeight: 800, color: "#ffffff", lineHeight: 1.2, marginBottom: "8px" }}>{resource.officialName}</h1>

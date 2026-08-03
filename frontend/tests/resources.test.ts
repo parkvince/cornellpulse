@@ -45,7 +45,7 @@ test("verification claims agree with review status", () => {
   }
   assert.ok(ACTIVE_RESOURCES.every(resource => resource.reviewStatus !== "retired"))
   assert.ok(ACTIVE_RESOURCES.every(resource => resource.reviewStatus === "verified"))
-  assert.ok(ACTIVE_RESOURCES.every(resource => resource.verificationDate === "2026-08-02"))
+  assert.ok(ACTIVE_RESOURCES.every(resource => resource.verificationDate === "2026-08-03"))
 })
 
 test("all resource consumers use the registry instead of duplicate arrays", () => {

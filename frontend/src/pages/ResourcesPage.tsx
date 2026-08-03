@@ -5,8 +5,9 @@ import { callHref, filterResources, getAvailability, isResourceStale, resourcePa
 import { ACTIVE_RESOURCES, RESOURCE_CATEGORIES, getResource } from "../resources/registry.ts"
 import { useOnlineStatus } from "../resources/useOnlineStatus.ts"
 import { recordLocalMeasurement, type ResourceAction } from "../privacy/measurement.ts"
+import { requestJson } from "../api/client"
 
-const CORAL = "#FF5A5F"
+const CORAL = "#C83C42"
 const CATS = ["All", ...RESOURCE_CATEGORIES] as const
 const crisisResource = getResource("988_lifeline")
 
@@ -19,15 +20,16 @@ const FILTER_GROUPS = [
   { key: "appointment", label: "Appointment", options: [["required", "Required"], ["not_required", "Not required"], ["varies", "Varies"]] },
 ] as const
 
-function track(resourceId: string, action: string) {
+async function track(resourceId: string, action: string) {
   if (["call", "text", "book", "directions", "website", "details"].includes(action)) recordLocalMeasurement("resource_action", action as ResourceAction)
   if (!getPrivacyPreferences().resourceAnalytics) return
   if (action !== "call" && action !== "website") return
-  fetch((import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1") + "/track-click", {
+  await requestJson<{ status: "recorded" }>("/track-click", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ resource_id: resourceId, action, consent_granted: true }),
-  }).catch(() => {})
+    body: { resource_id: resourceId, action, consent_granted: true },
+    idempotencyKey: crypto.randomUUID(),
+    validate: (value): value is { status: "recorded" } => !!value && typeof value === "object" && (value as { status?: unknown }).status === "recorded",
+  })
 }
 
 function verifiedLabel(value: string | null): string {
@@ -38,15 +40,14 @@ function verifiedLabel(value: string | null): string {
 export default function ResourcesPage() {
   const [search, setSearch] = useState("")
   const [filters, setFilters] = useState<ResourceFilters>({})
-  const [loading, setLoading] = useState(() => document.readyState === "loading")
+  const [loading, setLoading] = useState(true)
+  const [analyticsNotice, setAnalyticsNotice] = useState("")
   const online = useOnlineStatus()
 
   useEffect(() => {
-    if (!loading) return
-    const finishLoading = () => setLoading(false)
-    window.addEventListener("load", finishLoading)
-    return () => window.removeEventListener("load", finishLoading)
-  }, [loading])
+    const frame = window.requestAnimationFrame(() => setLoading(false))
+    return () => window.cancelAnimationFrame(frame)
+  }, [])
 
   const now = new Date()
   const filtered = filterResources(ACTIVE_RESOURCES, search, filters, now)
@@ -63,20 +64,25 @@ export default function ResourcesPage() {
     setFilters({})
   }
 
+  function trackAction(resourceId: string, action: string) {
+    void track(resourceId, action).catch(() => setAnalyticsNotice("The resource action still opened, but optional analytics could not be recorded."))
+  }
+
   return (
     <div style={{ paddingBottom: "24px" }}>
-      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 24px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
+      <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 20px 24px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Resources</p>
         <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", marginBottom: "4px" }}>Resources for different needs.</h1>
         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", marginBottom: "16px" }}>Review {ACTIVE_RESOURCES.length} verified resources and choose based on cost, access, and what happens next.</p>
         <div style={{ position: "relative" }}>
-          <svg aria-hidden="true" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <svg aria-hidden="true" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           <input aria-label="Search resources" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by need, service, or location..." style={{ width: "100%", padding: "12px 14px 12px 40px", border: "none", borderRadius: "12px", fontSize: "15px", backgroundColor: "#ffffff", color: "#222222" }} />
         </div>
       </div>
 
       <div style={{ padding: "16px 20px 0" }}>
         {!online && <div role="status" style={{ backgroundColor: "#fff4d6", color: "#765500", borderRadius: "14px", padding: "12px 14px", fontSize: "13px", lineHeight: 1.5, marginBottom: "12px" }}>You’re offline. The verified directory is still available, and phone or SMS actions may work, but official web pages need a connection.</div>}
+        {analyticsNotice && <div role="status" style={{ backgroundColor: "#fff4d6", color: "#765500", borderRadius: "14px", padding: "12px 14px", fontSize: "13px", lineHeight: 1.5, marginBottom: "12px" }}>{analyticsNotice}</div>}
         {staleCount > 0 && <div role="status" style={{ backgroundColor: "#fff4d6", color: "#765500", borderRadius: "14px", padding: "12px 14px", fontSize: "13px", lineHeight: 1.5, marginBottom: "12px" }}>{staleCount} {staleCount === 1 ? "listing is" : "listings are"} older than 180 days. Confirm stale details on the official source.</div>}
 
         <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "4px", marginBottom: "10px" }} aria-label="Resource categories">
@@ -106,8 +112,8 @@ export default function ResourcesPage() {
           <div style={{ backgroundColor: CORAL, borderRadius: "16px", padding: "16px 20px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
             <div><p style={{ fontSize: "13px", fontWeight: 700, color: "#ffffff", marginBottom: "2px" }}>Need crisis support?</p><p style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)" }}>Call or text 988 · 24/7</p></div>
             <div style={{ display: "flex", gap: "6px" }}>
-              <a href={callHref(crisisResource)} onClick={() => track(crisisResource.id, "call")} style={{ backgroundColor: "#ffffff", color: CORAL, padding: "8px 11px", borderRadius: "10px", fontSize: "12px", fontWeight: 700 }}>Call</a>
-              <a href={textHref(crisisResource)} onClick={() => track(crisisResource.id, "text")} style={{ backgroundColor: "#ffffff", color: CORAL, padding: "8px 11px", borderRadius: "10px", fontSize: "12px", fontWeight: 700 }}>Text</a>
+              <a href={callHref(crisisResource)} onClick={() => trackAction(crisisResource.id, "call")} style={{ backgroundColor: "#ffffff", color: CORAL, padding: "8px 11px", borderRadius: "10px", fontSize: "12px", fontWeight: 700 }}>Call</a>
+              <a href={textHref(crisisResource)} onClick={() => trackAction(crisisResource.id, "text")} style={{ backgroundColor: "#ffffff", color: CORAL, padding: "8px 11px", borderRadius: "10px", fontSize: "12px", fontWeight: 700 }}>Text</a>
             </div>
           </div>
         )}
@@ -128,7 +134,7 @@ export default function ResourcesPage() {
               <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.5, marginBottom: "4px" }}><strong style={{ color: "#222222" }}>Cost:</strong> {resource.cost}</p>
               <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.5, marginBottom: "9px" }}><strong style={{ color: "#222222" }}>Access:</strong> {resource.modalities.map(value => value.replace("_", " ")).join(", ")}</p>
               <p style={{ fontSize: "11px", color: isResourceStale(resource, now) ? "#b07000" : "#008577", marginBottom: "12px" }}>{verifiedLabel(resource.verificationDate)}</p>
-              <Link to={resourcePath(resource)} onClick={() => track(resource.id, "details")} style={{ display: "block", padding: "10px 14px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "10px", fontSize: "13px", fontWeight: 700, textAlign: "center" }}>View details and actions</Link>
+              <Link to={resourcePath(resource)} onClick={() => trackAction(resource.id, "details")} style={{ display: "block", padding: "10px 14px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "10px", fontSize: "13px", fontWeight: 700, textAlign: "center" }}>View details and actions</Link>
             </article>
           )
         })}

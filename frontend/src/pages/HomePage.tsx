@@ -5,15 +5,15 @@ import { getResource } from "../resources/registry.ts"
 import { resourcePath } from "../resources/directory.ts"
 import { loadLocalHistory, reminderIsDue, updatePlanEntry, type LocalPlanEntry } from "../history/localHistory.ts"
 
-const CORAL = "#FF5A5F"
+const CORAL = "#C83C42"
 
 const featuredResources = ["caps_access", "lets_talk", "ears", "cornell_health_247"].map(getResource)
 const crisisResource = getResource("988_lifeline")
 
 function moodColor(m: number) {
-  if (m >= 7) return "#00A699"
-  if (m >= 5) return "#FC642D"
-  if (m >= 3) return "#FF5A5F"
+  if (m >= 7) return "#007A70"
+  if (m >= 5) return "#A9461E"
+  if (m >= 3) return "#C83C42"
   return "#c0392b"
 }
 
@@ -33,6 +33,7 @@ function timeAgo(d: string) {
 
 export default function HomePage() {
   const [history, setHistory] = useState<LocalPlanEntry[]>(loadLocalHistory)
+  const [shareNotice, setShareNotice] = useState("")
   const last = history[0] || null
   const activePlan = history.find(entry => entry.status === "saved")
 
@@ -41,22 +42,27 @@ export default function HomePage() {
   }
 
   function handleShare() {
+    setShareNotice("")
     if (navigator.share) {
-      navigator.share({
+      void navigator.share({
         title: "CornellPulse",
         text: "A free mental health resource navigator for Cornell students.",
         url: window.location.origin,
-      }).catch(() => {})
+      }).catch(error => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) setShareNotice("The share sheet could not be opened. You can copy the address from your browser.")
+      })
+    } else if (navigator.clipboard) {
+      void navigator.clipboard.writeText(window.location.origin)
+        .then(() => setShareNotice("Link copied to clipboard."))
+        .catch(() => setShareNotice("The link could not be copied. You can copy the address from your browser."))
     } else {
-      navigator.clipboard.writeText(window.location.origin).then(() => {
-        alert("Link copied to clipboard")
-      }).catch(() => {})
+      setShareNotice("Sharing is not available in this browser. You can copy the address from your browser.")
     }
   }
 
   return (
     <div style={{ backgroundColor: "#fff8f7" }}>
-      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
+      <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Cornell University</p>
         <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "24px" }}>
           Find the right support, right now.
@@ -77,6 +83,7 @@ export default function HomePage() {
       </div>
 
       <div style={{ padding: "24px 20px 0" }}>
+        {shareNotice && <p role="status" aria-live="polite" style={{ backgroundColor: "#ffffff", color: "#595959", borderRadius: "12px", padding: "12px", marginBottom: "14px", fontSize: "13px" }}>{shareNotice}</p>}
         {activePlan && (
           <section aria-labelledby="next-step-home" style={{ marginBottom: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}><p id="next-step-home" style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em" }}>Your next step</p><Link to="/profile" style={{ fontSize: "12px", fontWeight: 700, color: CORAL }}>History &amp; Privacy</Link></div>
@@ -95,9 +102,9 @@ export default function HomePage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
                   <span style={{ fontSize: "48px", fontWeight: 800, color: moodColor(last.mood), lineHeight: 1 }}>{last.mood}</span>
-                  <span style={{ fontSize: "18px", color: "#b0b0b0" }}>/10</span>
+                  <span style={{ fontSize: "18px", color: "#717171" }}>/10</span>
                 </div>
-                <span style={{ fontSize: "12px", color: "#b0b0b0", backgroundColor: "#f5f5f5", padding: "4px 10px", borderRadius: "20px" }}>{timeAgo(last.date)}</span>
+                <span style={{ fontSize: "12px", color: "#717171", backgroundColor: "#f5f5f5", padding: "4px 10px", borderRadius: "20px" }}>{timeAgo(last.date)}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
                 <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: moodColor(last.mood) }} />
@@ -125,7 +132,7 @@ export default function HomePage() {
                     <p style={{ fontSize: "12px", color: "#717171" }}>{resource.verificationDate ? `Verified ${resource.verificationDate}` : "Verification pending"}</p>
                   </div>
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
               </Link>
             ))}
           </div>
@@ -151,7 +158,7 @@ export default function HomePage() {
             </Link>
           </div>}
 
-          <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", borderRadius: "20px", padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", borderRadius: "20px", padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>

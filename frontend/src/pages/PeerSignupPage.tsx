@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { requestJson } from "../api/client"
 
 const LOCATIONS = [
   "Libe Cafe",
@@ -57,6 +58,8 @@ const AVAILABILITY = [
 export default function PeerSignupPage() {
   const [submitted, setSubmitted] = useState(false)
   const [locationSearch, setLocationSearch] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState("")
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -89,26 +92,29 @@ export default function PeerSignupPage() {
   )
 
   async function handleSubmit() {
+    if (submitting) return
+    setSubmitting(true)
+    setSubmitError("")
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
-      const response = await fetch(apiUrl + "/peer-signup", {
+      const draft = await requestJson<{ supporter_id: string; access_token: string }>("/peer-signup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ display_name: form.name, email: form.email, phone: form.phone, password: form.password, year: form.year, major: form.major, locations: form.locations, availability: form.availability, interests: form.interests, about: form.about }),
+        body: { display_name: form.name, email: form.email, phone: form.phone, password: form.password, year: form.year, major: form.major, locations: form.locations, availability: form.availability, interests: form.interests, about: form.about },
+        idempotencyKey: crypto.randomUUID(),
+        validate: (value): value is { supporter_id: string; access_token: string } => !!value && typeof value === "object" && typeof (value as { supporter_id?: unknown }).supporter_id === "string" && typeof (value as { access_token?: unknown }).access_token === "string",
       })
-      if (!response.ok) return
-      const draft = await response.json() as { supporter_id: string; access_token: string }
-      const submitResponse = await fetch(`${apiUrl}/peer-signups/${draft.supporter_id}/submit`, {
+      await requestJson<{ status: string }>(`/peer-signups/${draft.supporter_id}/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${draft.access_token}` },
-        body: JSON.stringify({ policy_version: "2026-08-02", role_scope_accepted: true, conduct_standards_accepted: true, crisis_boundaries_accepted: true, public_meeting_rules_accepted: true, reporting_policy_accepted: true, withdrawal_controls_acknowledged: true }),
+        headers: { Authorization: `Bearer ${draft.access_token}` },
+        body: { policy_version: "2026-08-02", role_scope_accepted: true, conduct_standards_accepted: true, crisis_boundaries_accepted: true, public_meeting_rules_accepted: true, reporting_policy_accepted: true, withdrawal_controls_acknowledged: true },
+        idempotencyKey: crypto.randomUUID(),
+        validate: (value): value is { status: string } => !!value && typeof value === "object" && typeof (value as { status?: unknown }).status === "string",
       })
-      if (!submitResponse.ok) return
-    } catch (e) {
-      console.error("Submit failed", e)
-      return
+      setSubmitted(true)
+    } catch (cause) {
+      setSubmitError(cause instanceof Error ? cause.message : "The server did not confirm this application.")
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitted(true)
   }
 
   const canSubmit = form.name && form.email && form.phone && form.password.length >= 12 && form.year && form.locations.length > 0 && form.policyAccepted
@@ -121,7 +127,7 @@ export default function PeerSignupPage() {
         <p style={{ fontSize: "15px", color: "#555", lineHeight: 1.6, marginBottom: "24px" }}>
           Your application is submitted, but it is not approved. Cornell identity verification, a consent-based reference invitation, current training requirements, and administrator review must be completed before any public profile can appear.
         </p>
-        <p style={{ fontSize: "13px", color: "#aaa" }}>You can close this page.</p>
+        <p style={{ fontSize: "13px", color: "#717171" }}>You can close this page.</p>
       </div>
     )
   }
@@ -134,7 +140,7 @@ export default function PeerSignupPage() {
       </p>
 
       <div style={{ marginBottom: "32px" }}>
-        <p style={{ fontSize: "13px", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "16px" }}>Your info</p>
+        <p style={{ fontSize: "13px", fontWeight: 600, color: "#595959", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "16px" }}>Your info</p>
 
         <div style={{ marginBottom: "14px" }}>
           <label style={{ fontSize: "14px", fontWeight: 500, color: "#333", display: "block", marginBottom: "6px" }}>Full name <span style={{ color: "#c00" }}>*</span></label>
@@ -166,14 +172,14 @@ export default function PeerSignupPage() {
         </div>
 
         <div style={{ marginBottom: "14px" }}>
-          <label style={{ fontSize: "14px", fontWeight: 500, color: "#333", display: "block", marginBottom: "6px" }}>Major <span style={{ color: "#999", fontWeight: 400 }}>(optional)</span></label>
+          <label style={{ fontSize: "14px", fontWeight: 500, color: "#333", display: "block", marginBottom: "6px" }}>Major <span style={{ color: "#717171", fontWeight: 400 }}>(optional)</span></label>
           <input value={form.major} onChange={e => update("major", e.target.value)} placeholder="Your major" style={{ width: "100%", padding: "12px 14px", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "15px", backgroundColor: "#fff", color: "#1a1a1a" }} />
         </div>
       </div>
 
       <div style={{ marginBottom: "32px" }}>
-        <p style={{ fontSize: "13px", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Where you are comfortable meeting <span style={{ color: "#c00" }}>*</span></p>
-        <p style={{ fontSize: "13px", color: "#aaa", marginBottom: "14px" }}>Select all that apply. You can search below.</p>
+        <p style={{ fontSize: "13px", fontWeight: 600, color: "#595959", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Where you are comfortable meeting <span style={{ color: "#c00" }}>*</span></p>
+        <p style={{ fontSize: "13px", color: "#717171", marginBottom: "14px" }}>Select all that apply. You can search below.</p>
         <input value={locationSearch} onChange={e => setLocationSearch(e.target.value)} placeholder="Search locations..." style={{ width: "100%", padding: "10px 14px", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "14px", backgroundColor: "#fff", color: "#1a1a1a", marginBottom: "12px" }} />
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
           {filteredLocations.map(loc => {
@@ -186,8 +192,8 @@ export default function PeerSignupPage() {
       </div>
 
       <div style={{ marginBottom: "32px" }}>
-        <p style={{ fontSize: "13px", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>When are you generally available</p>
-        <p style={{ fontSize: "13px", color: "#aaa", marginBottom: "14px" }}>Select all that apply.</p>
+        <p style={{ fontSize: "13px", fontWeight: 600, color: "#595959", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>When are you generally available</p>
+        <p style={{ fontSize: "13px", color: "#717171", marginBottom: "14px" }}>Select all that apply.</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
           {AVAILABILITY.map(a => {
             const selected = form.availability.includes(a)
@@ -199,7 +205,7 @@ export default function PeerSignupPage() {
       </div>
 
       <div style={{ marginBottom: "32px" }}>
-        <p style={{ fontSize: "13px", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Interests <span style={{ color: "#999", fontWeight: 400, textTransform: "none", fontSize: "12px" }}>(optional, helps with matching)</span></p>
+        <p style={{ fontSize: "13px", fontWeight: 600, color: "#595959", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Interests <span style={{ color: "#717171", fontWeight: 400, textTransform: "none", fontSize: "12px" }}>(optional, helps with matching)</span></p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" }}>
           {INTERESTS.map(i => {
             const selected = form.interests.includes(i)
@@ -211,10 +217,10 @@ export default function PeerSignupPage() {
       </div>
 
       <div style={{ marginBottom: "32px" }}>
-        <p style={{ fontSize: "13px", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>About you <span style={{ color: "#999", fontWeight: 400, textTransform: "none", fontSize: "12px" }}>(optional)</span></p>
-        <p style={{ fontSize: "13px", color: "#aaa", marginBottom: "12px" }}>A sentence or two about yourself. This may be shown to students looking to connect.</p>
+        <p style={{ fontSize: "13px", fontWeight: 600, color: "#595959", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>About you <span style={{ color: "#717171", fontWeight: 400, textTransform: "none", fontSize: "12px" }}>(optional)</span></p>
+        <p style={{ fontSize: "13px", color: "#717171", marginBottom: "12px" }}>A sentence or two about yourself. This may be shown to students looking to connect.</p>
         <textarea value={form.about} onChange={e => update("about", e.target.value)} maxLength={300} placeholder="e.g. Junior in CS, originally from NYC. I know what it feels like to be overwhelmed at Cornell and I am always down to grab food or just talk." rows={4} style={{ width: "100%", padding: "12px 14px", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "15px", backgroundColor: "#fff", color: "#1a1a1a", resize: "none" }} />
-        <div style={{ fontSize: "12px", color: "#ccc", textAlign: "right" }}>{form.about.length}/300</div>
+        <div style={{ fontSize: "12px", color: "#717171", textAlign: "right" }}>{form.about.length}/300</div>
       </div>
 
       <div style={{ backgroundColor: "#f9f9f9", border: "1px solid #e5e5e5", borderRadius: "12px", padding: "16px", marginBottom: "24px" }}>
@@ -223,15 +229,17 @@ export default function PeerSignupPage() {
         <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "13px", color: "#333", lineHeight: 1.5 }}><input type="checkbox" checked={form.policyAccepted} onChange={event => update("policyAccepted", event.target.checked)} />I reviewed and accept the current supporter policy. I understand that identity verification, a consent-based reference invitation, training evidence, and administrator review are still required before approval.</label>
       </div>
 
+      {submitError && <p role="alert" style={{ color: "#b4232a", fontSize: "13px", marginBottom: "12px" }}>{submitError}</p>}
       <button
         onClick={handleSubmit}
-        disabled={!canSubmit}
-        style={{ width: "100%", padding: "16px", backgroundColor: canSubmit ? "#1a1a1a" : "#ccc", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700, cursor: canSubmit ? "pointer" : "default" }}
+        disabled={!canSubmit || submitting}
+        aria-busy={submitting}
+        style={{ width: "100%", padding: "16px", backgroundColor: canSubmit && !submitting ? "#1a1a1a" : "#ccc", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700, cursor: canSubmit && !submitting ? "pointer" : "default" }}
       >
-        Submit application
+        {submitting ? "Submitting…" : "Submit application"}
       </button>
       {!canSubmit && (
-        <p style={{ fontSize: "12px", color: "#aaa", textAlign: "center", marginTop: "10px" }}>Fill in all required fields to submit.</p>
+        <p style={{ fontSize: "12px", color: "#717171", textAlign: "center", marginTop: "10px" }}>Fill in all required fields to submit.</p>
       )}
     </div>
   )

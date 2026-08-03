@@ -1,6 +1,6 @@
-# CornellPulse resource audit — 2026-08-02
+# CornellPulse resource audit — refreshed 2026-08-03
 
-This audit covers every record in `frontend/src/resources/registry.ts`. Only direct Cornell, government, hospital, or service-provider pages were used. Search-result snippets were not treated as evidence. The active registry contains 15 records, all marked `verified` with a verification date of 2026-08-02 and an official source URL.
+This audit covers every record in `frontend/src/resources/registry.ts`. Only direct Cornell, government, hospital, or service-provider pages were used. Search-result snippets were not treated as evidence. The active registry contains 15 records, all marked `verified` with a verification date of 2026-08-03 and an official source URL.
 
 ## Retained records
 
@@ -12,10 +12,10 @@ This audit covers every record in `frontend/src/resources/registry.ts`. Only dir
 | `cornell_health_247` | [Cornell Health 24/7 phone consultation](https://health.cornell.edu/get-care/247-phone-consultation) | Retained with U.S.-location eligibility and consultation scope. |
 | `crisis_text_line` | [Crisis Text Line](https://www.crisistextline.org) | Retained with HOME-to-741741 instructions and carrier-cost caveat. |
 | `cayuga_medical_er` | [Cayuga Medical Center](https://cayugahealth.org/contact/cayuga-medical-center/) | Retained with hospital-owned address and Emergency Department phone; 24/7 availability is also confirmed on Cayuga Health's emergency-care page. |
-| `caps_access` | [CAPS access appointments](https://health.cornell.edu/services/mental-health-care/access) and [Cornell Health costs](https://health.cornell.edu/about/health-requirements-costs/cost-service) | Corrected: access appointment is a free 20-minute first step, usually by Zoom, and is not counseling. Continued individual counseling is generally $10 per visit for registered students; groups are free. |
+| `caps_access` | [CAPS access appointments](https://health.cornell.edu/services/mental-health-care/access) | Corrected: the access appointment is a free 20-minute first step, usually by Zoom, and is not counseling. Later-service costs are not hardcoded and must be confirmed with Cornell Health. |
 | `lets_talk` | [Let’s Talk](https://health.cornell.edu/services/mental-health-care/lets-talk) | Corrected: free, first-come consultation for Cornell students; not counseling or urgent care. Term-specific times are not copied into the registry. |
 | `ears` | [Cornell EARS Peer Mentoring FAQ](https://mentalhealth.cornell.edu/node/141) | Corrected from the legacy phone/counseling model to current peer mentoring. Removed the stale phone and old `ears.cornell.edu` URL. |
-| `learning_strategies` | [Learning Strategies Center](https://lsc.cornell.edu) | Retained with program-specific eligibility, cost, location, and schedule caveats. |
+| `learning_strategies` | [Learning Strategies Center](https://lsc.cornell.edu) | Retained with program-specific eligibility, cost, and schedule caveats; a temporary office location that was not present on the refreshed official page was removed. |
 | `basic_needs` | [Cornell Food Pantry](https://scl.cornell.edu/residential-life/dining/about-dining/food-security/cornell-food-pantry) | Replaced an unverified generic Basic Needs listing with a specific official service. Added current eligibility, enrollment, location, and regular hours. |
 | `identity_support` | [Cornell LGBT Resource Center](https://scl.cornell.edu/LGBTRC) | Replaced a generic legacy directory with the current center record: 626 Thurston Avenue, 607-254-4987, and published staff/building hours. |
 | `financial_aid_emergency_fund` | [Cornell emergency funds](https://finaid.cornell.edu/emergency-funds) | Fixed the broken singular URL; added current enrollment criteria, typical $500 academic-year limit, office, phone, and hours. |

@@ -38,6 +38,12 @@ def validate_security_settings() -> None:
         errors.append("ADMIN_PASSWORD_HASH must be a valid bcrypt hash")
     if not settings.FRONTEND_URL.startswith("https://"):
         errors.append("FRONTEND_URL must use HTTPS in production")
+    if not settings.DATABASE_URL.startswith("postgresql+asyncpg://") or "yourpassword" in settings.DATABASE_URL.lower():
+        errors.append("DATABASE_URL must be a non-placeholder PostgreSQL async URL")
+    if settings.REDIS_REQUIRED and not settings.REDIS_URL:
+        errors.append("REDIS_URL is required when REDIS_REQUIRED is enabled")
+    if settings.AGGREGATE_MAX_CONTRIBUTIONS_PER_HOUR < 1 or settings.AGGREGATE_RECEIPT_RETENTION_DAYS < 1 or settings.EMAIL_TIMEOUT_SECONDS < 1:
+        errors.append("Aggregate abuse limits and receipt retention must be positive")
     if settings.FEATURE_PEER_CONNECT or settings.FEATURE_SUPPORTER_SIGNUP:
         if len(settings.PEER_AUTH_SECRET) < 32 or settings.PEER_AUTH_SECRET.startswith("replace-"):
             errors.append("PEER_AUTH_SECRET must be a separate random value of at least 32 characters")
@@ -64,6 +70,8 @@ def validate_security_settings() -> None:
             errors.append("Peer Connect and supporter signup cannot be enabled in production until Cornell identity verification is integrated")
         if "@" not in settings.PEER_SAFETY_CONTACT_EMAIL:
             errors.append("PEER_SAFETY_CONTACT_EMAIL must be a monitored email address")
+        if not settings.RESEND_API_KEY or settings.RESEND_API_KEY.startswith("replace-"):
+            errors.append("RESEND_API_KEY is required when a peer feature is enabled")
         if settings.PEER_APPROVAL_VERSION != "2026-08-03":
             errors.append("PEER_APPROVAL_VERSION must match the current safety-operations version")
         approval_ids = (

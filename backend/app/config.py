@@ -33,7 +33,12 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     ENVIRONMENT: str = "dev"
     RESEND_API_KEY: str = ""
+    EMAIL_TIMEOUT_SECONDS: int = 8
     ADMIN_EMAIL: str = ""
+    REDIS_URL: str = ""
+    REDIS_REQUIRED: bool = False
+    AGGREGATE_MAX_CONTRIBUTIONS_PER_HOUR: int = 8
+    AGGREGATE_RECEIPT_RETENTION_DAYS: int = 2
     FEATURE_PEER_CONNECT: bool = False
     FEATURE_SUPPORTER_SIGNUP: bool = False
 

@@ -42,7 +42,7 @@ async def update_aggregates(request: AggregateContributionRequest, db: AsyncSess
             mood_sum=request.mood_score,
             sleep_score_sum=sleep_score,
             workload_score_sum=workload_score,
-        )
+        ).with_for_update()
         db.add(row)
     else:
         row.check_in_count += 1
@@ -53,7 +53,7 @@ async def update_aggregates(request: AggregateContributionRequest, db: AsyncSess
     campus_result = await db.execute(
         select(CampusHourAggregate).where(
             CampusHourAggregate.hour_bucket == hour_bucket
-        )
+        ).with_for_update()
     )
     campus_row = campus_result.scalar_one_or_none()
 
@@ -71,5 +71,3 @@ async def update_aggregates(request: AggregateContributionRequest, db: AsyncSess
         campus_row.mood_sum += request.mood_score
         campus_row.sleep_score_sum += sleep_score
         campus_row.workload_score_sum += workload_score
-
-    await db.commit()

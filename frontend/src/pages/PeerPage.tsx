@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react"
 import { featureFlags } from "../config/featureFlags"
 import { getResource } from "../resources/registry.ts"
+import { requestJson } from "../api/client"
 
-const CORAL = "#FF5A5F"
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
+const CORAL = "#C83C42"
 const crisisResource = getResource("988_lifeline")
 const healthResource = getResource("cornell_health_247")
 
-const AVATAR_COLORS = ["#FF5A5F", "#00A699", "#FC642D", "#7B68EE", "#20B2AA", "#FF6B6B", "#4ECDC4"]
+const AVATAR_COLORS = ["#C83C42", "#007A70", "#A9461E", "#5C4BC2", "#007B78", "#BD3439", "#337F7C"]
 
 function isCornellEmail(email: string) {
   return /^[a-zA-Z0-9._%+-]+@cornell\.edu$/i.test(email.trim())
@@ -81,6 +81,15 @@ interface Supporter {
   interests: string[]; about: string
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value)
+const hasString = (value: unknown, key: string): boolean => isRecord(value) && typeof value[key] === "string"
+const isTokenResponse = (value: unknown): value is { access_token: string } => hasString(value, "access_token")
+const CONNECTION_STATES: ConnectionState[] = ["pending", "failed", "declined", "expired", "accepted", "unavailable", "canceled", "blocked"]
+const isStatusResponse = (value: unknown): value is { status: string } => hasString(value, "status")
+const isConnectionStatusResponse = (value: unknown): value is { status: ConnectionState } => isStatusResponse(value) && CONNECTION_STATES.includes(value.status as ConnectionState)
+const isSupporterList = (value: unknown): value is Supporter[] => Array.isArray(value) && value.every(item => hasString(item, "supporter_id") && hasString(item, "display_name"))
+const isConnectionList = (value: unknown): value is ManagedConnection[] => Array.isArray(value) && value.every(item => hasString(item, "request_id") && hasString(item, "status"))
+
 function avatarColor(name: string) {
   const idx = name.charCodeAt(0) % AVATAR_COLORS.length
   return AVATAR_COLORS[idx]
@@ -115,13 +124,13 @@ function SupporterCard({ supporter, onRequest }: { supporter: Supporter, onReque
       <div style={{ display: "flex", gap: "16px", marginBottom: "14px" }}>
         {supporter.locations && supporter.locations.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
             <span style={{ fontSize: "12px", color: "#717171" }}>{supporter.locations[0]}{supporter.locations.length > 1 ? ` +${supporter.locations.length - 1}` : ""}</span>
           </div>
         )}
         {supporter.availability && supporter.availability.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             <span style={{ fontSize: "12px", color: "#717171" }}>{supporter.availability[0]}{supporter.availability.length > 1 ? ` +${supporter.availability.length - 1}` : ""}</span>
           </div>
         )}
@@ -147,10 +156,10 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
 
   useEffect(() => {
     let active = true
-    fetch(`${API_URL}/peer/public-meeting-options`)
-      .then(async response => {
-        if (!response.ok) throw new Error("Safe meeting options are unavailable.")
-        const data = await response.json()
+    requestJson<{ locations: MeetingOption[]; meeting_windows: MeetingOption[]; safety_note: string }>("/peer/public-meeting-options", {
+      validate: (value): value is { locations: MeetingOption[]; meeting_windows: MeetingOption[]; safety_note: string } => isRecord(value) && Array.isArray(value.locations) && Array.isArray(value.meeting_windows) && typeof value.safety_note === "string",
+    })
+      .then(data => {
         if (active) setMeetingOptions(data)
       })
       .catch(() => { if (active) setError("Peer Connect is unavailable while the safety review is in progress.") })
@@ -166,21 +175,20 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
     setError("")
     setConnectionState(null)
     try {
-      const loginResponse = await fetch(`${API_URL}/peer/auth/login`, {
+      const login = await requestJson<{ access_token: string }>("/peer/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "requester", subject_id: form.requester_id, password: form.password }),
+        body: { role: "requester", subject_id: form.requester_id, password: form.password },
+        idempotencyKey: crypto.randomUUID(),
+        validate: isTokenResponse,
       })
-      if (!loginResponse.ok) throw new Error(loginResponse.status === 401 ? "Sign-in failed. Check your requester ID and password." : "Requester sign-in is unavailable.")
-      const login = await loginResponse.json() as { access_token?: string }
-      if (!login.access_token) throw new Error("The server did not confirm sign-in.")
-      const response = await fetch(`${API_URL}/peer-connect`, {
+      const data = await requestJson<{ request_id: string; status: ConnectionState }>("/peer-connect", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${login.access_token}` },
-        body: JSON.stringify({ supporter_id: supporter.supporter_id, location_id: form.location_id, meeting_window_id: form.meeting_window_id, requester_consent: true, message: form.message || null }),
+        headers: { Authorization: `Bearer ${login.access_token}` },
+        body: { supporter_id: supporter.supporter_id, location_id: form.location_id, meeting_window_id: form.meeting_window_id, requester_consent: true, message: form.message || null },
+        idempotencyKey: crypto.randomUUID(),
+        validate: (value): value is { request_id: string; status: ConnectionState } => isConnectionStatusResponse(value) && hasString(value, "request_id"),
       })
-      const data = await response.json().catch(() => ({})) as { request_id?: string; status?: ConnectionState; detail?: string }
-      if (!response.ok || data.status !== "pending" || !data.request_id) throw new Error(data.detail || "The server did not confirm your request.")
+      if (data.status !== "pending") throw new Error("The server did not confirm your request.")
       setToken(login.access_token)
       setRequestId(data.request_id)
       setConnectionState("pending")
@@ -198,9 +206,8 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
     if (!token || !requestId || reportReason.trim().length < 10) return
     setLoading(true); setError("")
     try {
-      const response = await fetch(`${API_URL}/peer-requests/${requestId}/report`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ reason: reportReason }) })
-      const data = await response.json().catch(() => ({})) as { status?: string; detail?: string }
-      if (!response.ok || data.status !== "submitted") throw new Error(data.detail || "The server did not confirm the safety report.")
+      const data = await requestJson<{ status: string }>(`/peer-requests/${requestId}/report`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: { reason: reportReason }, idempotencyKey: crypto.randomUUID(), validate: isStatusResponse })
+      if (data.status !== "submitted") throw new Error("The server did not confirm the safety report.")
       setShowReport(false); setReportReason("")
     } catch (cause) { setError(cause instanceof Error ? cause.message : "The safety report was not confirmed.") }
     finally { setLoading(false) }
@@ -214,7 +221,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
           <p style={{ fontSize: "13px", color: "#717171", marginBottom: "16px" }}>This goes directly to our team and is kept confidential.</p>
           <textarea value={reportReason} onChange={e => setReportReason(e.target.value)} placeholder="What happened?" rows={4} style={{ width: "100%", padding: "12px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", resize: "none", marginBottom: "16px", fontFamily: "DM Sans, sans-serif" }} />
           {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
-          <button onClick={submitReport} disabled={reportReason.trim().length < 10 || loading} style={{ width: "100%", padding: "14px", backgroundColor: reportReason.trim().length >= 10 ? CORAL : "#ebebeb", color: reportReason.trim().length >= 10 ? "#fff" : "#b0b0b0", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: reportReason.trim().length >= 10 ? "pointer" : "default" }}>
+          <button onClick={submitReport} disabled={reportReason.trim().length < 10 || loading} style={{ width: "100%", padding: "14px", backgroundColor: reportReason.trim().length >= 10 ? CORAL : "#ebebeb", color: reportReason.trim().length >= 10 ? "#fff" : "#717171", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: reportReason.trim().length >= 10 ? "pointer" : "default" }}>
             Submit report
           </button>
         </div>
@@ -257,10 +264,9 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
             if (!token || !requestId) return
             setLoading(true); setError("")
             try {
-              const response = await fetch(`${API_URL}/peer/requesters/${form.requester_id}/requests`, { headers: { Authorization: `Bearer ${token}` } })
-              const data = await response.json().catch(() => []) as Array<{ request_id: string; status: ConnectionState }>
+              const data = await requestJson<ManagedConnection[]>(`/peer/requesters/${form.requester_id}/requests`, { headers: { Authorization: `Bearer ${token}` }, validate: isConnectionList })
               const current = data.find(item => item.request_id === requestId)
-              if (!response.ok || !current) throw new Error("The server could not confirm the current request state.")
+              if (!current) throw new Error("The server could not confirm the current request state.")
               setConnectionState(current.status)
             } catch (cause) { setError(cause instanceof Error ? cause.message : "Status could not be refreshed.") }
             finally { setLoading(false) }
@@ -269,15 +275,14 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
             if (!token || !requestId) return
             setLoading(true); setError("")
             try {
-              const response = await fetch(`${API_URL}/peer-requests/${requestId}/cancel`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
-              const data = await response.json().catch(() => ({})) as { status?: ConnectionState; detail?: string }
-              if (!response.ok || data.status !== "canceled") throw new Error(data.detail || "The server did not confirm cancellation.")
+              const data = await requestJson<{ status: ConnectionState }>(`/peer-requests/${requestId}/cancel`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, idempotencyKey: crypto.randomUUID(), validate: isConnectionStatusResponse })
+              if (data.status !== "canceled") throw new Error("The server did not confirm cancellation.")
               setConnectionState("canceled")
             } catch (cause) { setError(cause instanceof Error ? cause.message : "Cancellation was not confirmed.") }
             finally { setLoading(false) }
           }} disabled={loading} style={{ width: "100%", padding: "12px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 600, marginBottom: "10px", cursor: "pointer" }}>Cancel request</button>}
           <button onClick={onSubmit} style={{ width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 600, marginBottom: "10px", cursor: "pointer" }}>Done</button>
-          <button onClick={() => setShowReport(true)} style={{ width: "100%", padding: "10px", backgroundColor: "transparent", border: "none", color: "#b0b0b0", fontSize: "12px", cursor: "pointer" }}>Report a safety concern</button>
+          <button onClick={() => setShowReport(true)} style={{ width: "100%", padding: "10px", backgroundColor: "transparent", border: "none", color: "#717171", fontSize: "12px", cursor: "pointer" }}>Report a safety concern</button>
         </div>
       </div>
     )
@@ -334,9 +339,9 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         </fieldset>
 
         <div style={{ marginBottom: "20px" }}>
-          <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Anything you want them to know <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(optional)</span></label>
+          <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Anything you want them to know <span style={{ color: "#717171", fontWeight: 400 }}>(optional)</span></label>
           <textarea value={form.message} onChange={e => update("message", e.target.value)} maxLength={300} placeholder="Whatever feels right to share." rows={3} style={{ width: "100%", padding: "12px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", resize: "none", fontFamily: "DM Sans, sans-serif" }} />
-          <p style={{ fontSize: "12px", color: "#b0b0b0", textAlign: "right", marginTop: "4px" }}>{form.message.length}/300</p>
+          <p style={{ fontSize: "12px", color: "#717171", textAlign: "right", marginTop: "4px" }}>{form.message.length}/300</p>
         </div>
 
         <div style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "12px 14px", marginBottom: "20px" }}>
@@ -349,7 +354,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
 
         {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
 
-        <button onClick={handleSubmit} disabled={!canSubmit || loading} style={{ width: "100%", padding: "16px", backgroundColor: canSubmit && !loading ? CORAL : "#ebebeb", color: canSubmit && !loading ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: canSubmit && !loading ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+        <button onClick={handleSubmit} disabled={!canSubmit || loading} style={{ width: "100%", padding: "16px", backgroundColor: canSubmit && !loading ? CORAL : "#ebebeb", color: canSubmit && !loading ? "#ffffff" : "#717171", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: canSubmit && !loading ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
           {loading && <span style={{ width: "14px", height: "14px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#ffffff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />}
           {loading ? "Sending..." : "Send request"}
         </button>
@@ -384,18 +389,14 @@ function ConnectionManager() {
 
   async function loadConnections(activeToken = token) {
     const path = role === "supporter" ? `supporters/${subjectId}` : `requesters/${subjectId}`
-    const response = await fetch(`${API_URL}/peer/${path}/requests`, { headers: { Authorization: `Bearer ${activeToken}` } })
-    const data = await response.json().catch(() => [])
-    if (!response.ok || !Array.isArray(data)) throw new Error(data.detail || "The server could not load requests.")
+    const data = await requestJson<ManagedConnection[]>(`/peer/${path}/requests`, { headers: { Authorization: `Bearer ${activeToken}` }, validate: isConnectionList })
     setConnections(data)
   }
 
   async function login() {
     setLoading(true); setError("")
     try {
-      const response = await fetch(`${API_URL}/peer/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role, subject_id: subjectId, password }) })
-      const data = await response.json().catch(() => ({})) as { access_token?: string; detail?: string }
-      if (!response.ok || !data.access_token) throw new Error(data.detail || "The server did not confirm sign-in.")
+      const data = await requestJson<{ access_token: string }>("/peer/auth/login", { method: "POST", body: { role, subject_id: subjectId, password }, idempotencyKey: crypto.randomUUID(), validate: isTokenResponse })
       setToken(data.access_token)
       await loadConnections(data.access_token)
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Sign-in failed.") }
@@ -405,10 +406,9 @@ function ConnectionManager() {
   async function supporterAction(requestId: string, action: "accept" | "decline" | "expire" | "block") {
     setLoading(true); setError("")
     try {
-      const response = await fetch(`${API_URL}/peer-requests/${requestId}/supporter-action`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action }) })
-      const data = await response.json().catch(() => ({})) as { status?: ConnectionState; detail?: string }
+      const data = await requestJson<{ status: ConnectionState }>(`/peer-requests/${requestId}/supporter-action`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: { action }, idempotencyKey: crypto.randomUUID(), validate: isConnectionStatusResponse })
       const expected = action === "accept" ? "accepted" : action === "decline" ? "declined" : action === "expire" ? "expired" : "blocked"
-      if (!response.ok || data.status !== expected) throw new Error(data.detail || `The server did not confirm ${expected}.`)
+      if (data.status !== expected) throw new Error(`The server did not confirm ${expected}.`)
       await loadConnections()
     } catch (cause) { setError(cause instanceof Error ? cause.message : "The action was not confirmed.") }
     finally { setLoading(false) }
@@ -417,9 +417,8 @@ function ConnectionManager() {
   async function confirmedAction(path: string, expected: string, body?: object) {
     setLoading(true); setError("")
     try {
-      const response = await fetch(`${API_URL}/${path}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, ...(body ? { body: JSON.stringify(body) } : {}) })
-      const data = await response.json().catch(() => ({})) as { status?: string; detail?: string }
-      if (!response.ok || data.status !== expected) throw new Error(data.detail || `The server did not confirm ${expected}.`)
+      const data = await requestJson<{ status: string }>(`/${path}`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body, idempotencyKey: crypto.randomUUID(), validate: isStatusResponse })
+      if (data.status !== expected) throw new Error(`The server did not confirm ${expected}.`)
       await loadConnections()
     } catch (cause) { setError(cause instanceof Error ? cause.message : "The action was not confirmed.") }
     finally { setLoading(false) }
@@ -435,7 +434,7 @@ function ConnectionManager() {
     <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Password</label>
     <input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" style={{ width: "100%", padding: "13px", border: "2px solid #ebebeb", borderRadius: "12px", marginBottom: "12px" }} />
     {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
-    <button onClick={login} disabled={!subjectId || !password || loading} style={{ width: "100%", padding: "14px", border: 0, borderRadius: "12px", backgroundColor: subjectId && password ? CORAL : "#ebebeb", color: subjectId && password ? "#fff" : "#b0b0b0", fontWeight: 700 }}>{loading ? "Signing in..." : "Sign in"}</button>
+    <button onClick={login} disabled={!subjectId || !password || loading} style={{ width: "100%", padding: "14px", border: 0, borderRadius: "12px", backgroundColor: subjectId && password ? CORAL : "#ebebeb", color: subjectId && password ? "#fff" : "#717171", fontWeight: 700 }}>{loading ? "Signing in..." : "Sign in"}</button>
   </div>
 
   return <div>
@@ -446,7 +445,7 @@ function ConnectionManager() {
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}><p style={{ fontSize: "14px", fontWeight: 700, color: "#222" }}>Connection request</p><span style={{ fontSize: "12px", color: CORAL, textTransform: "capitalize" }}>{connection.status}</span></div>
       {connection.request?.location && <p style={{ fontSize: "13px", color: "#717171", marginBottom: "4px" }}>{connection.request.location.name}</p>}
       {connection.request?.meeting_window && <p style={{ fontSize: "13px", color: "#717171", marginBottom: "10px" }}>{connection.request.meeting_window.name}</p>}
-      <p style={{ fontSize: "12px", color: "#b0b0b0", lineHeight: 1.5, marginBottom: "12px" }}>{connection.status === "pending" ? "The requester opted in. No contact details are shown; the relay opens only after acceptance." : connection.relay_available ? "Both people opted in. Use the in-app relay; contact details remain private." : "This request is no longer awaiting a response."}</p>
+      <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.5, marginBottom: "12px" }}>{connection.status === "pending" ? "The requester opted in. No contact details are shown; the relay opens only after acceptance." : connection.relay_available ? "Both people opted in. Use the in-app relay; contact details remain private." : "This request is no longer awaiting a response."}</p>
       {role === "supporter" && connection.status === "pending" && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
         <button onClick={() => supporterAction(connection.request_id, "accept")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: CORAL, color: "#fff", fontWeight: 700 }}>Accept</button>
         <button onClick={() => supporterAction(connection.request_id, "decline")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#717171", fontWeight: 700 }}>Decline</button>
@@ -473,6 +472,7 @@ function SignupForm() {
   const TOTAL = 3
   const [submitted, setSubmitted] = useState(false)
   const [policyAccepted, setPolicyAccepted] = useState(false)
+  const [submitError, setSubmitError] = useState("")
   const [locationSearch, setLocationSearch] = useState("")
   const [majorSearch, setMajorSearch] = useState("")
   const [showMajorList, setShowMajorList] = useState(false)
@@ -502,22 +502,25 @@ function SignupForm() {
   const step3Valid = policyAccepted
 
   async function handleSubmit() {
+    setSubmitError("")
     try {
-      const response = await fetch(`${API_URL}/peer-signup`, {
+      const draft = await requestJson<{ supporter_id: string; access_token: string }>("/peer-signup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ display_name: form.name, email: form.email, phone: form.phone, password: form.password, year: form.year, major: form.majors.join(", "), locations: form.locations, availability: form.availability, interests: form.interests, about: form.about }),
+        body: { display_name: form.name, email: form.email, phone: form.phone, password: form.password, year: form.year, major: form.majors.join(", "), locations: form.locations, availability: form.availability, interests: form.interests, about: form.about },
+        idempotencyKey: crypto.randomUUID(),
+        validate: (value): value is { supporter_id: string; access_token: string } => hasString(value, "supporter_id") && hasString(value, "access_token"),
       })
-      if (!response.ok) return
-      const draft = await response.json() as { supporter_id: string; access_token: string }
-      const submitResponse = await fetch(`${API_URL}/peer-signups/${draft.supporter_id}/submit`, {
+      await requestJson<{ status: string }>(`/peer-signups/${draft.supporter_id}/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${draft.access_token}` },
-        body: JSON.stringify({ policy_version: "2026-08-02", role_scope_accepted: true, conduct_standards_accepted: true, crisis_boundaries_accepted: true, public_meeting_rules_accepted: true, reporting_policy_accepted: true, withdrawal_controls_acknowledged: true }),
+        headers: { Authorization: `Bearer ${draft.access_token}` },
+        body: { policy_version: "2026-08-02", role_scope_accepted: true, conduct_standards_accepted: true, crisis_boundaries_accepted: true, public_meeting_rules_accepted: true, reporting_policy_accepted: true, withdrawal_controls_acknowledged: true },
+        idempotencyKey: crypto.randomUUID(),
+        validate: isStatusResponse,
       })
-      if (!submitResponse.ok) return
-    } catch { /* Supporter signup remains feature-gated during safety review. */ }
-    setSubmitted(true)
+      setSubmitted(true)
+    } catch (cause) {
+      setSubmitError(cause instanceof Error ? cause.message : "The server did not confirm this application.")
+    }
   }
 
   if (submitted) {
@@ -527,7 +530,7 @@ function SignupForm() {
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", marginBottom: "10px" }}>Application received</h2>
-        <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>We will review your application and reach out within a few days.</p>
+        <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>The server recorded the application. Review, identity, reference, training, and approval steps are still pending; no outreach or approval is guaranteed.</p>
       </div>
     )
   }
@@ -548,7 +551,7 @@ function SignupForm() {
       <div style={{ marginBottom: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171" }}>Step {step} of {TOTAL}</p>
-          <p style={{ fontSize: "12px", color: "#b0b0b0" }}>{Math.round((step / TOTAL) * 100)}% complete</p>
+          <p style={{ fontSize: "12px", color: "#717171" }}>{Math.round((step / TOTAL) * 100)}% complete</p>
         </div>
         <div style={{ height: "6px", backgroundColor: "#f0f0f0", borderRadius: "6px" }}>
           <div style={{ height: "6px", backgroundColor: CORAL, borderRadius: "6px", width: ((step / TOTAL) * 100) + "%", transition: "width 0.4s ease" }} />
@@ -575,7 +578,7 @@ function SignupForm() {
             </div>
           </div>
           <div style={{ marginBottom: "20px", position: "relative" }}>
-            <label style={labelStyle}>Major <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(up to 2, optional)</span></label>
+            <label style={labelStyle}>Major <span style={{ color: "#717171", fontWeight: 400 }}>(up to 2, optional)</span></label>
             {form.majors.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
                 {form.majors.map(m => (
@@ -598,11 +601,11 @@ function SignupForm() {
             )}
           </div>
           <div style={{ marginBottom: "20px" }}>
-            <label style={labelStyle}>About you <span style={{ color: "#b0b0b0", fontWeight: 400 }}>(optional)</span></label>
+            <label style={labelStyle}>About you <span style={{ color: "#717171", fontWeight: 400 }}>(optional)</span></label>
             <textarea value={form.about} onChange={e => update("about", e.target.value)} maxLength={300} placeholder="A sentence or two. This is what students see when choosing who to reach out to." rows={3} style={{ ...inputStyle, resize: "none" as const }} />
-            <p style={{ fontSize: "12px", color: "#b0b0b0", textAlign: "right" as const, marginTop: "4px" }}>{form.about.length}/300</p>
+            <p style={{ fontSize: "12px", color: "#717171", textAlign: "right" as const, marginTop: "4px" }}>{form.about.length}/300</p>
           </div>
-          <button onClick={() => setStep(2)} disabled={!step1Valid} style={{ width: "100%", padding: "18px", backgroundColor: step1Valid ? CORAL : "#ebebeb", color: step1Valid ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: step1Valid ? "pointer" : "default" }}>
+          <button onClick={() => setStep(2)} disabled={!step1Valid} style={{ width: "100%", padding: "18px", backgroundColor: step1Valid ? CORAL : "#ebebeb", color: step1Valid ? "#ffffff" : "#717171", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: step1Valid ? "pointer" : "default" }}>
             Continue →
           </button>
         </div>
@@ -633,7 +636,7 @@ function SignupForm() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "20px" }}>
               {TIME_BLOCKS.map(t => <PillBtn key={t} label={t} selected={form.availability.includes(t)} onClick={() => toggleArray("availability", t)} />)}
             </div>
-            <p style={{ ...labelStyle, marginBottom: "10px" }}>Interests <span style={{ color: "#b0b0b0", fontWeight: 400, fontSize: "12px" }}>(optional, helps with matching)</span></p>
+            <p style={{ ...labelStyle, marginBottom: "10px" }}>Interests <span style={{ color: "#717171", fontWeight: 400, fontSize: "12px" }}>(optional, helps with matching)</span></p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
               {INTERESTS.map(i => <PillBtn key={i} label={i} selected={form.interests.includes(i)} onClick={() => toggleArray("interests", i)} />)}
             </div>
@@ -641,7 +644,7 @@ function SignupForm() {
 
           <div style={{ display: "flex", gap: "10px" }}>
             <button onClick={() => setStep(1)} style={{ flex: 1, padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Back</button>
-            <button onClick={() => setStep(3)} disabled={!step2Valid} style={{ flex: 2, padding: "16px", backgroundColor: step2Valid ? CORAL : "#ebebeb", color: step2Valid ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: step2Valid ? "pointer" : "default" }}>Continue →</button>
+            <button onClick={() => setStep(3)} disabled={!step2Valid} style={{ flex: 2, padding: "16px", backgroundColor: step2Valid ? CORAL : "#ebebeb", color: step2Valid ? "#ffffff" : "#717171", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: step2Valid ? "pointer" : "default" }}>Continue →</button>
           </div>
         </div>
       )}
@@ -658,8 +661,9 @@ function SignupForm() {
 
           <div style={{ display: "flex", gap: "10px" }}>
             <button onClick={() => setStep(2)} style={{ flex: 1, padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Back</button>
-            <button onClick={handleSubmit} disabled={!step3Valid} style={{ flex: 2, padding: "16px", backgroundColor: step3Valid ? CORAL : "#ebebeb", color: step3Valid ? "#ffffff" : "#b0b0b0", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: step3Valid ? "pointer" : "default" }}>Submit application</button>
+            <button onClick={handleSubmit} disabled={!step3Valid} style={{ flex: 2, padding: "16px", backgroundColor: step3Valid ? CORAL : "#ebebeb", color: step3Valid ? "#ffffff" : "#717171", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: step3Valid ? "pointer" : "default" }}>Submit application</button>
           </div>
+          {submitError && <p role="alert" style={{ color: CORAL, fontSize: "13px", marginTop: "12px" }}>{submitError}</p>}
         </div>
       )}
     </div>
@@ -673,12 +677,12 @@ export default function PeerPage() {
   const [selectedSupporter, setSelectedSupporter] = useState<Supporter | null>(null)
   const [search, setSearch] = useState("")
   const [interestFilter, setInterestFilter] = useState("")
+  const [listError, setListError] = useState("")
 
   useEffect(() => {
-    fetch(`${API_URL}/peer-supporters`)
-      .then(r => r.json())
-      .then(data => { setSupporters(Array.isArray(data) ? data : []); setLoading(false) })
-      .catch(() => setLoading(false))
+    requestJson<Supporter[]>("/peer-supporters", { validate: isSupporterList })
+      .then(data => { setSupporters(data); setLoading(false) })
+      .catch(cause => { setListError(cause instanceof Error ? cause.message : "Supporter profiles could not be loaded."); setLoading(false) })
   }, [])
 
   const allInterests = Array.from(new Set(supporters.flatMap(s => s.interests || [])))
@@ -694,17 +698,18 @@ export default function PeerPage() {
         <RequestModal supporter={selectedSupporter} onClose={() => setSelectedSupporter(null)} onSubmit={() => setSelectedSupporter(null)} />
       )}
 
-<div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
+<div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Peer support</p>
         <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", marginBottom: "6px" }}>Talk to a student who gets it.</h1>
         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", marginBottom: "20px", lineHeight: 1.5 }}>Peer Connect remains unavailable while identity, training, conduct, and safety requirements are reviewed.</p>
         <div style={{ position: "relative" }}>
-          <svg style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <svg style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, major, interest..." style={{ width: "100%", padding: "13px 14px 13px 42px", border: "none", borderRadius: "14px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }} />
         </div>
       </div>
 
       <div style={{ padding: "20px 20px 0" }}>
+        {listError && <p role="alert" style={{ backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "12px", padding: "12px", marginBottom: "12px", fontSize: "13px" }}>{listError}</p>}
         <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
           <button onClick={() => setTab("find")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "find" ? CORAL : "#ffffff", color: tab === "find" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "find" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
             Find a supporter
@@ -750,7 +755,7 @@ export default function PeerPage() {
               </div>
             </div>
 
-            {loading && <div style={{ textAlign: "center", padding: "40px 0" }}><p style={{ fontSize: "14px", color: "#b0b0b0" }}>Loading supporters...</p></div>}
+            {loading && <div style={{ textAlign: "center", padding: "40px 0" }}><p style={{ fontSize: "14px", color: "#717171" }}>Loading supporters...</p></div>}
 
             {!loading && filtered.length === 0 && (
               <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "32px 20px", textAlign: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
@@ -763,7 +768,7 @@ export default function PeerPage() {
             {!loading && filtered.map(s => <SupporterCard key={s.supporter_id} supporter={s} onRequest={setSelectedSupporter} />)}
 
             <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "14px 16px", marginBottom: "24px", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-              <p style={{ fontSize: "12px", color: "#b0b0b0", lineHeight: 1.6 }}>If you need crisis support, call or text {crisisResource.phone}. For 24/7 consultation, call {healthResource.officialName} at {healthResource.phone}.</p>
+              <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6 }}>If you need crisis support, call or text {crisisResource.phone}. For 24/7 consultation, call {healthResource.officialName} at {healthResource.phone}.</p>
             </div>
           </div>
         )}
