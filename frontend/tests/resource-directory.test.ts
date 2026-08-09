@@ -64,7 +64,7 @@ test("deep links and text actions are resource-specific", () => {
 test("directory and details expose operational states", () => {
   const directory = readFileSync(join(process.cwd(), "src", "pages", "ResourcesPage.tsx"), "utf8")
   const detail = readFileSync(join(process.cwd(), "src", "pages", "ResourceDetailPage.tsx"), "utf8")
-  for (const label of ["You’re offline", "Loading verified resources", "older than 180 days", "No verified resources are available", "No resources match those choices"]) assert.ok(directory.includes(label))
+  for (const label of ["You’re offline", "Loading source-checked resources", "passed the required review deadline", "No verified resources are available", "No resources match those choices"]) assert.ok(directory.includes(label))
   for (const label of ["What happens next", "Last verified", "Open official source", "Resource not found"]) assert.ok(detail.includes(label))
   assert.equal(isResourceStale(getResource("988_lifeline"), new Date("2027-03-01T00:00:00Z")), true)
 })

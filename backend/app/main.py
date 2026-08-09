@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,13 +10,34 @@ from app.database import init_db
 from app.middleware import PrivacySafeErrorMiddleware, SecurityHeadersMiddleware
 from app.routers import admin_auth, checkin, heatmap, peer, tracking
 from app.services.readiness import readiness_report
+from app.services.retention import retention_loop
 
 validate_security_settings()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    retention_task: asyncio.Task[None] | None = None
+    try:
+        await init_db()
+        retention_task = asyncio.create_task(retention_loop(), name="cornellpulse-retention")
+    except Exception as exc:
+        logging.getLogger("cornellpulse.startup").error("database_initialization_unavailable error_type=%s", type(exc).__name__)
+    try:
+        yield
+    finally:
+        if retention_task:
+            retention_task.cancel()
+            try:
+                await retention_task
+            except asyncio.CancelledError:
+                pass
 
 app = FastAPI(
     title="CornellPulse API",
     description="Campus wellness resource navigator for Cornell students",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -26,13 +49,6 @@ app.add_middleware(
 )
 app.add_middleware(PrivacySafeErrorMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
-
-@app.on_event("startup")
-async def startup():
-    try:
-        await init_db()
-    except Exception as exc:
-        logging.getLogger("cornellpulse.startup").error("database_initialization_unavailable error_type=%s", type(exc).__name__)
 
 app.include_router(checkin.router, prefix="/api/v1")
 app.include_router(admin_auth.router, prefix="/api/v1")

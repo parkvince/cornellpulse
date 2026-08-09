@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    DATABASE_URL: str = "postgresql+asyncpg://cpulse_user:yourpassword@localhost:5432/cornellpulse"
+    DATABASE_URL: str = "postgresql+asyncpg://cpulse_user@localhost:5432/cornellpulse"
     ADMIN_SESSION_SECRET: str = ""
     ADMIN_PASSWORD_HASH: str = ""
     ADMIN_SESSION_MINUTES: int = 15
@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     REDIS_REQUIRED: bool = False
     AGGREGATE_MAX_CONTRIBUTIONS_PER_HOUR: int = 8
     AGGREGATE_RECEIPT_RETENTION_DAYS: int = 2
+    AGGREGATE_RETENTION_DAYS: int = 30
+    RESOURCE_CLICK_RETENTION_DAYS: int = 30
+    TECHNICAL_LOG_RETENTION_DAYS: int = 14
+    PUSH_SUBSCRIBER_RETENTION_DAYS: int = 90
+    ACADEMIC_CALENDAR_RETENTION_DAYS: int = 365
+    RETENTION_SWEEP_INTERVAL_MINUTES: int = 60
+    AGGREGATE_SIGNING_SECRET: str = ""
+    PRIVACY_CONTACT_EMAIL: str = ""
     FEATURE_PEER_CONNECT: bool = False
     FEATURE_SUPPORTER_SIGNUP: bool = False
 

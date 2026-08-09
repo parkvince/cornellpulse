@@ -3,6 +3,7 @@ export const RESOURCE_REVIEW_STATUSES = ["verified", "needs_review", "retired"] 
 
 export type ResourceCategory = typeof RESOURCE_CATEGORIES[number]
 export type ResourceReviewStatus = typeof RESOURCE_REVIEW_STATUSES[number]
+export type ResourceSecondReviewStatus = "pending" | "approved" | "changes_requested"
 export type ResourceCostType = "free" | "paid" | "varies"
 export type ResourceUrgency = "emergency" | "urgent" | "routine"
 export type ResourceEligibilityGroup = "anyone" | "cornell_student" | "cornell_community"
@@ -44,6 +45,7 @@ export interface ResourceRecord {
   textAction: ResourceTextAction | null
   url: string | null
   location: string
+  physicalAddress: string | null
   hours: string
   timezone: string
   accessInstructions: string
@@ -58,19 +60,35 @@ export interface ResourceRecord {
   officialSourceUrl: string
   verificationDate: string | null
   verifier: string
+  accountableOwner: string
+  secondReviewer: string
+  secondReviewStatus: ResourceSecondReviewStatus
+  secondReviewDate: string | null
+  correctionChannel: string
+  reviewCadenceDays: number
+  reviewDeadline: string
   reviewStatus: ResourceReviewStatus
   tags: string[]
 }
 
 type ResourceDecisionMetadata = Pick<ResourceRecord, "whatHappensNext" | "costType" | "urgency" | "eligibilityGroups" | "modalities" | "scope" | "appointmentRequirement" | "availability">
-type VerifiedResource = Omit<ResourceRecord, "verificationDate" | "verifier" | "reviewStatus" | keyof ResourceDecisionMetadata>
+type VerifiedResource = Omit<ResourceRecord, "verificationDate" | "verifier" | "reviewStatus" | "physicalAddress" | "accountableOwner" | "secondReviewer" | "secondReviewStatus" | "secondReviewDate" | "correctionChannel" | "reviewCadenceDays" | "reviewDeadline" | keyof ResourceDecisionMetadata>
+
+const PHYSICAL_ADDRESSES: Readonly<Record<string, string>> = {
+  cayuga_medical_er: "101 Dates Drive, Ithaca, NY 14850",
+  basic_needs: "109 McGraw Place, Ithaca, NY 14850",
+  identity_support: "626 Thurston Avenue, Ithaca, NY 14853",
+  financial_aid_emergency_fund: "203 Day Hall, Ithaca, NY 14853",
+  cornell_botanic_gardens: "124 Comstock Knoll Drive, Ithaca, NY 14850",
+  helen_newman_fitness: "163 Cradit Farm Road, Ithaca, NY 14850",
+}
 
 const RESOURCE_DECISIONS: Record<string, ResourceDecisionMetadata> = {
-  emergency_911: { whatHappensNext: "A dispatcher asks where you are and what is happening, then sends the appropriate emergency response.", costType: "free", urgency: "emergency", eligibilityGroups: ["anyone"], modalities: ["phone"], scope: "national", appointmentRequirement: "not_required", availability: { kind: "always" } },
-  cornell_public_safety: { whatHappensNext: "A Cornell dispatcher assesses the situation and coordinates campus police, fire, medical, or other public-safety response.", costType: "free", urgency: "emergency", eligibilityGroups: ["cornell_community"], modalities: ["phone"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "always" } },
+  emergency_911: { whatHappensNext: "A dispatcher asks where you are and what is happening, then sends the appropriate emergency response.", costType: "varies", urgency: "emergency", eligibilityGroups: ["anyone"], modalities: ["phone"], scope: "national", appointmentRequirement: "not_required", availability: { kind: "always" } },
+  cornell_public_safety: { whatHappensNext: "A Cornell telecommunications officer determines the appropriate Cornell public-safety response and dispatches available services within Cornell's jurisdiction.", costType: "free", urgency: "emergency", eligibilityGroups: ["cornell_community"], modalities: ["phone"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "always" } },
   "988_lifeline": { whatHappensNext: "A trained crisis counselor responds by phone, text, or chat to listen, assess immediate safety, and help identify next steps.", costType: "free", urgency: "urgent", eligibilityGroups: ["anyone"], modalities: ["phone", "text", "online"], scope: "national", appointmentRequirement: "not_required", availability: { kind: "always" } },
   cornell_health_247: { whatHappensNext: "The phone menu connects you with a medical or mental health provider for consultation and guidance about appropriate follow-up.", costType: "varies", urgency: "urgent", eligibilityGroups: ["cornell_student"], modalities: ["phone"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "always" } },
-  crisis_text_line: { whatHappensNext: "An automated response confirms receipt, then a volunteer Crisis Counselor joins the text conversation and helps you work toward a safer next step.", costType: "free", urgency: "urgent", eligibilityGroups: ["anyone"], modalities: ["text", "online"], scope: "national", appointmentRequirement: "not_required", availability: { kind: "always" } },
+  crisis_text_line: { whatHappensNext: "A live volunteer Crisis Counselor responds by text to listen, support you, and help you move toward a calmer, safer next step.", costType: "free", urgency: "urgent", eligibilityGroups: ["anyone"], modalities: ["text", "online"], scope: "national", appointmentRequirement: "not_required", availability: { kind: "always" } },
   cayuga_medical_er: { whatHappensNext: "Emergency Department staff triage the immediate concern and determine evaluation, treatment, observation, or referral needs.", costType: "varies", urgency: "emergency", eligibilityGroups: ["anyone"], modalities: ["phone", "in_person"], scope: "community", appointmentRequirement: "not_required", availability: { kind: "always" } },
   caps_access: { whatHappensNext: "A CAPS clinician spends about 20 minutes discussing your concern and recommends suitable Cornell Health or outside options; this visit is not counseling.", costType: "free", urgency: "routine", eligibilityGroups: ["cornell_student"], modalities: ["phone", "online", "in_person"], scope: "campus", appointmentRequirement: "required", availability: { kind: "variable" } },
   lets_talk: { whatHappensNext: "A counselor offers a brief informal consultation and may suggest services or next steps; it does not create an ongoing counseling relationship.", costType: "free", urgency: "routine", eligibilityGroups: ["cornell_student"], modalities: ["online", "in_person"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "variable" } },
@@ -83,14 +101,38 @@ const RESOURCE_DECISIONS: Record<string, ResourceDecisionMetadata> = {
   helen_newman_fitness: { whatHappensNext: "You confirm the activity’s current schedule and access requirement, then present the required Cornell ID, membership, or pass at the facility.", costType: "paid", urgency: "routine", eligibilityGroups: ["cornell_community"], modalities: ["in_person"], scope: "campus", appointmentRequirement: "not_required", availability: { kind: "variable" } },
 }
 
+const RESOURCE_VERIFICATION_DATE = "2026-08-09"
+
+function addUtcDays(date: string, days: number): string {
+  const result = new Date(`${date}T00:00:00Z`)
+  result.setUTCDate(result.getUTCDate() + days)
+  return result.toISOString().slice(0, 10)
+}
+
+function isRealIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
+
 function verifiedResource(resource: VerifiedResource): ResourceRecord {
   const decisionMetadata = RESOURCE_DECISIONS[resource.id]
   if (!decisionMetadata) throw new Error(`Missing decision metadata for resource: ${resource.id}`)
+  const isCrisisResource = decisionMetadata.urgency === "emergency" || decisionMetadata.urgency === "urgent"
+  const reviewCadenceDays = isCrisisResource ? 14 : 90
   return {
     ...resource,
     ...decisionMetadata,
-    verificationDate: "2026-08-03",
-    verifier: "CornellPulse official-source review",
+    physicalAddress: PHYSICAL_ADDRESSES[resource.id] || null,
+    verificationDate: RESOURCE_VERIFICATION_DATE,
+    verifier: "CornellPulse Official-Source Reviewer",
+    accountableOwner: isCrisisResource ? "CornellPulse Safety Resource Steward" : "CornellPulse Resource Registry Steward",
+    secondReviewer: isCrisisResource ? "CornellPulse Clinical Safety Reviewer" : "CornellPulse Resource QA Reviewer",
+    secondReviewStatus: "pending",
+    secondReviewDate: null,
+    correctionChannel: "Monitored privacy/operator contact configured by VITE_PRIVACY_CONTACT_EMAIL",
+    reviewCadenceDays,
+    reviewDeadline: addUtcDays(RESOURCE_VERIFICATION_DATE, reviewCadenceDays),
     reviewStatus: "verified",
   }
 }
@@ -100,10 +142,10 @@ export const RESOURCE_REGISTRY: readonly ResourceRecord[] = [
     id: "emergency_911", officialName: "911 emergency response", description: "Emergency response for an immediate threat to life or a medical, mental health, fire, or safety emergency.", category: "Crisis", eligibility: "Anyone in the United States experiencing or witnessing an immediate emergency.", cost: "Calling is free; costs for dispatched medical services can vary.", phone: "911", textAction: null, url: null, location: "United States", hours: "24/7", timezone: "America/New_York", accessInstructions: "Call 911 for immediate emergency response. CornellPulse cannot dispatch help.", officialSourceUrl: "https://health.cornell.edu/get-care/emergencies-after-hours-care", tags: ["crisis", "emergency", "24/7"],
   }),
   verifiedResource({
-    id: "cornell_public_safety", officialName: "Cornell Public Safety Communications Center", description: "Campus emergency dispatch and public-safety response, including Cornell Police.", category: "Crisis", eligibility: "Cornell community members and visitors needing response on or near the Ithaca campus.", cost: "No charge to call.", phone: "607-255-1111", textAction: null, url: "https://publicsafety.cornell.edu/resources", location: "Cornell Ithaca campus", hours: "24/7", timezone: "America/New_York", accessInstructions: "From a cell phone on the Ithaca campus, call 607-255-1111. Call 911 for an immediate emergency.", officialSourceUrl: "https://publicsafety.cornell.edu/resources", tags: ["crisis", "emergency", "on-campus", "24/7"],
+    id: "cornell_public_safety", officialName: "Cornell Public Safety Communications Center", description: "Cornell's 24/7 communications center dispatches Cornell Police, emergency medical, Community Response Team, and other campus responses.", category: "Crisis", eligibility: "Cornell community members and visitors reporting an incident within Cornell University's Ithaca jurisdiction.", cost: "No charge to call.", phone: "607-255-1111", textAction: null, url: "https://publicsafety.cornell.edu/resources", location: "Cornell Ithaca campus jurisdiction", hours: "24/7", timezone: "America/New_York", accessInstructions: "Call 911 for an immediate threat to life. Call 607-255-1111 any time to report an incident in Cornell's jurisdiction; outside Cornell's jurisdiction, use 911 for the appropriate local agency.", officialSourceUrl: "https://publicsafety.cornell.edu/public-safety-communications/report-incidents-and-crimes/", tags: ["crisis", "emergency", "on-campus", "24/7"],
   }),
   verifiedResource({
-    id: "988_lifeline", officialName: "988 Suicide & Crisis Lifeline", description: "Call or text 988 to connect with a trained crisis counselor. Call 911 for an immediate physical safety threat.", category: "Crisis", eligibility: "People in the United States seeking crisis or emotional support.", cost: "The 988 Lifeline is free; wireless carrier terms may still apply.", phone: "988", textAction: { number: "988", prefilledText: "Hello, I need support." }, url: "https://988lifeline.org", location: "Phone, text, or web", hours: "24/7", timezone: "America/New_York", accessInstructions: "Call or text 988, or use the official website for chat options.", officialSourceUrl: "https://988lifeline.org", tags: ["crisis", "24/7", "text"],
+    id: "988_lifeline", officialName: "988 Suicide & Crisis Lifeline", description: "Call, text, or chat 988 for mental health, suicide, substance-use, or emotional support. Call 911 for an immediate physical safety threat.", category: "Crisis", eligibility: "Anyone in the United States seeking support for themselves or someone else.", cost: "No payment or insurance information is required; standard mobile data rates may apply to texts.", phone: "988", textAction: { number: "988", prefilledText: "Hello, I need support." }, url: "https://988lifeline.org", location: "Phone, text, or web", hours: "24/7", timezone: "America/New_York", accessInstructions: "Call or text 988, or use 988lifeline.org for chat. 988 is support, not emergency dispatch.", officialSourceUrl: "https://www.samhsa.gov/mental-health/988/faqs", tags: ["crisis", "24/7", "text"],
   }),
   verifiedResource({
     id: "cornell_health_247", officialName: "Cornell Health 24/7 phone consultation", description: "Consult with a medical or mental health provider. This is consultation, not emergency dispatch.", category: "Cornell", eligibility: "Cornell students located within the United States.", cost: "Cornell Health does not list a charge for the phone consultation; follow-up care may have costs.", phone: "607-255-5155", textAction: null, url: "https://health.cornell.edu/get-care/247-phone-consultation", location: "Phone", hours: "24/7 phone consultation", timezone: "America/New_York", accessInstructions: "Call 607-255-5155 and follow the prompts. Call 911 for a medical or mental health emergency.", officialSourceUrl: "https://health.cornell.edu/get-care/247-phone-consultation", tags: ["health", "mental health", "24/7"],
@@ -121,7 +163,7 @@ export const RESOURCE_REGISTRY: readonly ResourceRecord[] = [
     id: "lets_talk", officialName: "Let’s Talk Drop-In Consultation", description: "A brief, informal consultation with a Cornell Health counselor; it is not counseling or urgent care.", category: "Cornell", eligibility: "Cornell students.", cost: "No charge.", phone: null, textAction: null, url: "https://health.cornell.edu/services/mental-health-care/lets-talk", location: "Campus locations and Zoom options vary by term", hours: "Schedule varies by term; check the current official page before attending", timezone: "America/New_York", accessInstructions: "Sessions are first-come, first-served and do not require an appointment. Use 911, 988, or Cornell Health for urgent or emergency needs.", officialSourceUrl: "https://health.cornell.edu/services/mental-health-care/lets-talk", tags: ["drop-in", "mental health"],
   }),
   verifiedResource({
-    id: "ears", officialName: "EARS Peer Mentoring", description: "Informal student-to-student listening, support, and referral for topics common to the student experience; this is peer mentoring, not counseling.", category: "Cornell", eligibility: "Currently enrolled Cornell undergraduate, graduate, and professional students.", cost: "No charge for drop-in peer mentoring.", phone: null, textAction: null, url: "https://mentalhealth.cornell.edu/node/141", location: "Current Cornell page lists North Campus, Central Campus, and Collegetown drop-in locations", hours: "Tuesday, Wednesday, and Thursday evenings during scheduled drop-in periods", timezone: "America/New_York", accessInstructions: "No appointment is required. Check the linked official schedule before attending; use professional crisis services for clinical concerns or thoughts of suicide.", officialSourceUrl: "https://mentalhealth.cornell.edu/node/141", tags: ["peer", "talk"],
+    id: "ears", officialName: "EARS Peer Mentoring", description: "Informal student-to-student listening, support, and referral for topics common to the student experience; this is peer mentoring, not counseling.", category: "Cornell", eligibility: "Cornell students seeking informal peer mentoring.", cost: "No fee is listed for drop-in peer mentoring.", phone: null, textAction: null, url: "https://mentalhealth.cornell.edu/node/141", location: "North Campus, Central Campus, and Collegetown locations listed on the current Cornell page", hours: "Tuesday, Wednesday, and Thursday evenings during scheduled drop-in periods", timezone: "America/New_York", accessInstructions: "No appointment is listed. Check the official detailed schedule before attending; use 911, 988, or Cornell Health rather than EARS for urgent or clinical support.", officialSourceUrl: "https://mentalhealth.cornell.edu/node/141", tags: ["peer", "talk"],
   }),
   verifiedResource({
     id: "learning_strategies", officialName: "Learning Strategies Center", description: "Academic support including study-skills resources, supplemental courses, tutoring, and learning support programs.", category: "Cornell", eligibility: "Program eligibility varies; many services focus on Cornell undergraduate students.", cost: "Many listed resources and drop-in tutoring options are free; course or program rules vary.", phone: null, textAction: null, url: "https://lsc.cornell.edu", location: "Programs use multiple campus and online locations", hours: "Varies by program and academic term", timezone: "America/New_York", accessInstructions: "Review the current program page and schedule before attending or enrolling.", officialSourceUrl: "https://lsc.cornell.edu", tags: ["academics", "learning"],
@@ -133,7 +175,7 @@ export const RESOURCE_REGISTRY: readonly ResourceRecord[] = [
     id: "identity_support", officialName: "Cornell LGBT Resource Center", description: "Community, advocacy, education, and support for LGBTQ+ Cornell students and community members.", category: "Cornell", eligibility: "Cornell students and community members seeking LGBT Resource Center programs or support.", cost: "No fee is listed for visiting the center or contacting staff; individual programs may have separate terms.", phone: "607-254-4987", textAction: null, url: "https://scl.cornell.edu/LGBTRC", location: "626 Thurston Avenue, third floor, Ithaca, NY 14853", hours: "Staff: Mon–Fri 9 a.m.–5 p.m.; building: Mon–Thu 9 a.m.–8 p.m., Fri 9 a.m.–7 p.m.; closed weekends", timezone: "America/New_York", accessInstructions: "Visit the official page for current programs or contact lgbtrc@cornell.edu.", officialSourceUrl: "https://scl.cornell.edu/LGBTRC", tags: ["identity", "belonging", "lgbtq"],
   }),
   verifiedResource({
-    id: "financial_aid_emergency_fund", officialName: "Cornell University Emergency Fund", description: "Grants for urgent, unanticipated expenses that could prevent an eligible student from continuing their education.", category: "Cornell", eligibility: "Currently enrolled Cornell students; priority is given to students with significant financial need, and additional fund-specific rules apply.", cost: "This is grant funding, not a paid service; grants are typically limited to $500 per academic year.", phone: "607-255-5145", textAction: null, url: "https://finaid.cornell.edu/emergency-funds", location: "Office of Financial Aid and Student Employment, 203 Day Hall", hours: "Office: Mon–Thu 10 a.m.–1 p.m. and 2–4 p.m.; phone and virtual assistance: Mon–Fri during those hours", timezone: "America/New_York", accessInstructions: "Review the current criteria and submit the application linked from the official page; funding is not guaranteed.", officialSourceUrl: "https://finaid.cornell.edu/emergency-funds", tags: ["financial", "emergency"],
+    id: "financial_aid_emergency_fund", officialName: "CU Emergency Fund", description: "Cornell-administered grants for urgent, unanticipated expenses beyond the standard cost of attendance for currently enrolled students.", category: "Cornell", eligibility: "Currently enrolled Cornell students; priority is given to students with significant financial need, and fund-specific rules apply.", cost: "This is grant funding, not a paid service; grants are typically limited to $500 per academic year.", phone: "607-255-5145", textAction: null, url: "https://finaid.cornell.edu/emergency-funds", location: "Office of Financial Aid and Student Employment, 203 Day Hall", hours: "Office: Mon–Thu 10 a.m.–1 p.m. and 2–4 p.m.; phone and virtual assistance: Mon–Fri during those hours", timezone: "America/New_York", accessInstructions: "Review current criteria and submit the linked Request for CU Emergency Fund Application. Funding is limited and not guaranteed.", officialSourceUrl: "https://finaid.cornell.edu/emergency-funds", tags: ["financial", "emergency"],
   }),
   verifiedResource({
     id: "cornell_botanic_gardens", officialName: "Cornell Botanic Gardens", description: "Gardens, natural areas, and trails operated by Cornell Botanic Gardens.", category: "Stress Relief", eligibility: "Open to visitors, subject to location conditions, closures, and posted rules.", cost: "Gardens and natural areas are free; weekday metered parking near the Nevin Welcome Center costs $1.50 per hour.", phone: "607-255-2400", textAction: null, url: "https://cornellbotanicgardens.org/visit/visitor-faq/", location: "Nevin Welcome Center, 124 Comstock Knoll Drive, Ithaca, NY 14850", hours: "Gardens and natural areas: dawn to dusk daily, year-round; Welcome Center hours are seasonal", timezone: "America/New_York", accessInstructions: "Check current seasonal hours, closures, accessibility information, and parking rules before visiting.", officialSourceUrl: "https://cornellbotanicgardens.org/visit/visitor-faq/", tags: ["nature", "outdoor", "local"],
@@ -170,13 +212,16 @@ export function validateResourceRegistry(records: readonly ResourceRecord[] = RE
     if (!/^[a-z0-9]+(?:_[a-z0-9]+)*$/.test(resource.id)) errors.push(`${prefix}: id must be a stable snake_case identifier`)
     if (ids.has(resource.id)) errors.push(`${prefix}: duplicate id`)
     ids.add(resource.id)
-    for (const field of ["officialName", "description", "eligibility", "cost", "location", "hours", "timezone", "accessInstructions", "whatHappensNext", "officialSourceUrl", "verifier"] as const) {
+    for (const field of ["officialName", "description", "eligibility", "cost", "location", "hours", "timezone", "accessInstructions", "whatHappensNext", "officialSourceUrl", "verifier", "accountableOwner", "secondReviewer", "correctionChannel"] as const) {
       if (typeof resource[field] !== "string" || !resource[field].trim()) errors.push(`${prefix}: ${field} is required`)
     }
     if (!RESOURCE_CATEGORIES.includes(resource.category)) errors.push(`${prefix}: invalid category`)
     if (!RESOURCE_REVIEW_STATUSES.includes(resource.reviewStatus)) errors.push(`${prefix}: invalid reviewStatus`)
+    if (!["pending", "approved", "changes_requested"].includes(resource.secondReviewStatus)) errors.push(`${prefix}: invalid secondReviewStatus`)
     if (!isHttpUrl(resource.officialSourceUrl)) errors.push(`${prefix}: officialSourceUrl must be an HTTP(S) URL`)
     if (resource.url !== null && !isHttpUrl(resource.url)) errors.push(`${prefix}: url must be null or an HTTP(S) URL`)
+    if (resource.physicalAddress !== null && (typeof resource.physicalAddress !== "string" || !resource.physicalAddress.trim())) errors.push(`${prefix}: physicalAddress must be null or a non-empty address`)
+    if (resource.physicalAddress && !resource.modalities.includes("in_person")) errors.push(`${prefix}: physicalAddress requires in-person modality`)
     if (resource.phone !== null && !/^[0-9-]+$/.test(resource.phone)) errors.push(`${prefix}: phone has an invalid format`)
     if (resource.textAction && (!/^[0-9]+$/.test(resource.textAction.number) || !resource.textAction.prefilledText.trim())) errors.push(`${prefix}: malformed textAction`)
     if (!Array.isArray(resource.tags) || resource.tags.length === 0 || resource.tags.some(tag => typeof tag !== "string" || !tag.trim())) errors.push(`${prefix}: tags must contain non-empty strings`)
@@ -195,15 +240,33 @@ export function validateResourceRegistry(records: readonly ResourceRecord[] = RE
     }
     try { new Intl.DateTimeFormat("en-US", { timeZone: resource.timezone }).format() } catch { errors.push(`${prefix}: invalid IANA timezone`) }
     if (resource.verificationDate !== null) {
-      const dateMatches = /^\d{4}-\d{2}-\d{2}$/.test(resource.verificationDate)
-      const parsedDate = dateMatches ? new Date(`${resource.verificationDate}T00:00:00Z`) : null
-      if (!dateMatches || !parsedDate || Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== resource.verificationDate) errors.push(`${prefix}: verificationDate must be a real YYYY-MM-DD date or null`)
+      if (!isRealIsoDate(resource.verificationDate)) errors.push(`${prefix}: verificationDate must be a real YYYY-MM-DD date or null`)
     }
+    if (!Number.isInteger(resource.reviewCadenceDays) || resource.reviewCadenceDays < 1 || resource.reviewCadenceDays > 365) errors.push(`${prefix}: reviewCadenceDays must be 1 to 365`)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(resource.reviewDeadline) || Number.isNaN(new Date(`${resource.reviewDeadline}T00:00:00Z`).getTime())) errors.push(`${prefix}: reviewDeadline must be a real YYYY-MM-DD date`)
+    if (resource.verificationDate && resource.reviewDeadline <= resource.verificationDate) errors.push(`${prefix}: reviewDeadline must be after verificationDate`)
+    if (resource.verificationDate && isRealIsoDate(resource.verificationDate) && resource.reviewDeadline !== addUtcDays(resource.verificationDate, resource.reviewCadenceDays)) errors.push(`${prefix}: reviewDeadline must equal verificationDate plus reviewCadenceDays`)
+    if ((resource.urgency === "emergency" || resource.urgency === "urgent") && resource.reviewCadenceDays > 30) errors.push(`${prefix}: crisis and urgent resources require a cadence of 30 days or less`)
+    if (resource.secondReviewer === resource.verifier || resource.secondReviewer === resource.accountableOwner) errors.push(`${prefix}: secondReviewer must be independent of verifier and owner`)
+    if (resource.secondReviewStatus === "approved" && resource.secondReviewDate === null) errors.push(`${prefix}: approved second review requires secondReviewDate`)
+    if (resource.secondReviewStatus !== "approved" && resource.secondReviewDate !== null) errors.push(`${prefix}: only approved second reviews may have secondReviewDate`)
     if (resource.reviewStatus === "verified" && resource.verificationDate === null) errors.push(`${prefix}: verified records require verificationDate`)
     if (resource.reviewStatus === "needs_review" && resource.verificationDate !== null) errors.push(`${prefix}: needs_review records must not imply a completed verification`)
     if (!resource.phone && !resource.textAction && !resource.url) errors.push(`${prefix}: at least one contact or access action is required`)
   }
   return errors
+}
+
+export function resourceStalenessWarnings(records: readonly ResourceRecord[] = RESOURCE_REGISTRY, now = new Date()): string[] {
+  const warningThreshold = new Date(now.getTime() + 7 * 86_400_000).toISOString().slice(0, 10)
+  return records
+    .filter(resource => resource.reviewStatus !== "retired" && resource.reviewDeadline <= warningThreshold)
+    .map(resource => `${resource.id}: review due ${resource.reviewDeadline}; owner ${resource.accountableOwner}`)
+}
+
+export function expiredResourceRecords(records: readonly ResourceRecord[] = RESOURCE_REGISTRY, now = new Date()): ResourceRecord[] {
+  const today = now.toISOString().slice(0, 10)
+  return records.filter(resource => resource.reviewStatus === "verified" && resource.reviewDeadline < today)
 }
 
 const registryErrors = validateResourceRegistry()

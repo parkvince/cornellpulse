@@ -58,3 +58,19 @@ test("inaccurate legacy privacy claims cannot return to frontend source", () => 
   ]
   for (const claim of prohibitedClaims) assert.equal(source.includes(claim), false, `Prohibited privacy claim returned: ${claim}`)
 })
+
+test("privacy UI and policy materials disclose implemented retention, logs, backups, and limits", () => {
+  const privacyPage = readFileSync(join(process.cwd(), "src", "pages", "PrivacyPage.tsx"), "utf8")
+  const policy = readFileSync(join(process.cwd(), "..", "PRIVACY_POLICY.md"), "utf8")
+  const consent = readFileSync(join(process.cwd(), "..", "CONSENT_MATERIALS.md"), "utf8")
+  for (const required of ["30 days", "two days", "14 days", "90 days", "365 days", "Backups", "cannot be linked back", "no active Redis integration", "privacy/legal approval is pending"]) {
+    assert.ok(privacyPage.includes(required), `Privacy UI must disclose: ${required}`)
+  }
+  const normalizedPolicy = policy.toLowerCase()
+  for (const required of ["campus-wide utc-date count", "immutable/offline backups", "provider acceptance is not proof of delivery"]) {
+    assert.ok(normalizedPolicy.includes(required), `Policy must disclose: ${required}`)
+  }
+  assert.match(policy, /DRAFT PENDING PRIVACY\/LEGAL APPROVAL/)
+  assert.match(consent, /unchecked by default/)
+  assert.match(consent, /does not authorize transmission/)
+})

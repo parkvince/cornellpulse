@@ -51,14 +51,14 @@ test("matching in-flight idempotent mutations submit only once", async () => {
   assert.equal(calls, 1)
 })
 
-test("aggregate request sends four fields and a separate idempotency header", async () => {
+test("aggregate request sends only a completion event and a separate idempotency header", async () => {
   let body = ""
   let header = ""
-  await submitAggregateContribution({ mood_score: 6, sleep_category: "6_to_8", workload_category: "moderate", college: "engineering" }, async (_input, init) => {
+  await submitAggregateContribution({ event: "checkin_completed", consent_granted: true }, async (_input, init) => {
     body = String(init?.body)
     header = new Headers(init?.headers).get("X-Idempotency-Key") || ""
     return json({ aggregate_updated: true })
   }, "https://example.invalid/api/v1", "0f19f4a2-c4e4-4d4b-8d8e-c75b34ac63b6")
-  assert.deepEqual(Object.keys(JSON.parse(body)).sort(), ["college", "mood_score", "sleep_category", "workload_category"])
+  assert.deepEqual(JSON.parse(body), { event: "checkin_completed", consent_granted: true })
   assert.equal(header, "0f19f4a2-c4e4-4d4b-8d8e-c75b34ac63b6")
 })

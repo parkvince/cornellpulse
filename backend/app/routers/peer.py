@@ -98,11 +98,15 @@ def require_peer_connect() -> None:
 def require_supporter_signup() -> None:
     if not settings.FEATURE_SUPPORTER_SIGNUP:
         raise HTTPException(status_code=503, detail="Supporter signup is unavailable pending safety review.")
+    if peer_readiness_blockers():
+        raise HTTPException(status_code=503, detail="Supporter signup cannot start because the launch-readiness gate is incomplete.")
 
 
 def require_peer_workflow() -> None:
     if not settings.FEATURE_PEER_CONNECT and not settings.FEATURE_SUPPORTER_SIGNUP:
         raise HTTPException(status_code=503, detail="Peer workflows are unavailable pending safety review.")
+    if peer_readiness_blockers():
+        raise HTTPException(status_code=503, detail="Peer workflows cannot start because the launch-readiness gate is incomplete.")
 
 
 def _safe_text(value: str, label: str) -> str:

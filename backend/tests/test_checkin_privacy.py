@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -6,16 +6,14 @@ from fastapi import HTTPException, Request
 from pydantic import ValidationError
 
 from app.models.schemas import AggregateContributionRequest
-from app.models.db_models import AggregateContributionReceipt, CampusHourAggregate, CollegeHourAggregate
+from app.models.db_models import AggregateContributionReceipt, CampusDailyAggregate
 from app.routers.checkin import contribute_checkin_aggregate
 
 
 def make_request() -> AggregateContributionRequest:
     return AggregateContributionRequest(
-        mood_score=5,
-        sleep_category="6_to_8",
-        workload_category="moderate",
-        college="engineering",
+        event="checkin_completed",
+        consent_granted=True,
     )
 
 
@@ -23,7 +21,10 @@ def make_request() -> AggregateContributionRequest:
 async def test_aggregate_endpoint_writes_only_the_validated_minimum_fields():
     request = make_request()
     db = AsyncMock()
-    db.execute.return_value.scalar_one_or_none.return_value = None
+    db.add = MagicMock()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    db.execute.return_value = result
     http_request = Request({"type": "http", "client": ("127.0.0.1", 12345), "headers": []})
     with (
         patch("app.routers.checkin.update_aggregates", new_callable=AsyncMock) as update_aggregates,
@@ -32,7 +33,8 @@ async def test_aggregate_endpoint_writes_only_the_validated_minimum_fields():
         response = await contribute_checkin_aggregate(request, http_request, uuid4(), db=db)
 
     assert response.aggregate_updated is True
-    update_aggregates.assert_awaited_once_with(request=request, db=db)
+    update_aggregates.assert_awaited_once()
+    assert update_aggregates.await_args.kwargs["db"] is db
     limiter.assert_awaited_once()
     receipt = db.add.call_args.args[0]
     assert isinstance(receipt, AggregateContributionReceipt)
@@ -43,7 +45,9 @@ async def test_aggregate_endpoint_writes_only_the_validated_minimum_fields():
 @pytest.mark.asyncio
 async def test_duplicate_aggregate_is_rejected_before_inflating_counts():
     db = AsyncMock()
-    db.execute.return_value.scalar_one_or_none.return_value = uuid4()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = uuid4()
+    db.execute.return_value = result
     http_request = Request({"type": "http", "client": ("127.0.0.1", 12345), "headers": []})
     with (
         patch("app.routers.checkin.update_aggregates", new_callable=AsyncMock) as update_aggregates,
@@ -58,19 +62,20 @@ async def test_duplicate_aggregate_is_rejected_before_inflating_counts():
 
 
 def test_aggregate_request_schema_has_no_sensitive_or_tracking_fields():
-    assert set(AggregateContributionRequest.model_fields) == {
-        "mood_score",
-        "sleep_category",
-        "workload_category",
-        "college",
-    }
+    assert set(AggregateContributionRequest.model_fields) == {"event", "consent_granted"}
 
 
 def test_aggregate_database_tables_have_no_free_text_column():
-    for model in (CollegeHourAggregate, CampusHourAggregate, AggregateContributionReceipt):
+    for model in (CampusDailyAggregate, AggregateContributionReceipt):
         columns = {column.name for column in model.__table__.columns}
         assert "free_text" not in columns
         assert "session_token" not in columns
+        assert "mood_sum" not in columns
+        assert "sleep_score_sum" not in columns
+        assert "workload_score_sum" not in columns
+        assert "college" not in columns
+        assert "hour_bucket" not in columns
+    assert set(CampusDailyAggregate.__table__.columns.keys()) == {"id", "day_bucket", "check_in_count", "created_at", "updated_at"}
 
 
 @pytest.mark.parametrize(
@@ -79,12 +84,15 @@ def test_aggregate_database_tables_have_no_free_text_column():
 )
 def test_aggregate_request_rejects_free_text_and_nonaggregate_fields(extra_field):
     payload = {
-        "mood_score": 5,
-        "sleep_category": "6_to_8",
-        "workload_category": "moderate",
-        "college": "engineering",
+        "event": "checkin_completed",
+        "consent_granted": True,
         extra_field: "SENSITIVE_CANARY",
     }
 
     with pytest.raises(ValidationError):
         AggregateContributionRequest(**payload)
+
+
+def test_aggregate_request_requires_affirmative_consent():
+    with pytest.raises(ValidationError):
+        AggregateContributionRequest(event="checkin_completed", consent_granted=False)

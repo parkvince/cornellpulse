@@ -1,55 +1,109 @@
-# CornellPulse final launch audit — 2026-08-03
+# CornellPulse final launch audit — 2026-08-09
 
-## Verdict
+Audit version: **2026-08-09.1**
 
-**FAIL for public release.** The local remediation is materially stronger and the frontend gates pass, but this checkout cannot be called releasable until the updated backend suite, full browser/axe/device matrix, current dependency scanners, production dependency probes, and the external clinical/privacy/Cornell approvals below are completed. Peer Connect remains publicly disabled.
+## Final verdict
 
-Status meanings: **PASS** means the checked implementation and available evidence passed locally. **FAIL** means required release evidence is missing or a gate could not run. **EXTERNAL SIGNOFF NEEDED** means code cannot substitute for the named qualified reviewer or production integration.
+**FAIL for public release.** The locally executable technical suite passes, the Android debug project assembles, the resource registry has a current first-party-source review, and safety-sensitive public flags remain locked off. Public release is still blocked by staging/production execution, real-device and assistive-technology evidence, an authorized Cornell identity integration, independent resource second review, named human operators, and the six external review approvals. Peer Connect, supporter signup, and public Admin remain disabled.
 
-## Full launch checklist
+Status meanings:
 
-| # | Area | Status | Evidence |
+- **PASS** — current evidence proves this locally scoped criterion.
+- **FAIL** — a required technical or operational exercise has not been completed in its target environment.
+- **EXTERNAL SIGN-OFF NEEDED** — implementation and an approval packet exist, but an authorized independent reviewer has not approved it.
+
+## Complete 41-item launch checklist
+
+| # | Criterion | Status | Evidence and boundary |
 | --- | --- | --- | --- |
-| 1 | Safe baseline and feature flags | PASS | Central flags remain default-off in `frontend/src/config/featureFlags.ts` and `backend/app/config.py`; disabled routes use the safety-review screen and a custom 404 is routed in `frontend/src/App.tsx`. |
-| 2 | Server-side administrator security | PASS (implementation) / FAIL (final rerun) | HttpOnly signed short sessions, bcrypt hash configuration, login throttling, logout, authorization dependencies, production validation, and protected endpoint tests exist in `backend/app/auth.py`, `backend/app/routers/admin_auth.py`, and `backend/tests/test_admin_auth.py`. The changed Python suite could not be rerun in this environment. |
-| 3 | Administrator frontend states | PASS | `frontend/src/api/admin.ts` validates status and shape, includes cookies, and distinguishes expired, unauthorized, rate-limited, maintenance, network, and unexpected errors. `frontend/src/pages/AdminPage.tsx` exposes loading/empty/error states and confirmation for destructive actions. |
-| 4 | Privacy inventory and consent | PASS (implementation) / EXTERNAL SIGNOFF NEEDED | `PRIVACY_DATA_INVENTORY.md`, `MEASUREMENT_PLAN.md`, and the in-app privacy page cover local/server stores, retention, deletion limits, third parties, and opt-in choices. Privacy/legal review is still required; no compliance claim is made. |
-| 5 | On-device check-in privacy | PASS | Free text is excluded from drafts, requests, persistence, analytics, logs, Redis, and database schemas; only four aggregate fields can be contributed after opt-in. Privacy regression tests passed. |
-| 6 | Crisis and recommendation safety | PASS (implementation) / EXTERNAL SIGNOFF NEEDED | Local routing separates crisis from ordinary recommendations, uses qualified wording, handles tested negation/boundaries, and exposes 911/988/Cornell Health/Public Safety actions. `SAFETY_REVIEW.md` correctly requires licensed mental-health and Cornell Health review. |
-| 7 | Typed resource registry | PASS | One 15-record registry validates at build time; schema, duplicate, orphan, consumer, deep-link, and verification tests passed. |
-| 8 | Official-source resource accuracy | PASS for standing claims / EXTERNAL SIGNOFF NEEDED for dynamic claims | Refreshed against direct official pages on 2026-08-03; see `RESOURCE_AUDIT_2026-08-02.md`. CAPS downstream prices and an unconfirmed temporary LSC office were removed. Term schedules, closures, and clinical wording still require operator review. |
-| 9 | Resource decision directory | PASS | Timezone-aware availability, 24/7 handling, decision filters, search, details, direct SMS actions, deep links, and operational states are covered by passing resource tests. |
-| 10 | Accessible check-in flow | PASS (static/component) / FAIL (device execution) | Intentional mood selection, native fieldsets/labels, draft preservation, focus/scroll behavior, and validation tests passed. The six-viewport Playwright matrix was discovered but could not execute here. |
-| 11 | Actionable results | PASS | Results provide 2–3 qualified options, supported direct actions, local save/next-step choice, cost/eligibility/hours/verification, offline handling, and crisis/no-result/malformed-resource tests. |
-| 12 | History & Privacy follow-up | PASS | Local trends, plans, reminders, follow-up, export, deletion, retention, and consent-gated minimized counters passed unit tests; no account or raw-answer upload is implied. |
-| 13 | Peer privacy/security backend | EXTERNAL SIGNOFF NEEDED | Immutable IDs, private/public field separation, encrypted PII, role authorization, audit/retention/deletion, validation, and persistent controls exist. Migrations, identity integration, production topology, and privacy/security review are not externally verified. Public flag remains off. |
-| 14 | Supporter onboarding | EXTERNAL SIGNOFF NEEDED | State machine, policy/training boundaries, consent-based reference invitations, withdrawal, and permission tests exist. Cornell identity, training ownership, conduct, and approval remain external launch gates. |
-| 15 | Double-opt-in connection flow | EXTERNAL SIGNOFF NEEDED | Contact-free request/accept lifecycle, relay, cancel/decline/expire/block/report states, safe locations, and lifecycle tests exist. Production identity/relay/email behavior and concurrency require staging evidence. |
-| 16 | Moderation and safety operations | EXTERNAL SIGNOFF NEEDED | Triage, assignment, encrypted notes, resolution, suspension/reinstatement, blocking, audit history, retention, truthful notification states, and the readiness gate are documented in `PEER_SAFETY_OPERATIONS.md`. Cornell-independent operations staffing and shutdown approval are outstanding. |
-| 17 | Fetch/mutation/dependency reliability | PASS (implementation) / FAIL (integration rerun) | All frontend network calls use typed clients with timeout, safe-GET-only retry, shape/status checks, mutation deduplication, and explicit errors. Aggregate receipts plus persistent limits prevent ordinary duplicate inflation. PostgreSQL/Redis/config readiness probes and truthful email acceptance states have outage tests, but the updated backend integration suite and real dependencies were not run. |
-| 18 | Accessibility, devices, and PWA | PASS (static) / FAIL (live assistive-tech/device evidence) | Zoom restrictions removed; landmarks, names, focus, modal trap/Escape/restore, live announcements, reduced motion, safe areas, keyboard handling, AA-safe primary text colors, touch targets, manifest/icons/service worker, hardened Android config, and an iOS project are present. Static tests pass. Browser/axe execution was blocked; iOS/VoiceOver was not tested on Windows. |
-| 19 | Engineering/release standards | PASS for frontend / FAIL overall | Frontend lint, TypeScript, 65 tests, production build, 15-record schema validation, secret scan, and `git diff --check` pass. Bundle is 484.34 kB (130.58 kB gzip), down from the 500.34 kB baseline. Orphan components/assets/dependencies and the abandoned Expo scaffold were removed. Current npm/Python vulnerability scans and the updated backend suite remain unavailable. |
-| 20 | Fresh live final audit | FAIL | Production preview returned HTTP 200 for onboarding/root, home, check-in, resources, a resource deep link, history, privacy, disabled Peer/Admin routes, 404 fallback, and manifest. The in-app browser was explicitly blocked from localhost and Playwright browser execution could not start, so visual interaction, axe, keyboard, screen-reader, and responsive claims are not certified. |
+| 1 | Central safety feature flags | PASS | `frontend/src/config/featureFlags.ts` and `backend/app/config.py`; frontend release-approval constants and backend readiness blockers prevent environment flags alone from enabling safety-sensitive features. Frontend release-gate and backend feature-flag tests pass. |
+| 2 | Disabled routes and 404 | PASS | `/peer`, `/peer/signup`, `/peer/reference`, and `/admin` show the intentional safety-review screen; unknown routes show the custom 404. Verified at six viewports in Playwright and the local walkthrough. |
+| 3 | Server-side administrator authentication | PASS | Short-lived signed HttpOnly sessions, bcrypt hash from environment, secure production cookie validation, rate-limited login, logout, and no browser-bundle credential comparison. Covered by backend auth tests and tracked/bundle secret scan. |
+| 4 | Administrative authorization boundaries | PASS | Every administrative read/mutation requires administrator authorization; unauthenticated approve, resolve, report, read, and delete attempts are covered in the 102-test backend suite. |
+| 5 | Administrator frontend API states | PASS | Secure credentialed requests and explicit loading, empty, unauthorized/expired, rate-limited, maintenance, network, unexpected-error, and destructive-confirmation behavior are covered by frontend tests. The public route remains disabled. |
+| 6 | CORS and production secret validation | PASS | CORS is an origin control, not authentication. Production startup rejects unsafe/missing admin, aggregate, encryption, origin, and contact configuration; backend tests pass. A deployment exercise is separately row 39. |
+| 7 | Data inventory | PASS | `PRIVACY_DATA_INVENTORY.md` covers device storage, PostgreSQL, rate-limit state, Redis status, logs, email, processors, analytics, supporter/reference/peer data, aggregate counts, and backups. |
+| 8 | Privacy policy and consent materials | PASS | `PRIVACY_POLICY.md`, `CONSENT_MATERIALS.md`, and the in-app Privacy & Data screen match current fields, thresholds, retention, deletion limits, logs, backups, processor gaps, and contact fail-closed behavior. Frontend privacy regression tests pass. |
+| 9 | Privacy and legal approval | EXTERNAL SIGN-OFF NEEDED | `review-packets/PRIVACY_LEGAL_REVIEW.md` is complete but unsigned. No legal-compliance claim is made. |
+| 10 | On-device free-text boundary | PASS | Free text remains only in current page memory, is absent from session/local storage and requests, and is cleared after local recommendation. Frontend and backend privacy tests prohibit request, database, Redis, analytics, and log sinks. |
+| 11 | Aggregate privacy minimization | PASS | Opt-in request contains only `checkin_completed`, consent `true`, and a one-time idempotency header. Server stores a UTC-day campus completion count and short-lived keyed receipt, never mood/sleep/workload/college/hour cells. Migration irreversibly drops legacy sensitive aggregate tables. |
+| 12 | Automated retention and deletion | PASS | Hourly retention covers 30-day aggregates/clicks, 2-day receipts, 90-day inactive push rows, 365-day calendar cache, expired rate limits, and configured peer records. Backend retention tests pass; target-environment scheduling is row 39. |
+| 13 | Monitored privacy-contact fail-closed gate | PASS | Production validation and peer readiness require a non-placeholder monitored privacy contact; the in-app page exposes an alert when absent. Identifiable features remain disabled locally. |
+| 14 | Crisis separation and emergency actions | PASS | Crisis routing is separate from ordinary recommendations and exposes distinct 911, 988, Cornell Health, and Cornell Public Safety language/actions. Crisis, negation, boundary, empty, and ambiguous unit tests plus Playwright crisis flow pass. |
+| 15 | Qualified non-clinical recommendation wording | PASS | “Best match,” diagnosis, validation, and certainty claims are absent; 2–3 options explain why they may fit. Automated clinical-language regressions pass. |
+| 16 | Licensed clinical/Cornell Health approval | EXTERNAL SIGN-OFF NEEDED | `review-packets/CLINICAL_SAFETY_REVIEW.md` is complete but unsigned. Automated phrase tests are not clinical validation. |
+| 17 | Typed resource source of truth | PASS | All screens and recommendation logic consume 15 validated records from `frontend/src/resources/registry.ts`; malformed, duplicate, orphaned, and unsupported claims fail tests/build. |
+| 18 | Current authoritative resource verification | PASS | `RESOURCE_AUDIT_2026-08-09.md` records all 15 first-pass checks against official Cornell, government, hospital, park, or provider pages, corrections, source, verifier role, date, next review, owner, second reviewer, and correction channel. Dynamic facts still require scheduled re-review. |
+| 19 | Resource maintenance schedule and alerts | PASS | `RESOURCE_UPDATE_WORKFLOW.md`, daily CI, schema validation, 14-day crisis and 90-day routine deadlines, seven-day alerts, hard expiry failures, and 17-link automation are present. SAMHSA returns HTTP 403 to automation and therefore has documented manual-source verification rather than a false automated pass. |
+| 20 | Independent second resource review | EXTERNAL SIGN-OFF NEEDED | Every registry record names a second-review role, but all 15 statuses remain `pending`; no independent reviewer has signed them. |
+| 21 | Decision-oriented directory | PASS | Cost, urgency, eligibility, modality, scope, appointment, category, search, timezone-aware Open now, 24/7 handling, loading/no-results/offline/stale states, and count consistency pass unit/E2E tests. |
+| 22 | Resource detail and direct-action integrity | PASS | Details expose cost, eligibility, next step, source, verification/deadline, and supported actions. Directions use only structured unambiguous street addresses; CAPS has none and Botanic Gardens has one. E2E regression passes across six projects. |
+| 23 | Check-in semantics and input behavior | PASS | Intentional mood choice, fieldsets/legends/labels, native radio/checkbox state, validation, focus, Back preservation, real app-container scrolling, and pointer/keyboard behavior pass unit and six-project E2E tests without force clicking. |
+| 24 | Actionable result plan | PASS | Qualified options, supported call/text/book/directions/site/save actions, local next-step selection, unavailable/malformed/no-result/offline behavior, and local-only feedback are tested. |
+| 25 | Private history and follow-up | PASS | Local trends, save/complete/dismiss/replace, reminders, follow-up, 20-plan limit, configurable retention, export, and deletion pass frontend and E2E tests; raw answers are not uploaded. |
+| 26 | Consent-gated measurement | PASS | Aggregate, resource-click, and local product measurement choices default off. Tests constrain fields and prevent free text, raw answers, names, emails, and phone numbers. |
+| 27 | Peer backend privacy and authorization | PASS | Immutable IDs, public/private serialization, encrypted PII/notes/relay, role authorization, audit/status history, deletion/withdrawal, validation, injection defenses, and persistent rate limits pass locally. Public Peer remains off. |
+| 28 | Cornell affiliation and identity authorization | EXTERNAL SIGN-OFF NEEDED | `review-packets/CORNELL_AFFILIATION_IDENTITY_REVIEW.md` is unsigned and no Cornell-authorized IdP is integrated. Manual development evidence is deliberately production-ineligible. |
+| 29 | Supporter onboarding workflow | PASS | Draft-to-terminal state machine, identity/reference/training/review gates, consent-based reference invitation, no reference phone requirement, privacy serializers, and transition/permission tests pass locally. |
+| 30 | Peer training and safety review | EXTERNAL SIGN-OFF NEEDED | `review-packets/PEER_TRAINING_SAFETY_REVIEW.md` is unsigned. No supporter is represented as trained or vetted without verifiable completion. |
+| 31 | Double-consent connection and relay | PASS | Request/cancel/accept/decline/expire/block/report lifecycle, contact-free encrypted relay, safe public place/window registry, truthfully confirmed server states, and authorization tests pass locally. |
+| 32 | Moderation, reporting, and notification truthfulness | PASS | Severity, assignment, encrypted notes/resolution, suspension/reinstatement, blocking, audit history, retention, duplicate/spoof/injection tests, and delivery-failure states pass locally. |
+| 33 | Responsible human peer operations | EXTERNAL SIGN-OFF NEEDED | `PEER_SAFETY_OPERATIONS.md` specifies required named roles, triage, escalation boundaries, shutdown, and re-enable procedure, but no operators or approving authority are assigned. |
+| 34 | Peer readiness gate | PASS | Frontend code gates and backend readiness checks require approvals, identity, encryption, auth, mail, operations, and monitored contact; environment flags alone fail tests. All Peer/supporter/public-admin flags remain off. |
+| 35 | API and outage reliability | PASS | Response status/shape validation, timeouts, safe GET retries, no mutation retry, duplicate suppression, explicit error states, notification failure truthfulness, and partial-outage tests pass. |
+| 36 | Abuse, spam, and rate-limit controls | PASS | Aggregate idempotency/receipt, database-backed rate limits, strict lengths/types/list sizes/email/phone/content validation, duplicate and spoof tests, and injection defenses pass the backend suite. |
+| 37 | Health/readiness and privacy-safe monitoring code | PASS | Readiness evaluates PostgreSQL, optional Redis, email/config, worker requirements, and safe configuration. Error monitoring excludes request bodies/sensitive fields. Target-environment evidence is not claimed. |
+| 38 | Independent security approval | EXTERNAL SIGN-OFF NEEDED | `review-packets/SECURITY_REVIEW.md` is complete but unsigned. Local auth, dependency, authorization, injection, abuse, secret, and outage tests do not substitute for independent review. |
+| 39 | Staging and production operational proof | FAIL | `STAGING_VERIFICATION_RUNBOOK.md` and `PRODUCTION_VERIFICATION_RUNBOOK.md` exist, but migrations, production-like PostgreSQL/Redis/email, backup/restore, key recovery/rotation, retention worker, concurrency, abuse, readiness, monitoring, and incident exercises were not executed. |
+| 40 | Automated accessibility, PWA, and native configuration | PASS | Serious/critical axe violations are zero in 42 E2E runs; focus/zoom/reduced-motion/safe-area tests pass. Manifest, service worker, icons, offline emergency shell, Android/iOS Capacitor sync pass; Android `assembleDebug` succeeds on Windows. |
+| 41 | Accessibility approval and real-device/iOS evidence | EXTERNAL SIGN-OFF NEEDED | `review-packets/ACCESSIBILITY_REVIEW.md` and `REAL_DEVICE_ACCESSIBILITY_TEST_PLAN.md` are ready but unsigned/unexecuted. No physical iPhone/Android, VoiceOver/TalkBack/NVDA, Safari PWA, mobile-keyboard, or signed Xcode iOS test is claimed. |
 
-## Check evidence
+## Exact local check evidence
 
-- PASS: `npm.cmd run lint` — zero errors and zero warnings.
-- PASS: `npx.cmd tsc -b`.
-- PASS: `npm.cmd test` — 65 tests after the final resource-date update (rerun required if this line and terminal evidence diverge).
-- PASS: `npm.cmd run build` — Vite production build; 15 registry records validated; 56 modules; 484.34 kB JS / 130.58 kB gzip.
-- PASS: Playwright discovery — 24 tests across 320px, small iPhone, modern iPhone, Android, tablet, and desktop projects.
-- PASS: tracked-file secret scan.
-- PASS: `git diff --check` (line-ending notices are not whitespace errors).
-- BLOCKED: updated backend tests and `pip check` after the dependency change; the earlier pre-change baseline was 89 passing tests and no broken requirements, which is not final evidence.
-- BLOCKED: Playwright/axe execution and manual in-app-browser inspection because localhost browser navigation was denied and the browser runner could not launch.
-- BLOCKED: current online `npm audit` and Python vulnerability scanning in the restricted environment.
+- `npm.cmd run lint`: **PASS** — 0 errors, 0 warnings.
+- `npm.cmd test`: **PASS** — 68 passed, 0 failed, 0 skipped.
+- `npm.cmd run build`: **PASS** — 15 resources, 0 review warnings, 56 modules; production JS 488.63 kB (131.89 kB gzip).
+- `npm.cmd run test:e2e`: **PASS** — 42 passed, 0 failed/skipped across 320px, small iPhone, modern iPhone, Android, tablet, and desktop; serious/critical axe violations: 0.
+- `npm.cmd audit --omit=dev`: **PASS** — 0 vulnerabilities; React Router DOM is locked to 7.18.2.
+- `backend\venv\Scripts\python.exe -m pytest -q`: **PASS** — 102 passed, 0 failed/skipped; one upstream Starlette TestClient/httpx deprecation warning.
+- `backend\venv\Scripts\python.exe -m pip check`: **PASS** — no broken requirements.
+- `backend\venv\Scripts\python.exe -m pip_audit -r backend\requirements.txt`: **PASS** — no known vulnerabilities.
+- `npm.cmd run check:resource-links`: **PASS with one manual-verification warning** — 17 unique links checked; SAMHSA blocks automation with HTTP 403 and was verified manually against its official 988 FAQ.
+- Resource schema/deadline validation with warnings-as-errors: **PASS** — performed by the production build and daily workflow; 15 records, 0 warnings.
+- `node --require ./scripts/node-userinfo-shim.cjs ./node_modules/@capacitor/cli/bin/capacitor sync`: **PASS** — Android, iOS, and web projects synchronized.
+- Android `:app:assembleDebug`: **PASS** — 71 tasks executed; debug APK assembled in 3m 36s. This is not physical-device validation or a signed release build.
+- Tracked-file/current-production-bundle secret scan: **PASS** — no known credential formats; values were not printed.
+- Git-history secret scan: **PASS** — no known credential-format matches; values were not printed. This is not provider-side credential inventory or rotation evidence.
+- `git diff --check`: **PASS** after remediation; Windows line-ending notices are informational only.
+- Local route walkthrough: **PASS for stated local scope** — 42 route/viewport combinations had expected headings, Immediate help, and no horizontal overflow; see `LOCAL_ROUTE_WALKTHROUGH_2026-08-09.md`.
 
-## Required external completion
+## Authoritative resource-source evidence
 
-1. Apply every pending migration to a backed-up staging database and rerun all backend authorization, abuse, privacy, readiness, and partial-failure tests against PostgreSQL and Redis.
-2. Run the 24-test browser/axe matrix, manual keyboard inspection, NVDA/VoiceOver/TalkBack checks, and real-device viewport/keyboard tests. Build/sign/test iOS on macOS/Xcode.
-3. Run current npm and Python advisory scanners, review transitive results, and complete a tested backend dependency refresh. `python-jose` is pinned to 3.5.0 because upstream 3.4.0 fixed CVE-2024-33663 and CVE-2024-33664.
-4. Obtain licensed mental-health/Cornell Health review of crisis language, thresholds, false-positive handling, escalation, and resource descriptions.
-5. Obtain privacy/legal review of inventories, consent, retention, deletion limitations, third-party processing, and operator contact details.
-6. Integrate Cornell-authorized identity, verify the email sending domain and monitored safety mailbox, approve operations/training/shutdown ownership, and record the required Peer readiness approvals. Keep all Peer flags off until then.
+The complete field-by-field ledger is `RESOURCE_AUDIT_2026-08-09.md`. Key safety-sensitive sources include Cornell Health emergency/after-hours guidance, Cornell Public Safety reporting guidance, SAMHSA’s 988 FAQ, Cornell Health 24/7 consultation and CAPS access pages, and the provider’s Crisis Text Line page. Dynamic availability must be rechecked on each record’s deadline.
 
+## External approvals still missing
+
+1. Licensed mental-health/clinical safety review.
+2. Privacy and legal review.
+3. Independent security review.
+4. Accessibility review.
+5. Cornell affiliation and identity-provider authorization.
+6. Peer-support training and safety-operations review, including named responsible operators.
+7. Independent second review of all 15 resource records.
+
+## Real-device and production work still missing
+
+- Physical iPhone Safari/PWA and Android device tests; mobile software-keyboard and install/update/offline cold-start evidence.
+- Signed Capacitor iOS build on macOS/Xcode.
+- VoiceOver, TalkBack, NVDA, keyboard-only, 200%/400% zoom, and reduced-motion sessions using the evidence template.
+- Backed-up staging migration, rollback rehearsal, restored-data deletion-tombstone check, and production change approval.
+- Real PostgreSQL/optional Redis/email readiness, delivery confirmation, retention-worker scheduling, concurrency/abuse, log-deletion, monitoring, alerting, backup/restore, key recovery/rotation, and incident/shutdown exercises.
+- Provider-side secret inventory and rotation evidence. Git history was scanned, not rewritten; no rewrite is authorized.
+
+## Shortest ordered release path
+
+1. Assign named accountable operators, a monitored privacy contact, deployment processors, and independent resource reviewers; complete the 15 second reviews.
+2. Complete and sign the six review packets, including Cornell IdP/affiliation authorization and licensed clinical review; remediate any conditions.
+3. Execute the staging runbook on backed-up real infrastructure, including migrations, restore, retention, email, readiness, concurrency, abuse, monitoring, and incident exercises.
+4. Complete the real-device/assistive-technology matrix and a signed macOS/Xcode iOS build; remediate and rerun affected checks.
+5. Complete the production runbook, provider secret inventory/rotation evidence, and controlled launch approval. Keep Peer, supporter signup, and public Admin off until their separate readiness gates are genuinely satisfied.

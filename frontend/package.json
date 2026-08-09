@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test": "node --require ./scripts/node-userinfo-shim.cjs --import tsx --test tests/*.test.ts tests/*.test.tsx",
     "test:e2e": "playwright test",
+    "check:resource-links": "node --import tsx scripts/check-resource-links.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -17,7 +18,7 @@
     "@capacitor/ios": "^8.4.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.17.0"
+    "react-router-dom": "7.18.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",

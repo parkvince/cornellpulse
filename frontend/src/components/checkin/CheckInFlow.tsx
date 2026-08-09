@@ -22,11 +22,10 @@ interface StructuredDraft {
   workload: string
   triggers: string[]
   wantsToTalk: boolean | null
-  college: string
 }
 
 function loadDraft(): StructuredDraft {
-  const empty: StructuredDraft = { checkinId: crypto.randomUUID(), step: 1, mood: null, sleep: "", workload: "", triggers: [], wantsToTalk: null, college: "" }
+  const empty: StructuredDraft = { checkinId: crypto.randomUUID(), step: 1, mood: null, sleep: "", workload: "", triggers: [], wantsToTalk: null }
   try {
     const parsed = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || "null") as Partial<StructuredDraft> | null
     if (!parsed || typeof parsed !== "object") return empty
@@ -38,7 +37,6 @@ function loadDraft(): StructuredDraft {
       workload: typeof parsed.workload === "string" ? parsed.workload : "",
       triggers: Array.isArray(parsed.triggers) ? parsed.triggers.filter(value => typeof value === "string").slice(0, 4) : [],
       wantsToTalk: typeof parsed.wantsToTalk === "boolean" ? parsed.wantsToTalk : null,
-      college: typeof parsed.college === "string" ? parsed.college : "",
     }
   } catch {
     return empty
@@ -54,26 +52,15 @@ export default function CheckInFlow() {
   const [triggers, setTriggers] = useState<string[]>(initialDraft.triggers)
   const [wantsToTalk, setWantsToTalk] = useState<boolean | null>(initialDraft.wantsToTalk)
   const [freeText, setFreeText] = useState("")
-  const [college, setCollege] = useState(initialDraft.college)
   const [result, setResult] = useState<ReturnType<typeof buildLocalRecommendation> | null>(null)
   const [checkinId, setCheckinId] = useState(initialDraft.checkinId)
   const [aggregateNotice, setAggregateNotice] = useState("")
   const stepContainerRef = useRef<HTMLDivElement>(null)
 
-  const colleges = [
-    { value: "engineering", label: "Engineering" }, { value: "arts_sciences", label: "Arts and Sciences" },
-    { value: "dyson", label: "Dyson" }, { value: "ilr", label: "ILR" }, { value: "cals", label: "CALS" },
-    { value: "aap", label: "AAP" }, { value: "vet", label: "Vet" }, { value: "human_ecology", label: "Human Ecology" },
-    { value: "hotel", label: "Nolan School of Hotel Administration" }, { value: "bowers", label: "Bowers College of Computing and Information Science" },
-    { value: "public_policy", label: "Brooks School of Public Policy" }, { value: "law", label: "Law School" },
-    { value: "tech", label: "Cornell Tech" }, { value: "weill", label: "Weill Cornell Medicine" },
-    { value: "graduate", label: "Graduate" }, { value: "professional", label: "Professional" }, { value: "other", label: "Prefer not to say" },
-  ]
-
   useEffect(() => {
-    const draft: StructuredDraft = { checkinId, step, mood, sleep, workload, triggers, wantsToTalk, college }
+    const draft: StructuredDraft = { checkinId, step, mood, sleep, workload, triggers, wantsToTalk }
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
-  }, [checkinId, college, mood, sleep, step, triggers, wantsToTalk, workload])
+  }, [checkinId, mood, sleep, step, triggers, wantsToTalk, workload])
 
   useEffect(() => {
     const appScroller = document.getElementById("app-scroll-container")
@@ -92,7 +79,6 @@ export default function CheckInFlow() {
     setTriggers([])
     setWantsToTalk(null)
     setFreeText("")
-    setCollege("")
     setResult(null)
     setAggregateNotice("")
     setCheckinId(crypto.randomUUID())
@@ -117,13 +103,10 @@ export default function CheckInFlow() {
     recordLocalMeasurement("checkin_completion")
 
     if (getPrivacyPreferences().aggregateContribution) {
-      setAggregateNotice("Sending the optional four-field aggregate contribution...")
-      void submitAggregateContribution({
-        mood_score: mood,
-        sleep_category: sleep,
-        workload_category: workload,
-        college: college || "other",
-      }, fetch, undefined, checkinId).then(() => setAggregateNotice("Optional aggregate contribution sent.")).catch(() => setAggregateNotice("Your local recommendation is ready, but the optional aggregate contribution could not be sent."))
+      setAggregateNotice("Sending an optional campus-wide completion count...")
+      void submitAggregateContribution({ event: "checkin_completed", consent_granted: true }, fetch, undefined, checkinId)
+        .then(() => setAggregateNotice("Optional completion count sent. No check-in answers or college were included."))
+        .catch(() => setAggregateNotice("Your local recommendation is ready, but the optional completion count could not be sent."))
     } else {
       setAggregateNotice("No aggregate contribution was sent.")
     }
@@ -150,7 +133,7 @@ export default function CheckInFlow() {
         {step === 1 && <StepMood value={mood} onChange={setMood} onNext={() => setStep(2)} />}
         {step === 2 && <StepSleepWorkload sleep={sleep} onSleepChange={setSleep} workload={workload} onWorkloadChange={setWorkload} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
         {step === 3 && <StepTrigger values={triggers} onChange={setTriggers} wantsToTalk={wantsToTalk} onWantsToTalkChange={setWantsToTalk} onNext={() => setStep(4)} onBack={() => setStep(2)} />}
-        {step === 4 && <StepText value={freeText} onChange={setFreeText} college={college} onCollegeChange={setCollege} colleges={colleges} onSubmit={handleSubmit} onBack={() => setStep(3)} loading={false} error="" />}
+        {step === 4 && <StepText value={freeText} onChange={setFreeText} onSubmit={handleSubmit} onBack={() => setStep(3)} loading={false} error="" />}
       </div>
     </div>
   )

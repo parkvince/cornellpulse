@@ -49,12 +49,11 @@ test("topic choices are checkboxes and talk preference is a radio choice", () =>
   assert.match(html, /role="status"/)
 })
 
-test("optional text and college controls have programmatic labels", () => {
-  const html = renderToStaticMarkup(<StepText value="" onChange={noop} college="" onCollegeChange={noop} colleges={[{ value: "cals", label: "CALS" }]} onSubmit={noop} onBack={noop} loading={false} error="" />)
+test("optional text has a programmatic label and no college control", () => {
+  const html = renderToStaticMarkup(<StepText value="" onChange={noop} onSubmit={noop} onBack={noop} loading={false} error="" />)
   assert.match(html, /for="checkin-context"/)
   assert.match(html, /id="checkin-context"/)
-  assert.match(html, /for="checkin-college"/)
-  assert.match(html, /id="checkin-college"/)
+  assert.doesNotMatch(html, /checkin-college/)
   assert.match(html, /never added to the saved draft/)
 })
 

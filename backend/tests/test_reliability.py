@@ -91,3 +91,15 @@ def test_production_rejects_placeholder_database_credentials(monkeypatch):
     monkeypatch.setattr(settings, "FRONTEND_URL", "https://cornellpulse.example")
     with pytest.raises(RuntimeError, match="DATABASE_URL"):
         auth.validate_security_settings()
+
+
+def test_production_requires_monitored_privacy_contact(monkeypatch):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(settings, "DATABASE_URL", "postgresql+asyncpg://user:strong-local-value@db/cornellpulse")
+    monkeypatch.setattr(settings, "ADMIN_SESSION_SECRET", "a-production-admin-secret-that-is-long-enough")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD_HASH", "$2b$12$" + "x" * 53)
+    monkeypatch.setattr(settings, "FRONTEND_URL", "https://cornellpulse.example")
+    monkeypatch.setattr(settings, "AGGREGATE_SIGNING_SECRET", "a-separate-aggregate-key-that-is-long-enough")
+    monkeypatch.setattr(settings, "PRIVACY_CONTACT_EMAIL", "")
+    with pytest.raises(RuntimeError, match="PRIVACY_CONTACT_EMAIL"):
+        auth.validate_security_settings()

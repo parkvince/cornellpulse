@@ -5,8 +5,9 @@ from secrets import token_urlsafe
 from typing import Literal
 
 import bcrypt
+import jwt
 from fastapi import HTTPException, Request, Response, status
-from jose import JWTError, jwt
+from jwt import InvalidTokenError
 
 from app.config import settings
 from app.services.peer_security import valid_fernet_key
@@ -42,8 +43,12 @@ def validate_security_settings() -> None:
         errors.append("DATABASE_URL must be a non-placeholder PostgreSQL async URL")
     if settings.REDIS_REQUIRED and not settings.REDIS_URL:
         errors.append("REDIS_URL is required when REDIS_REQUIRED is enabled")
-    if settings.AGGREGATE_MAX_CONTRIBUTIONS_PER_HOUR < 1 or settings.AGGREGATE_RECEIPT_RETENTION_DAYS < 1 or settings.EMAIL_TIMEOUT_SECONDS < 1:
-        errors.append("Aggregate abuse limits and receipt retention must be positive")
+    if any(value < 1 for value in (settings.AGGREGATE_MAX_CONTRIBUTIONS_PER_HOUR, settings.AGGREGATE_RECEIPT_RETENTION_DAYS, settings.AGGREGATE_RETENTION_DAYS, settings.RESOURCE_CLICK_RETENTION_DAYS, settings.TECHNICAL_LOG_RETENTION_DAYS, settings.PUSH_SUBSCRIBER_RETENTION_DAYS, settings.ACADEMIC_CALENDAR_RETENTION_DAYS, settings.RETENTION_SWEEP_INTERVAL_MINUTES, settings.EMAIL_TIMEOUT_SECONDS)):
+        errors.append("Abuse limits and retention periods must be positive")
+    if len(settings.AGGREGATE_SIGNING_SECRET) < 32 or settings.AGGREGATE_SIGNING_SECRET.startswith("replace-"):
+        errors.append("AGGREGATE_SIGNING_SECRET must be a random value of at least 32 characters")
+    if "@" not in settings.PRIVACY_CONTACT_EMAIL or settings.PRIVACY_CONTACT_EMAIL.endswith("@example.com"):
+        errors.append("PRIVACY_CONTACT_EMAIL must be a monitored non-placeholder email address")
     if settings.FEATURE_PEER_CONNECT or settings.FEATURE_SUPPORTER_SIGNUP:
         if len(settings.PEER_AUTH_SECRET) < 32 or settings.PEER_AUTH_SECRET.startswith("replace-"):
             errors.append("PEER_AUTH_SECRET must be a separate random value of at least 32 characters")
@@ -157,7 +162,7 @@ def require_admin(request: Request) -> None:
             audience=ADMIN_TOKEN_AUDIENCE,
             issuer=ADMIN_TOKEN_ISSUER,
         )
-    except JWTError as exc:
+    except InvalidTokenError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired administrator session.") from exc
 
     if not compare_digest(str(claims.get("sub", "")), "administrator"):
@@ -196,7 +201,7 @@ def peer_principal_from_request(request: Request) -> PeerPrincipal:
             audience=PEER_TOKEN_AUDIENCE,
             issuer=ADMIN_TOKEN_ISSUER,
         )
-    except JWTError as exc:
+    except InvalidTokenError as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired peer session.") from exc
     role = str(claims.get("role", ""))
     subject_id = str(claims.get("sub", ""))

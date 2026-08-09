@@ -71,10 +71,9 @@ export function getAvailability(resource: ResourceRecord, now = new Date()): Ava
   return intervals.some(interval => intervalIsOpen(interval, local.weekday, local.minute)) ? "open" : "closed"
 }
 
-export function isResourceStale(resource: ResourceRecord, now = new Date(), maximumAgeDays = 180): boolean {
-  if (!resource.verificationDate) return true
-  const verified = new Date(`${resource.verificationDate}T00:00:00Z`).getTime()
-  return now.getTime() - verified > maximumAgeDays * 86_400_000
+export function isResourceStale(resource: ResourceRecord, now = new Date()): boolean {
+  if (!resource.verificationDate || resource.reviewStatus !== "verified") return true
+  return resource.reviewDeadline < now.toISOString().slice(0, 10)
 }
 
 function includesSearch(resource: ResourceRecord, search: string): boolean {

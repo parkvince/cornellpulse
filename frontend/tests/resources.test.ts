@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import test from "node:test"
 
-import { ACTIVE_RESOURCES, RESOURCE_REGISTRY, getResource, validateResourceRegistry, type ResourceRecord } from "../src/resources/registry.ts"
+import { ACTIVE_RESOURCES, RESOURCE_REGISTRY, expiredResourceRecords, getResource, resourceStalenessWarnings, validateResourceRegistry, type ResourceRecord } from "../src/resources/registry.ts"
 
 test("resource registry satisfies the runtime schema", () => {
   assert.deepEqual(validateResourceRegistry(), [])
@@ -45,7 +45,18 @@ test("verification claims agree with review status", () => {
   }
   assert.ok(ACTIVE_RESOURCES.every(resource => resource.reviewStatus !== "retired"))
   assert.ok(ACTIVE_RESOURCES.every(resource => resource.reviewStatus === "verified"))
-  assert.ok(ACTIVE_RESOURCES.every(resource => resource.verificationDate === "2026-08-03"))
+  assert.ok(ACTIVE_RESOURCES.every(resource => resource.verificationDate === "2026-08-09"))
+  assert.ok(ACTIVE_RESOURCES.every(resource => resource.accountableOwner.length > 0))
+  assert.ok(ACTIVE_RESOURCES.every(resource => resource.secondReviewer.length > 0))
+  assert.ok(ACTIVE_RESOURCES.every(resource => resource.secondReviewer !== resource.verifier && resource.secondReviewer !== resource.accountableOwner))
+  assert.ok(ACTIVE_RESOURCES.every(resource => resource.secondReviewStatus === "pending" && resource.secondReviewDate === null))
+  assert.ok(ACTIVE_RESOURCES.every(resource => resource.correctionChannel.includes("VITE_PRIVACY_CONTACT_EMAIL")))
+  assert.ok(ACTIVE_RESOURCES.every(resource => resource.reviewCadenceDays >= 1))
+  assert.ok(ACTIVE_RESOURCES.filter(resource => resource.urgency !== "routine").every(resource => resource.reviewCadenceDays === 14))
+  assert.deepEqual(resourceStalenessWarnings(RESOURCE_REGISTRY, new Date("2026-08-09T00:00:00Z")), [])
+  assert.equal(resourceStalenessWarnings(RESOURCE_REGISTRY, new Date("2026-08-20T00:00:00Z")).some(warning => warning.includes("988_lifeline")), true)
+  assert.deepEqual(expiredResourceRecords(RESOURCE_REGISTRY, new Date("2026-08-23T23:59:59Z")), [])
+  assert.equal(expiredResourceRecords(RESOURCE_REGISTRY, new Date("2026-08-24T00:00:00Z")).some(resource => resource.id === "988_lifeline"), true)
 })
 
 test("all resource consumers use the registry instead of duplicate arrays", () => {
@@ -66,7 +77,7 @@ test("resource UI exposes verification status and official sources", () => {
   const resultCard = readFileSync(join(process.cwd(), "src", "components", "checkin", "ResultCard.tsx"), "utf8")
   assert.match(resourcesPage, /Last verified/)
   assert.match(resourceDetailPage, /official source/i)
-  assert.match(resourcesPage, /ACTIVE_RESOURCES\.length} verified resources/)
+  assert.match(resourcesPage, /ACTIVE_RESOURCES\.length} source-checked resources/)
   assert.match(resultCard, /Last verified/)
 })
 

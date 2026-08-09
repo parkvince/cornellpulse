@@ -77,6 +77,7 @@ test("save plan writes only the explicitly selected local summary", () => {
 test("resource-specific actions appear only when supported", () => {
   assert.equal(bookingHref(getResource("caps_access")), getResource("caps_access").url)
   assert.equal(bookingHref(getResource("ears")), undefined)
-  assert.match(directionsHref(getResource("caps_access")) || "", /^https:\/\/www\.google\.com\/maps\/search/)
+  assert.equal(directionsHref(getResource("caps_access")), undefined)
+  assert.match(directionsHref(getResource("cayuga_medical_er")) || "", /^https:\/\/www\.google\.com\/maps\/search/)
   assert.equal(directionsHref(getResource("cornell_health_247")), undefined)
 })

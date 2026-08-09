@@ -157,10 +157,8 @@ export function requestJson<T>(path: string, options: ApiRequestOptions<T> = {})
 }
 
 export interface AggregateContribution {
-  mood_score: number
-  sleep_category: string
-  workload_category: string
-  college: string
+  event: "checkin_completed"
+  consent_granted: true
 }
 
 interface AggregateContributionResponse { aggregate_updated: true }

@@ -2,50 +2,26 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.database import get_db
-from app.models.db_models import CollegeHourAggregate, CampusHourAggregate
-from datetime import datetime, timezone, timedelta
+from app.models.db_models import CampusDailyAggregate
+from datetime import datetime, timezone
 
 router = APIRouter()
 
-MIN_COUNT = 10
-
 @router.get("/heatmap/24h")
 async def heatmap_24h(db: AsyncSession = Depends(get_db)):
-    since = datetime.now(timezone.utc) - timedelta(hours=24)
-    result = await db.execute(
-        select(
-            CollegeHourAggregate.college,
-            func.sum(CollegeHourAggregate.check_in_count).label("total_count"),
-            func.sum(CollegeHourAggregate.mood_sum).label("total_mood"),
-        ).where(
-            CollegeHourAggregate.hour_bucket >= since
-        ).group_by(CollegeHourAggregate.college)
-    )
-    rows = result.all()
-    data = {}
-    for row in rows:
-        if row.total_count >= MIN_COUNT:
-            data[row.college] = {
-                "avg_mood": round(row.total_mood / row.total_count, 1),
-                "count": row.total_count,
-            }
-        else:
-            data[row.college] = {"avg_mood": None, "count": row.total_count}
-    return data
+    # College/hour and wellness-answer heatmaps were retired because low-count
+    # buckets can expose a single person's sensitive answers.
+    return {"status": "retired", "reason": "privacy_redesign", "data": {}}
 
 @router.get("/campus/summary")
 async def campus_summary(db: AsyncSession = Depends(get_db)):
-    since = datetime.now(timezone.utc) - timedelta(hours=24)
+    today = datetime.now(timezone.utc).date()
     result = await db.execute(
         select(
-            func.sum(CampusHourAggregate.check_in_count).label("total_count"),
-            func.sum(CampusHourAggregate.mood_sum).label("total_mood"),
-        ).where(CampusHourAggregate.hour_bucket >= since)
+            func.sum(CampusDailyAggregate.check_in_count).label("total_count"),
+        ).where(CampusDailyAggregate.day_bucket == today)
     )
     row = result.one()
     if not row.total_count:
-        return {"avg_mood": None, "count": 0}
-    return {
-        "avg_mood": round(row.total_mood / row.total_count, 1),
-        "count": row.total_count,
-    }
+        return {"date": today.isoformat(), "count": 0}
+    return {"date": today.isoformat(), "count": row.total_count}

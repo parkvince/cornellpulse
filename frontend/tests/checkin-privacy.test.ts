@@ -29,14 +29,10 @@ test("free text affects local safety routing without entering an aggregate reque
     })
   }
 
-  await submitAggregateContribution({
-    mood_score: 7,
-    sleep_category: "6_to_8",
-    workload_category: "moderate",
-    college: "engineering",
-  }, fakeFetch, "https://example.invalid/api/v1")
+  await submitAggregateContribution({ event: "checkin_completed", consent_granted: true }, fakeFetch, "https://example.invalid/api/v1")
 
-  assert.deepEqual(Object.keys(JSON.parse(requestBody)).sort(), ["college", "mood_score", "sleep_category", "workload_category"])
+  assert.deepEqual(JSON.parse(requestBody), { event: "checkin_completed", consent_granted: true })
+  assert.equal(/mood|sleep|workload|college/i.test(requestBody), false)
   assert.equal(requestBody.includes(SENSITIVE_CANARY), false)
   assert.equal(/free.?text|trigger|talk|session|token|recommendation/i.test(requestBody), false)
 })
@@ -87,10 +83,10 @@ test("structured check-in draft never includes free text", () => {
   const resultCard = readFileSync(join(process.cwd(), "src", "components", "checkin", "ResultCard.tsx"), "utf8")
   const draftAssignment = flow.match(/const draft: StructuredDraft = \{([^}]+)\}/)?.[1] || ""
   assert.match(flow, /sessionStorage\.setItem\(DRAFT_KEY, JSON\.stringify\(draft\)\)/)
-  assert.match(draftAssignment, /step, mood, sleep, workload, triggers, wantsToTalk, college/)
+  assert.match(draftAssignment, /step, mood, sleep, workload, triggers, wantsToTalk/)
   assert.equal(draftAssignment.includes("freeText"), false)
   assert.equal(/localStorage\.setItem\([^\n]*freeText/.test(flow + resultCard), false)
-  assert.equal(flow.includes("submitAggregateContribution({\n        mood_score: mood,\n        sleep_category: sleep,\n        workload_category: workload,\n        college: college || \"other\","), true)
+  assert.equal(flow.includes('submitAggregateContribution({ event: "checkin_completed", consent_granted: true }'), true)
 })
 
 test("server check-in boundaries contain no free text, Redis key, analytics, or logging sink", () => {

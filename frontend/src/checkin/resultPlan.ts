@@ -37,8 +37,8 @@ export function prepareResultOptions(options: readonly QualifiedResourceOption[]
 }
 
 export function directionsHref(resource: ResourceRecord): string | undefined {
-  if (!resource.modalities.includes("in_person") || !resource.location.trim()) return undefined
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(resource.location)}`
+  if (!resource.modalities.includes("in_person") || !resource.physicalAddress?.trim()) return undefined
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(resource.physicalAddress)}`
 }
 
 export function bookingHref(resource: ResourceRecord): string | undefined {

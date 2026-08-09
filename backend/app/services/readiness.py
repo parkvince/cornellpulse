@@ -48,7 +48,16 @@ def _email_status() -> dict[str, Any]:
 def _configuration_status() -> dict[str, Any]:
     try:
         validate_security_settings()
-        valid = settings.AGGREGATE_MAX_CONTRIBUTIONS_PER_HOUR > 0 and settings.AGGREGATE_RECEIPT_RETENTION_DAYS > 0
+        valid = all(value > 0 for value in (
+            settings.AGGREGATE_MAX_CONTRIBUTIONS_PER_HOUR,
+            settings.AGGREGATE_RECEIPT_RETENTION_DAYS,
+            settings.AGGREGATE_RETENTION_DAYS,
+            settings.RESOURCE_CLICK_RETENTION_DAYS,
+            settings.TECHNICAL_LOG_RETENTION_DAYS,
+            settings.PUSH_SUBSCRIBER_RETENTION_DAYS,
+            settings.ACADEMIC_CALENDAR_RETENTION_DAYS,
+            settings.RETENTION_SWEEP_INTERVAL_MINUTES,
+        ))
     except RuntimeError:
         valid = False
     return {"status": "ready" if valid else "invalid", "required": True}

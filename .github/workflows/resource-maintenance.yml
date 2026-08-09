@@ -1,0 +1,31 @@
+name: Resource maintenance
+
+on:
+  schedule:
+    - cron: "0 13 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-resources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Validate schema and review deadlines
+        env:
+          RESOURCE_WARNINGS_AS_ERRORS: "true"
+        run: node --require ./scripts/node-userinfo-shim.cjs --import tsx scripts/validate-resources.ts
+      - name: Check official and direct-action links
+        run: node --require ./scripts/node-userinfo-shim.cjs --import tsx scripts/check-resource-links.ts

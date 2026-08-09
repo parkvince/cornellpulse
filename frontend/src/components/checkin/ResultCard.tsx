@@ -119,7 +119,7 @@ export default function ResultCard(props: ResultCardProps) {
       {safety.signal === "urgent" && (
         <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "2px solid #C83C42", borderRadius: "16px", padding: "20px", marginBottom: "20px" }}>
           <p style={{ fontSize: "15px", fontWeight: 800, color: CORAL, marginBottom: "8px" }}>Some words you entered may point to an immediate safety concern</p>
-          <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>This automated check can be wrong and is not a diagnosis or clinical assessment. Call 911 if you may act now or cannot stay safe. The options below are separate crisis pathways, not ordinary recommendations.</p>
+          <p style={{ fontSize: "14px", color: "#686868", lineHeight: 1.6 }}>This automated check can be wrong and is not a diagnosis or clinical assessment. Call 911 if you may act now or cannot stay safe. The options below are separate crisis pathways, not ordinary recommendations.</p>
         </div>
       )}
 
@@ -172,16 +172,16 @@ export default function ResultCard(props: ResultCardProps) {
           <p style={{ fontSize: "11px", color: "#717171", lineHeight: 1.45, marginBottom: "12px", textAlign: "center" }}>Your answer stays only in this open page’s memory. It is not saved or sent.</p>
           <div style={{ display: "flex", gap: "8px" }}>
             <button type="button" onClick={() => setFeedback("helpful")} style={{ flex: 1, padding: "12px", backgroundColor: "#FFF0F0", color: CORAL, border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Yes</button>
-            <button type="button" onClick={() => setFeedback("not_helpful")} style={{ flex: 1, padding: "12px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Not really</button>
+            <button type="button" onClick={() => setFeedback("not_helpful")} style={{ flex: 1, padding: "12px", backgroundColor: "#f5f5f5", color: "#686868", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Not really</button>
           </div>
         </div>
       ) : <p role="status" style={{ margin: "14px 0", backgroundColor: feedback === "helpful" ? "#FFF0F0" : "#f9f9f9", borderRadius: "14px", padding: "14px", fontSize: "13px", color: "#717171", textAlign: "center" }}>{feedback === "helpful" ? "Thanks. This feedback remains only on this page." : "Thanks. This feedback remains only on this page. You can also browse all verified resources."}</p>}
 
       <p role="status" style={{ fontSize: "12px", color: "#717171", textAlign: "center", margin: "12px 0 8px" }}>{props.aggregateNotice}</p>
       <button type="button" onClick={props.onDelete} style={{ width: "100%", padding: "12px", backgroundColor: "transparent", color: CORAL, border: "2px solid #ebebeb", borderRadius: "14px", fontSize: "13px", fontWeight: 700, cursor: "pointer", marginBottom: "8px" }}>Delete this check-in</button>
-      <button type="button" onClick={props.onRestart} style={{ marginTop: "4px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Check in again</button>
+      <button type="button" onClick={props.onRestart} style={{ marginTop: "4px", width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#686868", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Check in again</button>
       <Link to="/" style={{ display: "block", textAlign: "center", fontSize: "13px", fontWeight: 600, color: "#717171", marginTop: "12px", padding: "8px", textDecoration: "none" }}>← Back to home</Link>
-      <p style={{ fontSize: "11px", color: "#717171", textAlign: "center", marginTop: "6px" }}>Options were generated on this device. Only an optional four-field aggregate is sent when you have enabled that choice.</p>
+      <p style={{ fontSize: "11px", color: "#717171", textAlign: "center", marginTop: "6px" }}>Options were generated on this device. If you enabled the optional contribution, only a completion event was sent—not your answers or college.</p>
     </div>
   )
 }
