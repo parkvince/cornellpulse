@@ -1,8 +1,20 @@
-const CACHE_VERSION = "cornellpulse-shell-v1"
+const CACHE_VERSION = "cornellpulse-shell-v2"
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon.png", "/icon-192.png"]
 
+async function precacheShell() {
+  const cache = await caches.open(CACHE_VERSION)
+  const response = await fetch("/", { cache: "no-store" })
+  if (!response.ok) throw new Error("App shell unavailable during service-worker install")
+  const html = await response.clone().text()
+  await cache.put("/", response)
+  const localAssets = [...html.matchAll(/(?:src|href)="(\/[^"#?]+)"/g)]
+    .map(match => match[1])
+    .filter(path => !path.startsWith("//"))
+  await cache.addAll([...new Set([...APP_SHELL.slice(1), ...localAssets])])
+}
+
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE_VERSION).then(cache => cache.addAll(APP_SHELL)))
+  event.waitUntil(precacheShell())
   self.skipWaiting()
 })
 

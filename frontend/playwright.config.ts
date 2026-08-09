@@ -13,13 +13,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: "line",
+  globalSetup: "./scripts/playwright-global-setup.ts",
   use: { baseURL: "http://127.0.0.1:4173", channel: "chrome", trace: "retain-on-failure" },
-  webServer: {
-    command: "npm.cmd run build && npm.cmd run preview -- --host 127.0.0.1 --port 4173",
-    url: "http://127.0.0.1:4173",
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
   projects: [
     { name: "320px", use: { viewport: { width: 320, height: 568 } } },
     { name: "small-iphone", use: chromeDevice("iPhone SE") },

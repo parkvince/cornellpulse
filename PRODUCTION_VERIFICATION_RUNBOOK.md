@@ -1,12 +1,14 @@
 # CornellPulse production verification and release runbook
 
-Version: **2026-08-09.1**  
+Version: **2026-08-09.2**
 Status: **BLOCKED UNTIL EXTERNAL APPROVALS AND STAGING EVIDENCE EXIST**  
 Release owner: __________________  Change ticket: __________________  Date: __________
 
 ## Go/no-go gate
 
 Do not proceed unless the exact artifact passed staging; all six review packets contain approval decisions for the release scope; the 41-row audit has no release-blocking FAIL; privacy/safety contacts are monitored; processor/log/backup schedules are approved; resource crisis second reviews are current; and real-device/assistive-technology evidence is attached. Peer/supporter/public-admin flags remain off unless the separate Peer readiness gate and Cornell authorization are genuinely complete.
+
+Run `powershell -File scripts/validate-release-evidence.ps1 -Environment staging -RequireReady` before the production window. Inject `DATABASE_URL` through the approved secret manager, then run `backend\venv\Scripts\python.exe backend\scripts\verify_target_environment.py --environment production --base-url <https-production-url> --evidence RELEASE_EVIDENCE_MATRIX.csv` after the controlled migration. Both commands fail closed; database credentials are never command-line arguments and must not be copied into evidence.
 
 ## Release sequence
 
@@ -34,3 +36,5 @@ Migration/backup/restore evidence: _____________________________________________
 Monitoring and incident exercise evidence: _________________________________________________  
 Open risks/owners/deadlines: _______________________________________________________________  
 Release decision: [ ] Go  [ ] No-go  Approver/signature: __________________  Date: __________
+
+After every approved production exercise is evidenced, run `powershell -File scripts/validate-release-evidence.ps1 -Environment production -RequireReady`. Any non-PASS row blocks release completion.

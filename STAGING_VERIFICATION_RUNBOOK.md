@@ -1,6 +1,6 @@
 # CornellPulse staging verification runbook
 
-Version: **2026-08-09.1**  
+Version: **2026-08-09.2**
 Status: **READY TO EXECUTE; NO STAGING EXECUTION CLAIMED**  
 Operator: __________________  Environment/change ticket: __________________  Date: __________
 
@@ -10,6 +10,7 @@ Operator: __________________  Environment/change ticket: __________________  Dat
 2. Keep `FEATURE_PEER_CONNECT=false`, `FEATURE_SUPPORTER_SIGNUP=false`, `VITE_FEATURE_PEER_CONNECT=false`, `VITE_FEATURE_SUPPORTER_SIGNUP=false`, and `VITE_FEATURE_PUBLIC_ADMIN=false`.
 3. Generate separate random administrator, aggregate-signing, peer-auth, and PII-encryption secrets in the approved secret manager. Configure a monitored staging privacy/safety contact. Never paste secret values into evidence.
 4. Inventory selected hosting, PostgreSQL, email, monitoring, backup, and (only if required) Redis processors, regions, access roles, log retention, and subprocessors.
+5. Copy `RELEASE_EVIDENCE_MATRIX.csv` into the protected release evidence system. Update rows with UTC timestamps and artifact/evidence IDs only after execution; never enter secrets or personal data. Validate structure with `powershell -File scripts/validate-release-evidence.ps1 -Environment staging`.
 
 ## Backup and migration
 
@@ -18,6 +19,7 @@ Operator: __________________  Environment/change ticket: __________________  Dat
 3. Apply migrations in order, including `20260808_private_aggregate_retention.sql`, under a change transaction where supported. Record migration tool output and schema version.
 4. Confirm legacy `college_hour_aggregates` and `campus_hour_aggregates` are absent; `campus_daily_aggregates` contains only date/count/timestamps; no mood/sleep/workload/college/hour/free-text columns remain.
 5. Run the backend suite against staging-compatible PostgreSQL. Roll back using the tested backup if invariants fail; do not hand-edit production data.
+6. Inject `DATABASE_URL` through the approved secret manager, then run `backend\venv\Scripts\python.exe backend\scripts\verify_target_environment.py --environment staging --base-url <https-staging-url>`. The command does not accept database credentials on its command line, is read-only, and fails closed on readiness, schema, or legacy aggregate-table failures.
 
 ## Dependency and readiness exercise
 
@@ -48,3 +50,5 @@ All evidence links: ____________________________________________________________
 Open defects/owners: _____________________________________________________________________  
 Rollback tested: [ ]  Retention alert tested: [ ]  Backup restore tested: [ ]  
 Staging approver/signature: _______________________________________  Date: _________________
+
+Before a release candidate may advance, run `powershell -File scripts/validate-release-evidence.ps1 -Environment staging -RequireReady`. A nonzero result is a no-go, not a documentation exception.

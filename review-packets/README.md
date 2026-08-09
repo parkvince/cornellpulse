@@ -1,8 +1,8 @@
 # CornellPulse external review packet index
 
-Packet set version: **2026-08-09.1**  
+Packet set version: **2026-08-09.2**
 Prepared: **2026-08-09**  
-Product version: current uncommitted working tree in `C:\Users\sehov\Desktop\cornellpulse`  
+Product version: baseline commit `dc2b909` plus the attached uncommitted remediation diff and final test evidence
 Overall status: **PENDING EXTERNAL REVIEW**
 
 These packets are approval forms, not approvals. A reviewer must enter their name, qualifications/authority, decision, date, evidence references, conditions, and signature. A repository document, disabled feature, or completed local test does not replace that decision.
@@ -17,3 +17,5 @@ These packets are approval forms, not approvals. A reviewer must enter their nam
 | [Peer training and safety operations](PEER_TRAINING_SAFETY_REVIEW.md) | Qualified peer-support program, safeguarding, and operations leads | Pending; reviewer not assigned |
 
 Approval identifiers must be stored in the deployment's protected configuration or approval system, not invented in this repository. Peer readiness requires current safety, privacy, security, and operations approval identifiers plus a implemented Cornell-authorized identity integration; the public flags remain off until those checks pass.
+
+Every approval must identify its exact artifact/diff, accepted conditions, evidence references, decision date, expiry/review date, and re-review triggers. A code, resource, processor, incident, clinical-language, identity, retention, or deployment-topology change invalidates the affected decision unless the reviewer explicitly scopes it otherwise. Blank or expired fields mean pending, not approval.

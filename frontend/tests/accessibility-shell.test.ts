@@ -6,6 +6,7 @@ const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8")
 const css = readFileSync(new URL("../src/index.css", import.meta.url), "utf8")
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8")
 const emergency = readFileSync(new URL("../src/components/shared/EmergencyHelp.tsx", import.meta.url), "utf8")
+const serviceWorker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8")
 
 test("app shell exposes landmarks, navigation state, skip link, and route announcements", () => {
   assert.match(app, /<main id="app-scroll-container"/)
@@ -40,6 +41,9 @@ test("web install metadata and native privacy configuration are present", () => 
   assert.equal(manifest.display, "standalone")
   assert.deepEqual(manifest.icons.map((icon: { sizes: string }) => icon.sizes), ["192x192", "512x512"])
   assert.equal(existsSync(new URL("../public/icon-192.png", import.meta.url)), true)
+  assert.match(serviceWorker, /precacheShell/)
+  assert.match(serviceWorker, /html\.matchAll/)
+  assert.match(serviceWorker, /request\.mode === "navigate"/)
   assert.equal(existsSync(new URL("../ios/App/App/Info.plist", import.meta.url)), true)
   const androidManifest = readFileSync(new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url), "utf8")
   assert.match(androidManifest, /android:allowBackup="false"/)

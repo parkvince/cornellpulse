@@ -72,7 +72,8 @@ test("check-in completes locally and results can be saved", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "History & Privacy" })).toBeVisible()
   const download = page.waitForEvent("download")
   await page.getByRole("button", { name: "Export local history as JSON" }).click()
-  await download
+  const exportedHistory = await download
+  await exportedHistory.delete()
   await page.getByRole("button", { name: "Delete" }).first().click()
   await page.getByRole("button", { name: "Delete plan" }).click()
   await expect(page.getByText("No saved plans", { exact: true })).toBeVisible()
@@ -126,10 +127,39 @@ test("offline state is explicit and local resources remain readable", async ({ p
   await completeOnboarding(page)
   await page.goto("/resources")
   await context.setOffline(true)
-  await page.reload().catch(() => undefined)
-  await expect(page.getByText(/You’re offline/).first()).toBeVisible()
-  await expect(page.getByText("988 Suicide & Crisis Lifeline", { exact: true })).toBeVisible()
-  await context.setOffline(false)
+  try {
+    await page.reload().catch(() => undefined)
+    await expect(page.getByText(/You’re offline/).first()).toBeVisible()
+    await expect(page.getByText("988 Suicide & Crisis Lifeline", { exact: true })).toBeVisible()
+  } finally {
+    await context.setOffline(false)
+  }
+})
+
+test("zoom-equivalent reflow and reduced motion remain usable", async ({ page }) => {
+  await completeOnboarding(page)
+  await page.emulateMedia({ reducedMotion: "reduce" })
+
+  for (const viewport of [
+    { label: "200%", width: 640, height: 720 },
+    { label: "400%", width: 320, height: 568 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    for (const route of ["/", "/checkin", "/resources", "/privacy", "/profile"]) {
+      await page.goto(route)
+      const layout = await page.evaluate(() => ({
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        helpVisible: [...document.querySelectorAll("button")].some(button => button.textContent?.includes("Immediate help")),
+        maxTransitionMs: Math.max(...[...document.querySelectorAll<HTMLElement>("*")].map(element => {
+          const duration = getComputedStyle(element).transitionDuration
+          return duration.split(",").reduce((max, value) => Math.max(max, Number.parseFloat(value) * (value.includes("ms") ? 1 : 1000)), 0)
+        })),
+      }))
+      expect(layout.overflow, `${viewport.label} ${route} must reflow without document overflow`).toBe(false)
+      expect(layout.helpVisible, `${viewport.label} ${route} must keep emergency access visible`).toBe(true)
+      expect(layout.maxTransitionMs, `${viewport.label} ${route} must honor reduced motion`).toBeLessThanOrEqual(1)
+    }
+  }
 })
 
 test("manifest is valid install metadata", async ({ request }) => {
@@ -137,5 +167,13 @@ test("manifest is valid install metadata", async ({ request }) => {
   expect(response.ok()).toBeTruthy()
   const manifest = await response.json()
   expect(manifest.name).toBe("CornellPulse")
+  expect(manifest.display).toBe("standalone")
+  expect(manifest.start_url).toBe("/")
   expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({ sizes: "192x192" }), expect.objectContaining({ sizes: "512x512" })]))
+  const serviceWorker = await request.get("/sw.js")
+  expect(serviceWorker.ok()).toBeTruthy()
+  const serviceWorkerSource = await serviceWorker.text()
+  expect(serviceWorkerSource).toMatch(/precacheShell/)
+  expect(serviceWorkerSource).toMatch(/html\.matchAll/)
+  expect(serviceWorkerSource).toMatch(/request\.mode === "navigate"/)
 })

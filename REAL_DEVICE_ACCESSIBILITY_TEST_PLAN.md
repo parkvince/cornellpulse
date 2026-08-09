@@ -1,9 +1,9 @@
 # CornellPulse real-device and assistive-technology test plan
 
-Version: **2026-08-09.1**  
+Version: **2026-08-09.2**
 Status: **INSTRUCTIONS/TEMPLATE ONLY — NO REAL-DEVICE OR ASSISTIVE-TECH EXECUTION CLAIMED**
 
-Use the release-candidate staging URL/artifact. Never use real crisis disclosures or personal data. For every run record tester, date/time, app SHA/artifact, device model, OS/browser/AT versions, orientation, network mode, text size/zoom, result, screenshot/video/log path, defect ID, and retest evidence.
+Use the release-candidate staging URL/artifact. Never use real crisis disclosures or personal data. For every run record tester, date/time, app SHA/artifact, device model, OS/browser/AT versions, orientation, network mode, text size/zoom, result, screenshot/video/log path, defect ID, and retest evidence. Record install source, PWA display mode, service-worker version/update state, native build/signing identity reference (never the key), software-keyboard type, and whether the run was physical hardware or an emulator.
 
 ## Shared route/state script
 
@@ -14,6 +14,7 @@ Test onboarding and reset; home; empty and populated History & Privacy; check-in
 - Minimum targets: current supported small-screen iPhone and modern notched iPhone on current supported iOS.
 - Safari at default and 200% page zoom/text size; portrait/landscape; light/dark OS settings if supported; reduce motion; larger text; VoiceOver separately.
 - Add to Home Screen, standalone launch, offline warm/cold launch, update after a new service worker, safe areas, link handoff to Phone/Messages/Maps, virtual-keyboard focus/scroll, history persistence and deletion.
+- Capture evidence for first install, upgrade over an older cached version, stale/offline notice, emergency actions during a cold offline start, rotation while an input is focused, and deletion after relaunch. A Windows Capacitor sync is not an iOS build result.
 
 ## Signed Capacitor iOS build on macOS/Xcode
 
@@ -24,6 +25,7 @@ Test onboarding and reset; home; empty and populated History & Privacy; check-in
 
 - Test a 320px-class emulator, a current Pixel-class emulator, and at least one physical supported Android device/API level.
 - Verify Chrome/PWA install and signed Capacitor debug/release candidate as applicable; font/display scaling, TalkBack, switch/keyboard, WebView version, back navigation, keyboard resize, safe areas/cutouts, link intents, offline/update, backup-disabled behavior, and shared route script.
+- Record emulator separately from physical-device evidence; neither can substitute for the other. Test fresh install, update, offline cold start, interrupted navigation, link cancellation, and app resume after OS process eviction.
 
 ## Assistive technology
 

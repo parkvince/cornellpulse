@@ -1,6 +1,7 @@
 # Peer-support training and safety-operations review packet
 
-Packet version: **2026-08-09.1**  
+Packet version: **2026-08-09.2**
+Review scope: **baseline commit `dc2b909`, attached uncommitted remediation diff, operations version 2026-08-09.2, curriculum/staffing evidence, and pilot plan**
 Approval status: **PENDING EXTERNAL REVIEW — PEER CONNECT MUST REMAIN OFF**  
 Responsible reviewers: **Qualified peer-support program lead, safeguarding lead, and accountable operations owner**  
 Assigned reviewer names / organizations: ______________________________
@@ -37,5 +38,7 @@ Decision: [ ] Approve pilot  [ ] Approve with conditions  [ ] Changes required  
 Approved scope/version/pilot limit: ________________________________________________________  
 Conditions / required changes: ____________________________________________________________  
 Evidence references: ____________________________________________________________________  
+Approval expiry / mandatory re-review date: _______________________________________________
+Re-review triggers accepted (training/staffing/SLA/incident/identity/relay/policy changes): _
 Reviewer names and qualifications: ________________________________________________________  
 Signatures: __________________________________________  Date: _____________________________

@@ -1,6 +1,7 @@
 # Independent security review packet
 
-Packet version: **2026-08-09.1**  
+Packet version: **2026-08-09.2**
+Review scope: **baseline commit `dc2b909`, attached uncommitted remediation diff, dependency locks, target topology, and final evidence bundle**
 Approval status: **PENDING EXTERNAL REVIEW — NOT APPROVED**  
 Responsible reviewer: **Independent application-security reviewer**  
 Assigned reviewer name / organization: ______________________________
@@ -38,5 +39,7 @@ Decision: [ ] Approve  [ ] Approve with conditions  [ ] Changes required  [ ] Re
 Approved scope/version: ______________________________  
 Risk exceptions and owners: ______________________________________________________________  
 Evidence references: ____________________________________________________________________  
+Approval expiry / mandatory re-review date: _______________________________________________
+Re-review triggers accepted (auth/dependency/topology/key/incident/authorization changes): _
 Reviewer name and qualifications: ______________________  Organization: ____________________  
 Signature: ___________________________________________  Date: _____________________________

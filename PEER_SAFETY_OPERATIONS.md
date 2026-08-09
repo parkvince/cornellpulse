@@ -2,7 +2,7 @@
 
 Peer Connect is disabled publicly. This runbook describes requirements for a future independent CornellPulse operator; it does not represent Cornell University, Cornell Health, Cornell Police, or any emergency service, and it is not launch approval.
 
-Document version: **2026-08-09.1**
+Document version: **2026-08-09.2**
 Approval status: **PENDING EXTERNAL REVIEW; NOT APPROVED FOR OPERATION**
 
 ## Identity, roles, training, and references
@@ -35,6 +35,8 @@ Severity describes operational priority, not a clinical assessment:
 - `critical`: information may indicate imminent danger. Show emergency boundaries immediately and escalate to the trained operator; software must not automatically contact authorities.
 
 No response time is promised until staffing and on-call coverage are formally approved. Reports are not continuously monitored. The UI and notifications must say only `submitted`, `provider accepted`, `failed`, or `skipped` as confirmed by the server; provider acceptance is not proof of delivery or human review.
+
+Before any pilot, the protected operations record must name the primary and backup person for moderation, safeguarding, privacy, security, identity, release, and shutdown authority; record acknowledged coverage hours/timezone; define severity-specific triage and escalation targets; identify who may accept residual risk; and provide tested primary/backup contact channels. Blank roles, unacknowledged rotations, or an untested alert path block the readiness decision. No repository placeholder or self-entered `@cornell.edu` address satisfies staffing or identity.
 
 The accountable operations owner must publish approved triage targets only after staffing is verified. Every shift/handoff records queue age, unassigned high/critical reports, notification failures, suspended participants, and unresolved incidents without copying unnecessary PII. Critical indicates operational priority, not diagnosis. Duplicate submissions link to the surviving report without discarding evidence; spoofed identity or authorization anomalies are escalated to security.
 
@@ -79,3 +81,5 @@ CornellPulse cannot dispatch responders. For immediate danger in the United Stat
 ## Readiness gate
 
 `FEATURE_PEER_CONNECT=true` is insufficient. Runtime routes also require a valid peer signing secret, Fernet encryption key, monitored safety contact, the current approval version, four non-empty approval identifiers, and the hard-coded identity-integration implementation gate. The administrator-only readiness endpoint reports missing categories without exposing secret values. Default environment examples intentionally leave approval identifiers blank.
+
+Readiness is necessary but not sufficient: a positive response cannot replace signed approvals, named staffed operators, target-environment evidence, or a release decision. Until all are independently verified, Peer Connect and supporter signup remain off.

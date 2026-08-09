@@ -12,7 +12,7 @@ from app.auth import PeerPrincipal, create_peer_token
 from app import auth
 from app.config import settings
 from app.database import get_db
-from app.models.db_models import PeerSignup, SupporterReferenceInvitation
+from app.models.db_models import PeerRequester, PeerSignup, SupporterReferenceInvitation
 from app.routers import peer
 from app.services.peer_security import decrypt_private_data, encrypt_private_data, public_supporter_dict
 from app.services.supporter_onboarding import (
@@ -344,6 +344,18 @@ async def test_manual_identity_evidence_is_refused_in_production(onboarding_sett
             OnboardingDb(),
         )
     assert error.value.status_code == 503
+
+
+def test_self_asserted_cornell_email_is_not_identity_verification(onboarding_settings):
+    requester = PeerRequester(
+        requester_id=uuid.uuid4(),
+        credential_hash="unused",
+        private_data_encrypted=encrypt_private_data({"email": "self-asserted@cornell.edu"}),
+        identity_verified_at=None,
+        identity_verification_method=None,
+        identity_subject_hash=None,
+    )
+    assert peer._identity_is_verified(requester) is False
 
 
 def test_onboarding_migration_is_additive_and_has_no_reference_phone():

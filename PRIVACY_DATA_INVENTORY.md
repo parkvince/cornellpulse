@@ -1,6 +1,6 @@
 # CornellPulse data inventory
 
-This inventory describes behavior visible in the repository as of 2026-08-09. Deployment infrastructure, backups, provider settings, and operator practices must be verified separately. It is not a claim of anonymity, legal compliance, Cornell approval, or production execution.
+This inventory describes behavior visible in the repository as of 2026-08-09 (version 2026-08-09.2). Deployment infrastructure, backups, provider settings, and operator practices must be verified separately. It is not a claim of anonymity, legal compliance, Cornell approval, or production execution.
 
 | Location / processor | Data | Purpose | Trigger and consent | Retention visible in code | Deletion / withdrawal |
 | --- | --- | --- | --- | --- | --- |
@@ -47,6 +47,7 @@ The separate product-measurement plan currently stays on-device. With explicit c
 ## Unresolved governance requirements
 
 - Apply `20260808_private_aggregate_retention.sql` to every database after a reviewed backup; confirm the retired sensitive tables were dropped and the hourly retention worker is monitored.
+- Confirm the readiness retention component reports a current successful sweep in every deployed instance; `not_running`, `starting`, `failed`, and `stale` are release-blocking states.
 - Configure and verify provider-side 14-day technical-log deletion plus separate email and backup schedules; application code cannot enforce those provider controls.
 - Configure and monitor the same non-placeholder address in backend `PRIVACY_CONTACT_EMAIL` and frontend `VITE_PRIVACY_CONTACT_EMAIL`. Production startup fails when the backend contact is absent, and identifiable peer features remain default-off.
 - Complete the authorized Cornell OIDC/SAML integration and establish identity-verification and authorization procedures for access, correction, withdrawal, and deletion requests. Manual non-production identity evidence is not launch-ready verification.

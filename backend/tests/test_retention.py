@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.config import settings
+from app.services import retention
 from app.services.retention import purge_expired_operational_data
 
 
@@ -40,3 +41,24 @@ def test_retention_periods_are_bounded_and_documented_defaults():
     assert settings.PUSH_SUBSCRIBER_RETENTION_DAYS == 90
     assert settings.ACADEMIC_CALENDAR_RETENTION_DAYS == 365
     assert settings.RETENTION_SWEEP_INTERVAL_MINUTES == 60
+
+
+def test_retention_readiness_fails_closed_for_missing_failed_and_stale_heartbeat(monkeypatch):
+    now = datetime(2026, 8, 9, 12, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(retention, "_loop_started_at", None)
+    monkeypatch.setattr(retention, "_last_success_at", None)
+    monkeypatch.setattr(retention, "_last_failure_at", None)
+    monkeypatch.setattr(retention, "_last_error_type", None)
+    assert retention.retention_runtime_status(now)["status"] == "not_running"
+
+    monkeypatch.setattr(retention, "_loop_started_at", now)
+    assert retention.retention_runtime_status(now)["status"] == "starting"
+
+    monkeypatch.setattr(retention, "_last_success_at", datetime(2026, 8, 9, 9, 0, tzinfo=timezone.utc))
+    assert retention.retention_runtime_status(now)["status"] == "stale"
+
+    monkeypatch.setattr(retention, "_last_failure_at", datetime(2026, 8, 9, 11, 30, tzinfo=timezone.utc))
+    monkeypatch.setattr(retention, "_last_error_type", "DatabaseError")
+    failed = retention.retention_runtime_status(now)
+    assert failed["status"] == "failed"
+    assert failed["error_type"] == "DatabaseError"

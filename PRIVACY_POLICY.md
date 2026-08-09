@@ -1,6 +1,6 @@
 # CornellPulse privacy and data policy
 
-Version: **2026-08-09.1**  
+Version: **2026-08-09.2**
 Prepared: **2026-08-09**  
 Status: **DRAFT PENDING PRIVACY/LEGAL APPROVAL**  
 Operator/contact: **must be configured as a monitored address in `PRIVACY_CONTACT_EMAIL` and `VITE_PRIVACY_CONTACT_EMAIL` before identifiable features or production release**
@@ -44,7 +44,7 @@ Administrator sessions use a signed short-lived HttpOnly cookie. Peer Connect/su
 
 ## Automated retention
 
-The application runs an hourly sweep for 30-day daily aggregates, 2-day contribution receipts, 30-day resource clicks, 90-day inactive legacy push subscriptions, 365-day cached academic-calendar rows, expired rate-limit buckets, and configured peer field-level retention. Hosting logs, backups, provider logs, and mailboxes require separate operator/provider enforcement and evidence.
+The application runs an hourly sweep for 30-day daily aggregates, 2-day contribution receipts, 30-day resource clicks, 90-day inactive legacy push subscriptions, 365-day cached academic-calendar rows, expired rate-limit buckets, and configured peer field-level retention. Readiness fails closed when the in-process retention scheduler has not started, its last sweep failed, or its successful heartbeat is more than two configured intervals old. Hosting logs, backups, provider logs, and mailboxes require separate operator/provider enforcement and evidence.
 
 ## Access, export, withdrawal, correction, and deletion
 

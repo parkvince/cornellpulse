@@ -6,6 +6,7 @@ from sqlalchemy import text
 from app.auth import validate_security_settings
 from app.config import settings
 from app.database import engine
+from app.services.retention import retention_runtime_status
 
 
 async def _postgres_status() -> dict[str, Any]:
@@ -70,6 +71,7 @@ async def readiness_report() -> dict[str, Any]:
         "redis": redis,
         "email": _email_status(),
         "configuration": _configuration_status(),
+        "retention": retention_runtime_status(),
     }
     ready = all(
         component["status"] in {"ready", "configured"}

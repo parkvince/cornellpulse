@@ -1,6 +1,7 @@
 # Cornell affiliation and identity-provider review packet
 
-Packet version: **2026-08-09.1**  
+Packet version: **2026-08-09.2**
+Review scope: **baseline commit `dc2b909`, attached uncommitted remediation diff, proposed brand/domain, and identity claims/data-flow matrix**
 Approval status: **PENDING CORNELL AUTHORIZATION — NOT APPROVED OR AFFILIATED**  
 Responsible reviewers: **Cornell-authorized brand/legal owner and Cornell Identity Management service owner**  
 Assigned reviewer names / units: ______________________________
@@ -37,5 +38,7 @@ Identity-provider decision: [ ] Approve  [ ] Conditional  [ ] Changes required  
 Approved name/scope/client ID reference: __________________________________________________  
 Conditions / required changes: ____________________________________________________________  
 Evidence references: ____________________________________________________________________  
+Authorization expiry / mandatory re-review date: __________________________________________
+Re-review triggers accepted (brand/domain/claims/roles/IdP/security/incident changes): ______
 Reviewer names and authority: _____________________________________________________________  
 Signatures: __________________________________________  Date: _____________________________

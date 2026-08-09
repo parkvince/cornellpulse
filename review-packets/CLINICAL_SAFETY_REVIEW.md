@@ -1,6 +1,7 @@
 # Licensed mental-health and clinical-safety review packet
 
-Packet version: **2026-08-09.1**  
+Packet version: **2026-08-09.2**
+Review scope: **baseline commit `dc2b909`, attached uncommitted remediation diff, resource audit 2026-08-09.2, and final evidence bundle**
 Approval status: **PENDING EXTERNAL REVIEW — NOT APPROVED**  
 Responsible reviewer: **Independent licensed mental-health professional**  
 Cornell-specific co-reviewer: **Cornell Health-authorized clinical representative**  
@@ -44,5 +45,7 @@ Decision: [ ] Approve  [ ] Approve with conditions  [ ] Changes required  [ ] Re
 Approved scope/version: ______________________________  
 Conditions / required changes: ____________________________________________________________  
 Evidence references: ____________________________________________________________________  
+Approval expiry / mandatory re-review date: _______________________________________________
+Re-review triggers accepted (clinical/resource/crisis-copy/algorithm/incident changes): ____
 Reviewer name and credentials: ________________________  Organization: _____________________  
 Signature: ___________________________________________  Date: _____________________________
