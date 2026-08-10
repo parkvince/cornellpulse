@@ -1,7 +1,7 @@
 # Cornell affiliation and identity-provider review packet
 
-Packet version: **2026-08-09.2**
-Review scope: **baseline commit `dc2b909`, attached uncommitted remediation diff, proposed brand/domain, and identity claims/data-flow matrix**
+Packet version: **2026-08-10.2**
+Review scope: **commit `72ef3c4ad7788ad6d89b640b097eec90c1364215`, the explicitly listed uncommitted Peer-navigation, test, audit-document, and evidence-validation diff, proposed brand/domain, and identity claims/data-flow matrix**
 Approval status: **PENDING CORNELL AUTHORIZATION — NOT APPROVED OR AFFILIATED**  
 Responsible reviewers: **Cornell-authorized brand/legal owner and Cornell Identity Management service owner**  
 Assigned reviewer names / units: ______________________________

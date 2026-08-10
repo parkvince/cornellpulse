@@ -12,6 +12,9 @@ export const localReleaseApprovals = Object.freeze({
 })
 
 export const featureFlags = Object.freeze({
+  // Keep the navigation entry visible so people can find the feature and see
+  // its truthful safety-review status. This does not enable Peer Connect.
+  peerNavigation: true,
   peerConnect: enabled(import.meta.env.VITE_FEATURE_PEER_CONNECT) && localReleaseApprovals.peerConnect,
   supporterSignup: enabled(import.meta.env.VITE_FEATURE_SUPPORTER_SIGNUP) && localReleaseApprovals.supporterSignup,
   publicAdmin: enabled(import.meta.env.VITE_FEATURE_PUBLIC_ADMIN) && localReleaseApprovals.publicAdmin,

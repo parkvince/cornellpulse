@@ -6,7 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$requiredColumns = @("ID", "Exercise", "Command", "Environment", "ExpectedResult", "ActualResult", "TimestampUTC", "Artifact", "Owner", "Status")
+$requiredColumns = @("ID", "Exercise", "Command", "Environment", "Commit", "ExpectedResult", "ActualResult", "TimestampUTC", "Artifact", "Owner", "Status")
 $allowedStatuses = @("PASS", "FAIL", "BLOCKED", "NOT EXECUTED")
 $rows = @(Import-Csv -LiteralPath $Path)
 if ($rows.Count -eq 0) { throw "Release evidence matrix is empty." }
@@ -19,12 +19,12 @@ $selected = if ($Environment -eq "all") { $rows } else { @($rows | Where-Object 
 if ($selected.Count -eq 0) { throw "No rows found for environment: $Environment" }
 
 foreach ($row in $selected) {
-    foreach ($field in @("ID", "Exercise", "Command", "Environment", "ExpectedResult", "ActualResult", "Owner", "Status")) {
+    foreach ($field in @("ID", "Exercise", "Command", "Environment", "Commit", "ExpectedResult", "ActualResult", "TimestampUTC", "Artifact", "Owner", "Status")) {
         if ([string]::IsNullOrWhiteSpace($row.$field)) { throw "Row $($row.ID) is missing $field." }
     }
     if ($allowedStatuses -notcontains $row.Status) { throw "Row $($row.ID) has invalid status $($row.Status)." }
-    if ($row.Status -eq "PASS" -and ([string]::IsNullOrWhiteSpace($row.TimestampUTC) -or [string]::IsNullOrWhiteSpace($row.Artifact))) {
-        throw "PASS row $($row.ID) requires timestamp and artifact evidence."
+    if ($row.Commit -notmatch "^[0-9a-f]{40}$") {
+        throw "Row $($row.ID) must identify the exact 40-character Git commit under review."
     }
 }
 

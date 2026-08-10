@@ -54,8 +54,8 @@ function BottomNav() {
         <span aria-hidden="true" style={{ fontSize: "10px", fontWeight: 600, color: active("/checkin") ? CORAL : "#595959" }}>Check In</span>
       </Link>
 
-      {featureFlags.peerConnect && <Link to="/peer" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", color: active("/peer") ? CORAL : "#717171", fontSize: "10px", fontWeight: active("/peer") ? 600 : 400, textDecoration: "none" }}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/peer") ? CORAL : "#717171"} strokeWidth="1.8">
+      {featureFlags.peerNavigation && <Link to="/peer" aria-label="Peer Connect — unavailable pending safety review" aria-current={active("/peer") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/peer") ? CORAL : "#595959", fontSize: "10px", fontWeight: active("/peer") ? 600 : 400, textDecoration: "none" }}>
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/peer") ? CORAL : "#595959"} strokeWidth="1.8">
           <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
           <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>

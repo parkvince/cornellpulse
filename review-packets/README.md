@@ -1,8 +1,8 @@
 # CornellPulse external review packet index
 
-Packet set version: **2026-08-09.2**
-Prepared: **2026-08-09**  
-Product version: baseline commit `dc2b909` plus the attached uncommitted remediation diff and final test evidence
+Packet set version: **2026-08-10.2**
+Prepared: **2026-08-10**
+Product version: commit `72ef3c4ad7788ad6d89b640b097eec90c1364215` plus the explicitly listed uncommitted Peer-navigation, test, audit-document, and evidence-validation diff and final test evidence
 Overall status: **PENDING EXTERNAL REVIEW**
 
 These packets are approval forms, not approvals. A reviewer must enter their name, qualifications/authority, decision, date, evidence references, conditions, and signature. A repository document, disabled feature, or completed local test does not replace that decision.

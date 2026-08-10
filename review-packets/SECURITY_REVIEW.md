@@ -1,7 +1,7 @@
 # Independent security review packet
 
-Packet version: **2026-08-09.2**
-Review scope: **baseline commit `dc2b909`, attached uncommitted remediation diff, dependency locks, target topology, and final evidence bundle**
+Packet version: **2026-08-10.2**
+Review scope: **commit `72ef3c4ad7788ad6d89b640b097eec90c1364215`, the explicitly listed uncommitted Peer-navigation, test, audit-document, and evidence-validation diff, dependency locks, target topology, and final evidence bundle**
 Approval status: **PENDING EXTERNAL REVIEW — NOT APPROVED**  
 Responsible reviewer: **Independent application-security reviewer**  
 Assigned reviewer name / organization: ______________________________

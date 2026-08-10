@@ -1,7 +1,7 @@
 # Privacy and legal review packet
 
-Packet version: **2026-08-09.2**
-Review scope: **baseline commit `dc2b909`, attached uncommitted remediation diff, policy/inventory version 2026-08-09.2, and final evidence bundle**
+Packet version: **2026-08-10.2**
+Review scope: **commit `72ef3c4ad7788ad6d89b640b097eec90c1364215`, the explicitly listed uncommitted Peer-navigation, test, audit-document, and evidence-validation diff, policy/inventory version 2026-08-09.2, and final evidence bundle**
 Approval status: **PENDING EXTERNAL REVIEW — NOT APPROVED**  
 Responsible reviewer: **Qualified privacy counsel or privacy officer familiar with the deployment jurisdictions and processors**  
 Assigned reviewer name / authority: ______________________________

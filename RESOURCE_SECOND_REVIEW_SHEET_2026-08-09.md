@@ -1,7 +1,7 @@
 # CornellPulse independent resource second-review sheet
 
-Audit version: **2026-08-09.2**  
-Registry version: **baseline commit `dc2b909` plus the attached uncommitted remediation diff**  
+Audit version: **2026-08-10.2**
+Registry version: **commit `72ef3c4ad7788ad6d89b640b097eec90c1364215` plus any explicitly listed uncommitted audit-document diff**
 Status: **PENDING — no row is approved or signed**
 
 The second reviewer must open each authoritative source, compare every registry field and action, test the action on a safe device where appropriate, and be independent of the first-pass verifier. Entering a name without completing that work is not approval. Crisis and urgent records expire after 14 days; routine records after 90 days. A material provider change triggers immediate re-review.

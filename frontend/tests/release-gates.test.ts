@@ -5,12 +5,16 @@ import test from "node:test"
 
 test("public safety-sensitive UI cannot be enabled by environment flags alone", () => {
   const source = readFileSync(join(process.cwd(), "src", "config", "featureFlags.ts"), "utf8")
+  const app = readFileSync(join(process.cwd(), "src", "App.tsx"), "utf8")
+  assert.match(source, /peerNavigation:\s*true/)
   assert.match(source, /peerConnect:\s*false/)
   assert.match(source, /supporterSignup:\s*false/)
   assert.match(source, /publicAdmin:\s*false/)
   assert.match(source, /enabled\(import\.meta\.env\.VITE_FEATURE_PEER_CONNECT\) && localReleaseApprovals\.peerConnect/)
   assert.match(source, /enabled\(import\.meta\.env\.VITE_FEATURE_SUPPORTER_SIGNUP\) && localReleaseApprovals\.supporterSignup/)
   assert.match(source, /enabled\(import\.meta\.env\.VITE_FEATURE_PUBLIC_ADMIN\) && localReleaseApprovals\.publicAdmin/)
+  assert.match(app, /featureFlags\.peerNavigation/)
+  assert.match(app, /path="\/peer" element=\{featureFlags\.peerConnect \? <PeerPage \/> : <FeatureUnavailablePage feature="Peer Connect" \/>\}/)
 })
 
 test("default environment examples keep every public safety-sensitive flag off", () => {

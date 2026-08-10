@@ -1,7 +1,7 @@
 # Accessibility review packet
 
-Packet version: **2026-08-09.2**
-Review scope: **baseline commit `dc2b909`, attached uncommitted remediation diff, six-project browser evidence, and completed real-device/AT evidence**
+Packet version: **2026-08-10.2**
+Review scope: **commit `72ef3c4ad7788ad6d89b640b097eec90c1364215`, the explicitly listed uncommitted Peer-navigation, test, audit-document, and evidence-validation diff, six-project browser evidence, and completed real-device/AT evidence**
 Approval status: **PENDING EXTERNAL REVIEW — NOT APPROVED**  
 Responsible reviewer: **Qualified WCAG accessibility specialist and disabled-user testing coordinator**  
 Assigned reviewer name / organization: ______________________________
