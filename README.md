@@ -14,6 +14,8 @@ Requirements: Node.js 22+, Python 3.12, Docker Desktop, and PowerShell.
 4. From the repository root, start PostgreSQL, Redis, API, and frontend with one command:
    `powershell -ExecutionPolicy Bypass -File .\scripts\start-local.ps1`
 
+   The launcher reads the local PostgreSQL password from `DATABASE_URL` in the ignored `backend/.env`, starts Docker Desktop services, and waits for PostgreSQL and Redis health checks before starting the app. Docker Desktop must already be running.
+
 The app is at `http://localhost:5173`; readiness evidence is at `http://localhost:8000/api/v1/health/ready`. Use `-SkipContainers` only when compatible PostgreSQL and Redis instances are already running.
 
 ### Open local Peer sandbox
