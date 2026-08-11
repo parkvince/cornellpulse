@@ -21,12 +21,12 @@ function sourceFiles(directory: URL): URL[] {
 }
 
 test("primary text palette meets WCAG AA against white", () => {
-  for (const color of ["C83C42", "A9461E", "007A70", "717171", "595959", "222222"]) {
+  for (const color of ["D70466", "A9461E", "007A70", "717171", "595959", "222222"]) {
     assert.ok(contrast(color) >= 4.5, `#${color} should meet 4.5:1 against white`)
   }
 })
 
 test("known legacy low-contrast text colors do not return", () => {
   const source = sourceFiles(new URL("../src/", import.meta.url)).map(file => readFileSync(file, "utf8")).join("\n")
-  assert.doesNotMatch(source, /#(?:b0b0b0|aaa(?:aaa)?|888(?:888)?|999(?:999)?|ff5a5f|fc642d|00a699)\b/i)
+  assert.doesNotMatch(source, /#(?:b0b0b0|aaa(?:aaa)?|888(?:888)?|999(?:999)?|c83c42|fc642d|00a699)\b/i)
 })

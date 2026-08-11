@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { getResource } from "../resources/registry.ts"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 const emergency = getResource("emergency_911")
 const publicSafety = getResource("cornell_public_safety")
 
@@ -10,7 +10,7 @@ const slides = [
     tag: "Welcome",
     title: "Find the right support, right now.",
     body: "CornellPulse helps you explore support resources based on the choices you enter.",
-    bg: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)",
+    bg: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)",
   },
   {
     tag: "Resources",
@@ -22,13 +22,13 @@ const slides = [
     tag: "Connect",
     title: "Talk to a peer who gets it.",
     body: "Peer Connect is an open non-production sandbox. Anyone can create an account; Cornell identity verification is coming soon, so profiles are not verified.",
-    bg: "linear-gradient(135deg, #A9461E 0%, #C83C42 100%)",
+    bg: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)",
   },
   {
     tag: "Privacy",
     title: "Clear choices about your data.",
     body: "Recommendations are generated on your device. Optional aggregate contribution and resource-click analytics are off until you choose to enable them.",
-    bg: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)",
+    bg: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)",
   },
   {
     tag: "Before you start",

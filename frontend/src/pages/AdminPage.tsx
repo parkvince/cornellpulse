@@ -1,10 +1,10 @@
 import { type FormEvent, type KeyboardEvent, useCallback, useState, useEffect } from "react"
 import { AdminApiError, adminRequest, parseAdminJson } from "../api/admin"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
 
-const AVATAR_COLORS = ["#C83C42", "#007A70", "#A9461E", "#5C4BC2", "#007B78", "#BD3439", "#337F7C"]
+const AVATAR_COLORS = ["#D70466", "#007A70", "#E31C5F", "#5C4BC2", "#007B78", "#FF385C", "#337F7C"]
 function avatarColor(name: string) {
   return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]
 }
@@ -298,7 +298,7 @@ export default function AdminPage() {
           <label htmlFor="admin-password" style={{ position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 }}>Administrator password</label>
           <input id="admin-password" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" disabled={loginLoading} aria-describedby={loginError ? "admin-login-error" : undefined} style={{ width: "100%", padding: "14px 16px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", marginBottom: "12px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }} />
           {loginError && (
-            <div id="admin-login-error" role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #C83C42", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}>
+            <div id="admin-login-error" role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #D70466", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}>
               <p style={{ fontSize: "13px", color: CORAL }}>{loginError}</p>
             </div>
           )}
@@ -311,7 +311,7 @@ export default function AdminPage() {
   if (selectedSignup) {
     return (
       <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
-        <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
+        <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
           <button onClick={() => setSelectedSignup(null)} style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(255,255,255,0.2)", border: "none", borderRadius: "10px", padding: "8px 14px", color: "#ffffff", fontSize: "13px", fontWeight: 600, marginBottom: "20px", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
             Applications
@@ -328,7 +328,7 @@ export default function AdminPage() {
         </div>
 
         <div style={{ padding: "24px 20px" }}>
-          {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #C83C42", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p></div>}
+          {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #D70466", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p></div>}
           <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
             <span style={{ padding: "6px 14px", borderRadius: "20px", backgroundColor: selectedSignup.approved ? "#E8F8F5" : "#FFF0F0", color: selectedSignup.approved ? "#007A70" : CORAL, fontSize: "12px", fontWeight: 700 }}>
               {selectedSignup.approved ? "Approved" : "Pending review"}
@@ -440,7 +440,7 @@ export default function AdminPage() {
   if (selectedRequest) {
     return (
       <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
-        <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
+        <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
           <button onClick={() => setSelectedRequest(null)} style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(255,255,255,0.2)", border: "none", borderRadius: "10px", padding: "8px 14px", color: "#ffffff", fontSize: "13px", fontWeight: 600, marginBottom: "20px", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
             Requests
@@ -451,7 +451,7 @@ export default function AdminPage() {
         </div>
 
         <div style={{ padding: "24px 20px" }}>
-          {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #C83C42", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p></div>}
+          {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #D70466", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p></div>}
           <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
             <span style={{ padding: "6px 14px", borderRadius: "20px", backgroundColor: selectedRequest.status === "resolved" ? "#E8F8F5" : "#FFF0F0", color: selectedRequest.status === "resolved" ? "#007A70" : CORAL, fontSize: "12px", fontWeight: 700, textTransform: "capitalize" }}>
               {selectedRequest.status}
@@ -532,7 +532,7 @@ export default function AdminPage() {
 
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
-      <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 20px 28px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 20px 28px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em" }}>CornellPulse</p>
           <button onClick={logout} style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", backgroundColor: "rgba(255,255,255,0.15)", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontFamily: "DM Sans, sans-serif" }}>Sign out</button>
@@ -549,7 +549,7 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #C83C42", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+        {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #D70466", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
           <p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p>
           <button onClick={() => void loadData()} style={{ color: CORAL, backgroundColor: "transparent", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Retry</button>
         </div>}
@@ -570,7 +570,7 @@ export default function AdminPage() {
               <div style={{ backgroundColor: "#FFF0F0", border: "1px solid #FFD0D0", borderRadius: "16px", padding: "16px 18px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <p style={{ fontSize: "14px", fontWeight: 700, color: CORAL, marginBottom: "2px" }}>{pendingCount} application{pendingCount !== 1 ? "s" : ""} need review</p>
-                  <p style={{ fontSize: "12px", color: "#C83C42" }}>Approve to make them live on the app</p>
+                  <p style={{ fontSize: "12px", color: "#D70466" }}>Approve to make them live on the app</p>
                 </div>
                 <button onClick={() => setTab("signups")} style={{ padding: "8px 16px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Review</button>
               </div>

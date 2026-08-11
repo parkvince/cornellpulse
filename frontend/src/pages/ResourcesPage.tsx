@@ -7,7 +7,7 @@ import { useOnlineStatus } from "../resources/useOnlineStatus.ts"
 import { recordLocalMeasurement, type ResourceAction } from "../privacy/measurement.ts"
 import { requestJson } from "../api/client"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 const CATS = ["All", ...RESOURCE_CATEGORIES] as const
 const crisisResource = getResource("988_lifeline")
 
@@ -70,7 +70,7 @@ export default function ResourcesPage() {
 
   return (
     <div style={{ paddingBottom: "24px" }}>
-      <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 20px 24px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 20px 24px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Resources</p>
         <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", marginBottom: "4px" }}>Resources for different needs.</h1>
         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", marginBottom: "16px" }}>Review {ACTIVE_RESOURCES.length} source-checked resources and choose based on cost, access, and what happens next. Independent second review is pending.</p>

@@ -5,7 +5,7 @@ import { getResource } from "../resources/registry.ts"
 import { resourcePath } from "../resources/directory.ts"
 import { loadLocalHistory, reminderIsDue, updatePlanEntry, type LocalPlanEntry } from "../history/localHistory.ts"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 
 const featuredResources = ["caps_access", "lets_talk", "ears", "cornell_health_247"].map(getResource)
 const crisisResource = getResource("988_lifeline")
@@ -13,7 +13,7 @@ const crisisResource = getResource("988_lifeline")
 function moodColor(m: number) {
   if (m >= 7) return "#007A70"
   if (m >= 5) return "#A9461E"
-  if (m >= 3) return "#C83C42"
+  if (m >= 3) return "#D70466"
   return "#c0392b"
 }
 
@@ -62,7 +62,7 @@ export default function HomePage() {
 
   return (
     <div style={{ backgroundColor: "#fff8f7" }}>
-      <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Cornell University</p>
         <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "24px" }}>
           Find the right support, right now.
@@ -158,7 +158,7 @@ export default function HomePage() {
             </Link>
           </div>}
 
-          <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", borderRadius: "20px", padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", borderRadius: "20px", padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>

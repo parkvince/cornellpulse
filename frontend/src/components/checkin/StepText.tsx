@@ -1,4 +1,4 @@
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 interface Props { value: string; onChange: (v: string) => void; onSubmit: () => void; onBack: () => void; loading: boolean; error: string }
 
 function keepVisible(element: HTMLElement) {

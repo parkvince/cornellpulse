@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 
 interface Props {
   sleep: string; onSleepChange: (v: string) => void

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { getResource } from "../../resources/registry.ts"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 
 const emergency = getResource("emergency_911")
 const publicSafety = getResource("cornell_public_safety")

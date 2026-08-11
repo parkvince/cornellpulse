@@ -17,14 +17,14 @@ import {
 import { recordLocalMeasurement } from "../privacy/measurement.ts"
 import { ACTIVE_RESOURCES, getResource } from "../resources/registry.ts"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 const emergency = getResource("emergency_911")
 const publicSafety = getResource("cornell_public_safety")
 
 function moodColor(mood: number) {
   if (mood >= 7) return "#007A70"
   if (mood >= 5) return "#A9461E"
-  if (mood >= 3) return "#C83C42"
+  if (mood >= 3) return "#D70466"
   return "#c0392b"
 }
 
@@ -111,7 +111,7 @@ export default function ProfilePage() {
 
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
-      <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "250px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "250px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Your device</p>
         <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "8px" }}>History &amp; Privacy</h1>
         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.82)", lineHeight: 1.5 }}>Review saved plans and mood trends locally. Raw check-in answers are not added to this history or uploaded for these features.</p>

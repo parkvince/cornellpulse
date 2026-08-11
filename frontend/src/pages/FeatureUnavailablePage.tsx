@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 
 export default function FeatureUnavailablePage({ feature }: { feature: string }) {
   return (

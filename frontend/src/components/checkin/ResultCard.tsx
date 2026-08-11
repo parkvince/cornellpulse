@@ -8,12 +8,12 @@ import { CrisisContactActions } from "../shared/EmergencyHelp"
 import { loadLocalHistory } from "../../history/localHistory.ts"
 import { recordLocalMeasurement, type ResourceAction } from "../../privacy/measurement.ts"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 
 function moodColor(mood: number) {
   if (mood >= 7) return "#007A70"
   if (mood >= 5) return "#A9461E"
-  if (mood >= 3) return "#C83C42"
+  if (mood >= 3) return "#D70466"
   return "#c0392b"
 }
 
@@ -117,14 +117,14 @@ export default function ResultCard(props: ResultCardProps) {
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh", padding: "24px 20px 32px" }}>
       {safety.signal === "urgent" && (
-        <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "2px solid #C83C42", borderRadius: "16px", padding: "20px", marginBottom: "20px" }}>
+        <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "2px solid #D70466", borderRadius: "16px", padding: "20px", marginBottom: "20px" }}>
           <p style={{ fontSize: "15px", fontWeight: 800, color: CORAL, marginBottom: "8px" }}>Some words you entered may point to an immediate safety concern</p>
           <p style={{ fontSize: "14px", color: "#686868", lineHeight: 1.6 }}>This automated check can be wrong and is not a diagnosis or clinical assessment. Call 911 if you may act now or cannot stay safe. The options below are separate crisis pathways, not ordinary recommendations.</p>
         </div>
       )}
 
       {safety.signal === "check-in" && (
-        <div role="status" style={{ backgroundColor: "#FFF0F0", border: "1.5px solid #C83C42", borderRadius: "16px", padding: "18px", marginBottom: "20px" }}>
+        <div role="status" style={{ backgroundColor: "#FFF0F0", border: "1.5px solid #D70466", borderRadius: "16px", padding: "18px", marginBottom: "20px" }}>
           <p style={{ fontSize: "14px", fontWeight: 800, color: CORAL, marginBottom: "6px" }}>Would immediate support be useful?</p>
           <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6 }}>A low mood selection or ambiguous wording prompted this check-in. CornellPulse cannot determine whether you are in danger. The immediate-support options below are separate from ordinary resource suggestions.</p>
         </div>

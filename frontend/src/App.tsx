@@ -17,7 +17,7 @@ import { featureFlags } from "./config/featureFlags"
 import EmergencyHelp from "./components/shared/EmergencyHelp"
 import ConnectivityBanner from "./components/shared/ConnectivityBanner"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 
 function BottomNav() {
   const location = useLocation()

@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { clearCornellPulseDeviceData, getPrivacyPreferences, savePrivacyPreferences, type PrivacyPreferences } from "../privacy/preferences"
 
-const CORAL = "#C83C42"
+const CORAL = "#D70466"
 const CONTACT_EMAIL = (import.meta.env.VITE_PRIVACY_CONTACT_EMAIL || "").trim()
 
 const sections = [
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
 
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
-      <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Privacy & Data</p>
         <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, marginBottom: "8px" }}>Your choices and data</h1>
         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>A factual summary of what CornellPulse stores, transmits, and cannot delete automatically. Policy version 2026-08-09.1; privacy/legal approval is pending.</p>
