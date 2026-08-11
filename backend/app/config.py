@@ -1,3 +1,9 @@
+import json
+import os
+from pathlib import Path
+from secrets import token_urlsafe
+
+from cryptography.fernet import Fernet
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -49,9 +55,44 @@ class Settings(BaseSettings):
     PRIVACY_CONTACT_EMAIL: str = ""
     FEATURE_PEER_CONNECT: bool = False
     FEATURE_SUPPORTER_SIGNUP: bool = False
+    PEER_SANDBOX_MODE: bool = False
 
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT.strip().lower() == "production"
 
 settings = Settings()
+
+
+def _configure_local_peer_sandbox() -> None:
+    """Create ignored local credentials for the explicitly enabled dev sandbox."""
+    if not settings.PEER_SANDBOX_MODE or settings.is_production:
+        return
+    secret_path = Path(__file__).resolve().parents[1] / ".peer-sandbox-secrets.json"
+    try:
+        stored = json.loads(secret_path.read_text(encoding="utf-8")) if secret_path.exists() else {}
+    except (OSError, json.JSONDecodeError):
+        stored = {}
+    if not isinstance(stored, dict):
+        stored = {}
+    changed = False
+    if not isinstance(stored.get("peer_auth_secret"), str) or len(stored["peer_auth_secret"]) < 32:
+        stored["peer_auth_secret"] = token_urlsafe(48)
+        changed = True
+    try:
+        Fernet(str(stored.get("peer_pii_encryption_key", "")).encode("ascii"))
+    except (ValueError, UnicodeEncodeError):
+        stored["peer_pii_encryption_key"] = Fernet.generate_key().decode("ascii")
+        changed = True
+    if changed or not secret_path.exists():
+        secret_path.write_text(json.dumps(stored, separators=(",", ":")), encoding="utf-8")
+        try:
+            os.chmod(secret_path, 0o600)
+        except OSError:
+            pass
+    if len(settings.PEER_AUTH_SECRET) < 32 or settings.PEER_AUTH_SECRET.startswith("replace-"):
+        settings.PEER_AUTH_SECRET = str(stored["peer_auth_secret"])
+    settings.PEER_PII_ENCRYPTION_KEY = str(stored["peer_pii_encryption_key"])
+
+
+_configure_local_peer_sandbox()

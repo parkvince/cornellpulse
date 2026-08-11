@@ -54,7 +54,7 @@ function BottomNav() {
         <span aria-hidden="true" style={{ fontSize: "10px", fontWeight: 600, color: active("/checkin") ? CORAL : "#595959" }}>Check In</span>
       </Link>
 
-      {featureFlags.peerNavigation && <Link to="/peer" aria-label="Peer Connect — unavailable pending safety review" aria-current={active("/peer") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/peer") ? CORAL : "#595959", fontSize: "10px", fontWeight: active("/peer") ? 600 : 400, textDecoration: "none" }}>
+      {featureFlags.peerNavigation && <Link to="/peer" aria-label="Peer Connect" aria-current={active("/peer") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/peer") ? CORAL : "#595959", fontSize: "10px", fontWeight: active("/peer") ? 600 : 400, textDecoration: "none" }}>
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/peer") ? CORAL : "#595959"} strokeWidth="1.8">
           <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
@@ -112,8 +112,8 @@ export default function App() {
           <Route path="/checkin" element={<CheckInPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/resources/:resourceId" element={<ResourceDetailPage />} />
-          <Route path="/peer" element={featureFlags.peerConnect ? <PeerPage /> : <FeatureUnavailablePage feature="Peer Connect" />} />
-          <Route path="/peer/signup" element={featureFlags.supporterSignup ? <PeerSignupPage /> : <FeatureUnavailablePage feature="Supporter signup" />} />
+          <Route path="/peer" element={featureFlags.peerSandbox || featureFlags.peerConnect ? <PeerPage /> : <FeatureUnavailablePage feature="Peer Connect" />} />
+          <Route path="/peer/signup" element={featureFlags.peerSandbox ? <Navigate to="/peer" replace /> : featureFlags.supporterSignup ? <PeerSignupPage /> : <FeatureUnavailablePage feature="Supporter signup" />} />
           <Route path="/peer/reference" element={featureFlags.supporterSignup ? <ReferenceInvitationPage /> : <FeatureUnavailablePage feature="Reference invitations" />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/privacy" element={<PrivacyPage />} />

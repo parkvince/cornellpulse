@@ -2,6 +2,8 @@
 backend/venv/
 backend/__pycache__/
 backend/.env
+backend/.peer-sandbox-secrets.json
+backend/local-backups/
 *.pyc
 
 # Node

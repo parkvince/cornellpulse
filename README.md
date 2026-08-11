@@ -16,6 +16,10 @@ Requirements: Node.js 22+, Python 3.12, Docker Desktop, and PowerShell.
 
 The app is at `http://localhost:5173`; readiness evidence is at `http://localhost:8000/api/v1/health/ready`. Use `-SkipContainers` only when compatible PostgreSQL and Redis instances are already running.
 
+### Open local Peer sandbox
+
+For non-production phone testing with real database records, set `PEER_SANDBOX_MODE=true` in the ignored `backend/.env` and create an ignored `frontend/.env.local` containing `VITE_PEER_SANDBOX_MODE=true`. The backend generates local Peer signing and encryption credentials in ignored `backend/.peer-sandbox-secrets.json`. Sandbox profiles are explicitly labeled as not identity verified, and the backend rejects sandbox mode whenever `ENVIRONMENT=production`.
+
 ## Database changes
 
 Development startup creates missing tables. Existing or production databases must apply the ordered SQL files in `backend/migrations` with a backup and a transaction-capable PostgreSQL client. The migrations preserve records and do not drop user data.

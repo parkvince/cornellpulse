@@ -47,6 +47,7 @@ from app.services.peer_security import (
     encrypt_private_data,
     hash_peer_password,
     public_supporter_dict,
+    valid_fernet_key,
     verify_peer_password,
 )
 from app.services.rate_limits import enforce_persistent_rate_limit
@@ -88,7 +89,21 @@ CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 AUDIT_METADATA_KEYS = {"supporter_id", "requester_id", "invitation_id", "from", "to", "reason_code", "action", "supporters", "requesters", "requests", "reports", "messages", "blocks", "connection_reports", "moderation_notes", "notifications", "reference_invitations", "audit_logs", "status_history", "rate_limit_buckets"}
 
 
+def _peer_sandbox_active() -> bool:
+    return settings.PEER_SANDBOX_MODE and not settings.is_production
+
+
+def _require_peer_sandbox_security() -> None:
+    if settings.is_production:
+        raise HTTPException(status_code=503, detail="The open Peer sandbox is prohibited in production.")
+    if len(settings.PEER_AUTH_SECRET) < 32 or not valid_fernet_key(settings.PEER_PII_ENCRYPTION_KEY):
+        raise HTTPException(status_code=503, detail="The local Peer sandbox security configuration is incomplete.")
+
+
 def require_peer_connect() -> None:
+    if settings.PEER_SANDBOX_MODE:
+        _require_peer_sandbox_security()
+        return
     if not settings.FEATURE_PEER_CONNECT:
         raise HTTPException(status_code=503, detail="Peer Connect is unavailable pending safety review.")
     if peer_readiness_blockers():
@@ -96,6 +111,9 @@ def require_peer_connect() -> None:
 
 
 def require_supporter_signup() -> None:
+    if settings.PEER_SANDBOX_MODE:
+        _require_peer_sandbox_security()
+        return
     if not settings.FEATURE_SUPPORTER_SIGNUP:
         raise HTTPException(status_code=503, detail="Supporter signup is unavailable pending safety review.")
     if peer_readiness_blockers():
@@ -103,6 +121,9 @@ def require_supporter_signup() -> None:
 
 
 def require_peer_workflow() -> None:
+    if settings.PEER_SANDBOX_MODE:
+        _require_peer_sandbox_security()
+        return
     if not settings.FEATURE_PEER_CONNECT and not settings.FEATURE_SUPPORTER_SIGNUP:
         raise HTTPException(status_code=503, detail="Peer workflows are unavailable pending safety review.")
     if peer_readiness_blockers():
@@ -149,7 +170,7 @@ class SupporterSignupRequest(StrictPeerModel):
     @classmethod
     def validate_email(cls, value: str) -> str:
         normalized = _email(value)
-        if not normalized.endswith("@cornell.edu"):
+        if not _peer_sandbox_active() and not normalized.endswith("@cornell.edu"):
             raise ValueError("A Cornell email is required for contact; email-domain validation is not identity verification")
         return normalized
 
@@ -274,7 +295,7 @@ class RequesterRegistrationRequest(StrictPeerModel):
     @classmethod
     def validate_email(cls, value: str) -> str:
         normalized = _email(value)
-        if not normalized.endswith("@cornell.edu"):
+        if not _peer_sandbox_active() and not normalized.endswith("@cornell.edu"):
             raise ValueError("A Cornell email is required for contact; email-domain validation is not identity verification")
         return normalized
 
@@ -692,6 +713,8 @@ async def _active_supporter(db: AsyncSession, supporter_id: uuid.UUID, *, approv
 
 
 def _identity_is_verified(record: PeerRequester | PeerSignup) -> bool:
+    if _peer_sandbox_active():
+        return True
     if not record.identity_verified_at or not record.identity_subject_hash:
         return False
     return not settings.is_production or record.identity_verification_method == "cornell_oidc"
@@ -869,10 +892,15 @@ async def submit_supporter_application(supporter_id: uuid.UUID, payload: Support
     now = datetime.now(timezone.utc)
     supporter.policy_version = payload.policy_version
     supporter.policy_accepted_at = now
-    supporter.status = "submitted"
-    _status_history(db, actor, "supporter", str(supporter_id), "draft", "submitted")
-    _audit(db, actor, "supporter.application.submitted", "supporter", str(supporter_id), {"from": "draft", "to": "submitted"})
+    target_status = "approved" if _peer_sandbox_active() else "submitted"
+    supporter.status = target_status
+    supporter.approved = target_status == "approved"
+    supporter.approved_at = now if target_status == "approved" else None
+    _status_history(db, actor, "supporter", str(supporter_id), "draft", target_status)
+    _audit(db, actor, "supporter.application.submitted", "supporter", str(supporter_id), {"from": "draft", "to": target_status})
     await db.commit()
+    if _peer_sandbox_active():
+        return {"supporter_id": str(supporter_id), "status": "approved", "identity_status": "unverified_sandbox", "notification": {"status": "skipped"}}
     attempt = await asyncio.to_thread(_send_email, settings.ADMIN_EMAIL, "application", str(supporter_id))
     notification = _record_notification(db, "supporter_application_submitted", "supporter", str(supporter_id), "administrator", "administrator", attempt)
     await db.commit()
@@ -1044,7 +1072,7 @@ async def register_requester(payload: RequesterRegistrationRequest, request: Req
         "requester_id": str(requester_id),
         "access_token": create_peer_token("requester", str(requester_id)),
         "token_type": "bearer",
-        "identity_status": "pending",
+        "identity_status": "unverified_sandbox" if _peer_sandbox_active() else "pending",
     }
 
 
@@ -1097,6 +1125,16 @@ async def peer_login(payload: PeerLoginRequest, request: Request, db: AsyncSessi
 @router.get("/peer-supporters", dependencies=[Depends(require_peer_connect)])
 async def get_supporters(db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)
+    if _peer_sandbox_active():
+        result = await db.execute(select(PeerSignup).where(
+            PeerSignup.status == "approved",
+            PeerSignup.policy_version == SUPPORTER_POLICY_VERSION,
+            PeerSignup.policy_accepted_at.is_not(None),
+            PeerSignup.deleted_at.is_(None),
+            PeerSignup.withdrawn_at.is_(None),
+            PeerSignup.retention_expires_at > now,
+        ).order_by(PeerSignup.submitted_at.desc()))
+        return [{**public_supporter_dict(supporter), "identity_status": "unverified"} for supporter in result.scalars().all()]
     consented_reference_exists = select(SupporterReferenceInvitation.invitation_id).where(
         SupporterReferenceInvitation.supporter_id == PeerSignup.supporter_id,
         SupporterReferenceInvitation.status == "accepted",

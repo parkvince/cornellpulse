@@ -13,6 +13,10 @@ function isCornellEmail(email: string) {
   return /^[a-zA-Z0-9._%+-]+@cornell\.edu$/i.test(email.trim())
 }
 
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+}
+
 const MAJORS = [
   "Africana Studies", "Agricultural Sciences", "American Studies", "Animal Science", "Anthropology",
   "Applied Economics and Management", "Archaeology", "Architecture", "Asian Studies", "Astronomy",
@@ -79,6 +83,7 @@ interface Supporter {
   display_name: string; year: string; major: string
   locations: string[]; availability: string[]
   interests: string[]; about: string
+  identity_status?: string
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value)
@@ -104,7 +109,10 @@ function SupporterCard({ supporter, onRequest }: { supporter: Supporter, onReque
           <span style={{ fontSize: "20px", fontWeight: 800, color: color }}>{supporter.display_name.charAt(0)}</span>
         </div>
         <div style={{ flex: 1 }}>
-          <p style={{ fontSize: "16px", fontWeight: 700, color: "#222222", marginBottom: "2px" }}>{supporter.display_name}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "7px", flexWrap: "wrap" }}>
+            <p style={{ fontSize: "16px", fontWeight: 700, color: "#222222", marginBottom: "2px" }}>{supporter.display_name}</p>
+            {supporter.identity_status === "unverified" && <span style={{ padding: "3px 7px", borderRadius: "999px", backgroundColor: "#FFF5E8", color: "#704214", fontSize: "10px", fontWeight: 700 }}>Identity not verified</span>}
+          </div>
           <p style={{ fontSize: "12px", color: "#717171" }}>{supporter.year}{supporter.major ? ` · ${supporter.major}` : ""}</p>
         </div>
       </div>
@@ -280,8 +288,8 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
               setConnectionState("canceled")
             } catch (cause) { setError(cause instanceof Error ? cause.message : "Cancellation was not confirmed.") }
             finally { setLoading(false) }
-          }} disabled={loading} style={{ width: "100%", padding: "12px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 600, marginBottom: "10px", cursor: "pointer" }}>Cancel request</button>}
-          <button onClick={onSubmit} style={{ width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 600, marginBottom: "10px", cursor: "pointer" }}>Done</button>
+          }} disabled={loading} style={{ width: "100%", padding: "12px", backgroundColor: "#f5f5f5", color: "#595959", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 600, marginBottom: "10px", cursor: "pointer" }}>Cancel request</button>}
+          <button onClick={onSubmit} style={{ width: "100%", padding: "16px", backgroundColor: "#f5f5f5", color: "#595959", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 600, marginBottom: "10px", cursor: "pointer" }}>Done</button>
           <button onClick={() => setShowReport(true)} style={{ width: "100%", padding: "10px", backgroundColor: "transparent", border: "none", color: "#717171", fontSize: "12px", cursor: "pointer" }}>Report a safety concern</button>
         </div>
       </div>
@@ -448,11 +456,11 @@ function ConnectionManager() {
       <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.5, marginBottom: "12px" }}>{connection.status === "pending" ? "The requester opted in. No contact details are shown; the relay opens only after acceptance." : connection.relay_available ? "Both people opted in. Use the in-app relay; contact details remain private." : "This request is no longer awaiting a response."}</p>
       {role === "supporter" && connection.status === "pending" && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
         <button onClick={() => supporterAction(connection.request_id, "accept")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: CORAL, color: "#fff", fontWeight: 700 }}>Accept</button>
-        <button onClick={() => supporterAction(connection.request_id, "decline")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#717171", fontWeight: 700 }}>Decline</button>
-        <button onClick={() => supporterAction(connection.request_id, "expire")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#717171", fontWeight: 700 }}>Expire</button>
+        <button onClick={() => supporterAction(connection.request_id, "decline")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#595959", fontWeight: 700 }}>Decline</button>
+        <button onClick={() => supporterAction(connection.request_id, "expire")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#595959", fontWeight: 700 }}>Expire</button>
         <button onClick={() => window.confirm("Block this requester? This ends the request and prevents another request while the block is active.") && supporterAction(connection.request_id, "block")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, fontWeight: 700 }}>Block</button>
       </div>}
-      {role === "requester" && (connection.status === "pending" || connection.status === "accepted") && <button onClick={() => window.confirm("Cancel this connection request?") && confirmedAction(`peer-requests/${connection.request_id}/cancel`, "canceled")} disabled={loading} style={{ width: "100%", padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#717171", fontWeight: 700 }}>Cancel request</button>}
+      {role === "requester" && (connection.status === "pending" || connection.status === "accepted") && <button onClick={() => window.confirm("Cancel this connection request?") && confirmedAction(`peer-requests/${connection.request_id}/cancel`, "canceled")} disabled={loading} style={{ width: "100%", padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#595959", fontWeight: 700 }}>Cancel request</button>}
       {connection.relay_available && <div style={{ marginTop: "12px" }}>
         <label htmlFor={`relay-${connection.request_id}`} style={{ fontSize: "12px", fontWeight: 600, color: "#222", display: "block", marginBottom: "6px" }}>In-app relay message</label>
         <textarea id={`relay-${connection.request_id}`} value={messageDrafts[connection.request_id] || ""} onChange={event => setMessageDrafts(current => ({ ...current, [connection.request_id]: event.target.value }))} maxLength={1000} placeholder="Do not include email, phone, links, or social handles." rows={2} style={{ width: "100%", padding: "10px", border: "2px solid #ebebeb", borderRadius: "10px", resize: "vertical", marginBottom: "6px" }} />
@@ -467,10 +475,67 @@ function ConnectionManager() {
   </div>
 }
 
-function SignupForm() {
+function RequesterSignupForm() {
+  const [form, setForm] = useState({ display_name: "", email: "", phone: "", password: "" })
+  const [requesterId, setRequesterId] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const valid = Boolean(form.display_name.trim() && isValidEmail(form.email) && form.password.length >= 12)
+
+  function update(field: keyof typeof form, value: string) {
+    setForm(current => ({ ...current, [field]: value }))
+  }
+
+  async function register() {
+    if (!valid) return
+    setLoading(true); setError("")
+    try {
+      const result = await requestJson<{ requester_id: string; access_token: string; identity_status: string }>("/peer/requesters", {
+        method: "POST",
+        body: { ...form, phone: form.phone.trim() || null },
+        idempotencyKey: crypto.randomUUID(),
+        validate: (value): value is { requester_id: string; access_token: string; identity_status: string } => hasString(value, "requester_id") && hasString(value, "access_token") && hasString(value, "identity_status"),
+      })
+      setRequesterId(result.requester_id)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The server did not create the requester account.")
+    } finally { setLoading(false) }
+  }
+
+  if (requesterId) return (
+    <section aria-labelledby="requester-created" style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "22px", boxShadow: "0 2px 14px rgba(0,0,0,0.06)" }}>
+      <div style={{ width: "54px", height: "54px", borderRadius: "17px", backgroundColor: "#E8F8F5", color: "#007A70", display: "grid", placeItems: "center", fontSize: "24px", fontWeight: 800, marginBottom: "15px" }}>✓</div>
+      <h2 id="requester-created" style={{ fontSize: "21px", color: "#222222", marginBottom: "7px" }}>Your requester account is ready</h2>
+      <p style={{ fontSize: "13px", color: "#666666", lineHeight: 1.55, marginBottom: "14px" }}>Save this ID. You will use it with your password to request peers and manage connections.</p>
+      <div style={{ backgroundColor: "#F7F5F4", borderRadius: "13px", padding: "12px", marginBottom: "13px" }}><p style={{ fontSize: "11px", color: "#717171", marginBottom: "3px" }}>Requester ID</p><p style={{ fontSize: "12px", color: "#222222", fontWeight: 700, overflowWrap: "anywhere", userSelect: "all" }}>{requesterId}</p></div>
+      <div role="note" style={{ backgroundColor: "#FFF5E8", color: "#704214", borderRadius: "13px", padding: "12px", fontSize: "12px", lineHeight: 1.5 }}>Cornell identity verification is coming soon. This sandbox account is not identity verified.</div>
+    </section>
+  )
+
+  const inputStyle = { width: "100%", padding: "13px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }
+  return (
+    <section aria-labelledby="requester-signup-title">
+      <h2 id="requester-signup-title" style={{ fontSize: "21px", color: "#222222", marginBottom: "6px" }}>Create a requester account</h2>
+      <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.55, marginBottom: "18px" }}>Use this account to ask a peer to connect. Your email and phone are never shown in the supporter directory.</p>
+      <div role="note" style={{ backgroundColor: "#FFF5E8", border: "1px solid #F1D4A8", borderRadius: "14px", padding: "12px", marginBottom: "16px", color: "#704214", fontSize: "12px", lineHeight: 1.5 }}><strong>Cornell identity verification is coming soon.</strong> Anyone can create an account in this non-production sandbox, so identities are not verified.</div>
+      {([
+        ["display_name", "Display name", "Your name", "text"],
+        ["email", "Email", "you@example.com", "email"],
+        ["phone", "Phone (optional and private)", "Optional phone number", "tel"],
+        ["password", "Password", "At least 12 characters", "password"],
+      ] as const).map(([field, label, placeholder, type]) => <div key={field} style={{ marginBottom: "13px" }}><label htmlFor={`requester-${field}`} style={{ display: "block", fontSize: "13px", fontWeight: 650, color: "#222222", marginBottom: "6px" }}>{label}</label><input id={`requester-${field}`} value={form[field]} onChange={event => update(field, event.target.value)} placeholder={placeholder} type={type} autoComplete={field === "password" ? "new-password" : undefined} style={inputStyle} /></div>)}
+      {form.email && !isValidEmail(form.email) && <p role="alert" style={{ fontSize: "12px", color: CORAL, margin: "-5px 0 12px" }}>Enter a valid email address.</p>}
+      {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+      <button type="button" onClick={register} disabled={!valid || loading} style={{ width: "100%", padding: "15px", border: 0, borderRadius: "13px", backgroundColor: valid && !loading ? CORAL : "#ebebeb", color: valid && !loading ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 750 }}>{loading ? "Creating account..." : "Create requester account"}</button>
+    </section>
+  )
+}
+
+function SignupForm({ onCreated }: { onCreated: () => void }) {
   const [step, setStep] = useState(1)
   const TOTAL = 3
   const [submitted, setSubmitted] = useState(false)
+  const [supporterId, setSupporterId] = useState("")
   const [policyAccepted, setPolicyAccepted] = useState(false)
   const [submitError, setSubmitError] = useState("")
   const [locationSearch, setLocationSearch] = useState("")
@@ -495,7 +560,7 @@ function SignupForm() {
 
   const filteredMajors = majorSearch ? MAJORS.filter(m => m.toLowerCase().includes(majorSearch.toLowerCase()) && !form.majors.includes(m)).slice(0, 8) : []
   const filteredLocations = LOCATIONS.filter(l => l.toLowerCase().includes(locationSearch.toLowerCase()))
-  const emailValid = isCornellEmail(form.email)
+  const emailValid = featureFlags.peerSandbox ? isValidEmail(form.email) : isCornellEmail(form.email)
 
   const step1Valid = form.name && emailValid && form.phone && form.password.length >= 12 && form.year
   const step2Valid = form.locations.length > 0
@@ -510,14 +575,17 @@ function SignupForm() {
         idempotencyKey: crypto.randomUUID(),
         validate: (value): value is { supporter_id: string; access_token: string } => hasString(value, "supporter_id") && hasString(value, "access_token"),
       })
-      await requestJson<{ status: string }>(`/peer-signups/${draft.supporter_id}/submit`, {
+      const submittedApplication = await requestJson<{ status: string }>(`/peer-signups/${draft.supporter_id}/submit`, {
         method: "POST",
         headers: { Authorization: `Bearer ${draft.access_token}` },
         body: { policy_version: "2026-08-02", role_scope_accepted: true, conduct_standards_accepted: true, crisis_boundaries_accepted: true, public_meeting_rules_accepted: true, reporting_policy_accepted: true, withdrawal_controls_acknowledged: true },
         idempotencyKey: crypto.randomUUID(),
         validate: isStatusResponse,
       })
+      if (featureFlags.peerSandbox && submittedApplication.status !== "approved") throw new Error("The sandbox did not publish the supporter profile.")
+      setSupporterId(draft.supporter_id)
       setSubmitted(true)
+      onCreated()
     } catch (cause) {
       setSubmitError(cause instanceof Error ? cause.message : "The server did not confirm this application.")
     }
@@ -529,8 +597,12 @@ function SignupForm() {
         <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#FFF0F0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", marginBottom: "10px" }}>Application received</h2>
-        <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>The server recorded the application. Review, identity, reference, training, and approval steps are still pending; no outreach or approval is guaranteed.</p>
+        <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#222222", marginBottom: "10px" }}>{featureFlags.peerSandbox ? "Your supporter profile is live" : "Application received"}</h2>
+        {featureFlags.peerSandbox ? <>
+          <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6, marginBottom: "14px" }}>People using this sandbox can now find your profile. Save your supporter ID to manage and respond to requests.</p>
+          <div style={{ backgroundColor: "#F7F5F4", borderRadius: "13px", padding: "12px", marginBottom: "12px", textAlign: "left" }}><p style={{ fontSize: "11px", color: "#717171", marginBottom: "3px" }}>Supporter ID</p><p style={{ fontSize: "12px", color: "#222222", fontWeight: 700, overflowWrap: "anywhere", userSelect: "all" }}>{supporterId}</p></div>
+          <div role="note" style={{ backgroundColor: "#FFF5E8", color: "#704214", borderRadius: "13px", padding: "12px", fontSize: "12px", lineHeight: 1.5, textAlign: "left" }}>Cornell identity verification is coming soon. Your profile is labeled as not identity verified.</div>
+        </> : <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6 }}>The server recorded the application. Review, identity, reference, training, and approval steps are still pending; no outreach or approval is guaranteed.</p>}
       </div>
     )
   }
@@ -565,9 +637,9 @@ function SignupForm() {
 
           <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Full name <span style={{ color: CORAL }}>*</span></label><input value={form.name} onChange={e => update("name", e.target.value)} placeholder="Your name" style={inputStyle} /></div>
           <div style={{ marginBottom: "14px" }}>
-            <label style={labelStyle}>Cornell email <span style={{ color: CORAL }}>*</span></label>
-            <input value={form.email} onChange={e => update("email", e.target.value)} placeholder="netid@cornell.edu" type="email" style={{ ...inputStyle, borderColor: form.email && !emailValid ? CORAL : "#ebebeb" }} />
-            {form.email && !emailValid && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>Must be a valid @cornell.edu email.</p>}
+            <label style={labelStyle}>{featureFlags.peerSandbox ? "Email" : "Cornell email"} <span style={{ color: CORAL }}>*</span></label>
+            <input value={form.email} onChange={e => update("email", e.target.value)} placeholder={featureFlags.peerSandbox ? "you@example.com" : "netid@cornell.edu"} type="email" style={{ ...inputStyle, borderColor: form.email && !emailValid ? CORAL : "#ebebeb" }} />
+            {form.email && !emailValid && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>{featureFlags.peerSandbox ? "Enter a valid email address." : "Must be a valid @cornell.edu email."}</p>}
           </div>
           <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Phone number <span style={{ color: CORAL }}>*</span></label><input value={form.phone} onChange={e => update("phone", e.target.value)} placeholder="Your phone" type="tel" style={inputStyle} /></div>
           <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Password <span style={{ color: CORAL }}>*</span></label><input value={form.password} onChange={e => update("password", e.target.value)} placeholder="At least 12 characters" type="password" autoComplete="new-password" style={inputStyle} /></div>
@@ -655,7 +727,7 @@ function SignupForm() {
           <p style={{ fontSize: "14px", color: "#717171", marginBottom: "20px", lineHeight: 1.6 }}>Supporters offer informal peer presence and resource navigation. They do not provide therapy, diagnosis, crisis response, transportation, or guaranteed confidentiality.</p>
 
           <div style={{ backgroundColor: "#fff8f7", borderRadius: "12px", padding: "14px", marginBottom: "20px", border: "1px solid #f0f0f0" }}>
-            <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>You must follow the conduct, crisis-escalation, public-meeting, reporting, privacy, and withdrawal rules. Cornell identity verification, a consent-based reference invitation, training requirements, and administrator review are still required after submission.</p>
+            <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6, marginBottom: "10px" }}>{featureFlags.peerSandbox ? "This sandbox publishes your profile after submission. Cornell identity verification is coming soon, and the app will label your profile as not identity verified. You must still follow the conduct, crisis-escalation, public-meeting, reporting, privacy, and withdrawal rules." : "You must follow the conduct, crisis-escalation, public-meeting, reporting, privacy, and withdrawal rules. Cornell identity verification, a consent-based reference invitation, training requirements, and administrator review are still required after submission."}</p>
             <label style={{ display: "flex", gap: "10px", alignItems: "flex-start", fontSize: "13px", color: "#222222", lineHeight: 1.5 }}><input type="checkbox" checked={policyAccepted} onChange={event => setPolicyAccepted(event.target.checked)} />I reviewed and accept the current supporter role and conduct policy.</label>
           </div>
 
@@ -678,12 +750,13 @@ export default function PeerPage() {
   const [search, setSearch] = useState("")
   const [interestFilter, setInterestFilter] = useState("")
   const [listError, setListError] = useState("")
+  const [directoryVersion, setDirectoryVersion] = useState(0)
 
   useEffect(() => {
     requestJson<Supporter[]>("/peer-supporters", { validate: isSupporterList })
       .then(data => { setSupporters(data); setLoading(false) })
       .catch(cause => { setListError(cause instanceof Error ? cause.message : "Supporter profiles could not be loaded."); setLoading(false) })
-  }, [])
+  }, [directoryVersion])
 
   const allInterests = Array.from(new Set(supporters.flatMap(s => s.interests || [])))
   const filtered = supporters.filter(s => {
@@ -701,7 +774,7 @@ export default function PeerPage() {
 <div style={{ background: "linear-gradient(135deg, #C83C42 0%, #A9461E 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Peer support</p>
         <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", marginBottom: "6px" }}>Talk to a student who gets it.</h1>
-        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", marginBottom: "20px", lineHeight: 1.5 }}>Peer Connect remains unavailable while identity, training, conduct, and safety requirements are reviewed.</p>
+        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", marginBottom: "20px", lineHeight: 1.5 }}>{featureFlags.peerSandbox ? "Create an account, become a supporter, find peers, and manage real connection requests in this non-production sandbox." : "Find an approved peer supporter and request a protected connection."}</p>
         <div style={{ position: "relative" }}>
           <svg style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, major, interest..." style={{ width: "100%", padding: "13px 14px 13px 42px", border: "none", borderRadius: "14px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }} />
@@ -709,17 +782,17 @@ export default function PeerPage() {
       </div>
 
       <div style={{ padding: "20px 20px 0" }}>
+        {featureFlags.peerSandbox && <div role="note" style={{ backgroundColor: "#FFF5E8", border: "1px solid #F1D4A8", borderRadius: "16px", padding: "14px", marginBottom: "14px", color: "#704214" }}><p style={{ fontSize: "13px", fontWeight: 800, marginBottom: "3px" }}>Cornell identity verification coming soon</p><p style={{ fontSize: "12px", lineHeight: 1.5 }}>This is an open non-production sandbox. Anyone can create an account, and no requester or supporter identity is currently verified. Do not assume a profile is a Cornell student.</p></div>}
         {listError && <p role="alert" style={{ backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "12px", padding: "12px", marginBottom: "12px", fontSize: "13px" }}>{listError}</p>}
-        <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-          <button onClick={() => setTab("find")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "find" ? CORAL : "#ffffff", color: tab === "find" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "find" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
-            Find a supporter
+        <div role="tablist" aria-label="Peer Connect sections" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "16px" }}>
+          <button role="tab" aria-selected={tab === "find"} onClick={() => setTab("find")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "find" ? CORAL : "#ffffff", color: tab === "find" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "find" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
+            Find peers
           </button>
-          <button onClick={() => setTab("manage")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "manage" ? CORAL : "#ffffff", color: tab === "manage" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "manage" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
+          <button role="tab" aria-selected={tab === "manage"} onClick={() => setTab("manage")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "manage" ? CORAL : "#ffffff", color: tab === "manage" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "manage" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
             Manage
           </button>
-          {featureFlags.supporterSignup && <button onClick={() => setTab("signup")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "signup" ? CORAL : "#ffffff", color: tab === "signup" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "signup" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>
-            Become a supporter
-          </button>}
+          {featureFlags.peerSandbox && <button role="tab" aria-selected={tab === "requester"} onClick={() => setTab("requester")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "requester" ? CORAL : "#ffffff", color: tab === "requester" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "requester" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>Get requester ID</button>}
+          {(featureFlags.supporterSignup || featureFlags.peerSandbox) && <button role="tab" aria-selected={tab === "signup"} onClick={() => setTab("signup")} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "12px", backgroundColor: tab === "signup" ? CORAL : "#ffffff", color: tab === "signup" ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 600, boxShadow: tab === "signup" ? "none" : "0 1px 4px rgba(0,0,0,0.08)", cursor: "pointer" }}>Become a supporter</button>}
         </div>
 
         {tab === "find" && (
@@ -761,7 +834,7 @@ export default function PeerPage() {
               <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "32px 20px", textAlign: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
                 <p style={{ fontSize: "16px", fontWeight: 700, color: "#222222", marginBottom: "8px" }}>No supporters yet</p>
                 <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.6, marginBottom: "20px" }}>Be the first to sign up and help other students.</p>
-                {featureFlags.supporterSignup && <button onClick={() => setTab("signup")} style={{ padding: "12px 24px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Sign up as a supporter</button>}
+                {(featureFlags.supporterSignup || featureFlags.peerSandbox) && <button onClick={() => setTab("signup")} style={{ padding: "12px 24px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Sign up as a supporter</button>}
               </div>
             )}
 
@@ -773,7 +846,8 @@ export default function PeerPage() {
           </div>
         )}
 
-        {featureFlags.supporterSignup && tab === "signup" && <SignupForm />}
+        {featureFlags.peerSandbox && tab === "requester" && <RequesterSignupForm />}
+        {(featureFlags.supporterSignup || featureFlags.peerSandbox) && tab === "signup" && <SignupForm onCreated={() => setDirectoryVersion(version => version + 1)} />}
         {tab === "manage" && <ConnectionManager />}
       </div>
     </div>

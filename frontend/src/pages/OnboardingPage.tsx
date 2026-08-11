@@ -21,7 +21,7 @@ const slides = [
   {
     tag: "Connect",
     title: "Talk to a peer who gets it.",
-    body: "Peer Connect is unavailable while identity, conduct, training, and safety requirements are reviewed.",
+    body: "Peer Connect is an open non-production sandbox. Anyone can create an account; Cornell identity verification is coming soon, so profiles are not verified.",
     bg: "linear-gradient(135deg, #A9461E 0%, #C83C42 100%)",
   },
   {

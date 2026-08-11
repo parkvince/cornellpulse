@@ -33,6 +33,8 @@ def validate_security_settings() -> None:
         return
 
     errors = []
+    if settings.PEER_SANDBOX_MODE:
+        errors.append("PEER_SANDBOX_MODE is prohibited in production")
     if len(settings.ADMIN_SESSION_SECRET) < 32 or settings.ADMIN_SESSION_SECRET.startswith("replace-"):
         errors.append("ADMIN_SESSION_SECRET must be a random value of at least 32 characters")
     if not is_valid_password_hash(settings.ADMIN_PASSWORD_HASH):

@@ -6,6 +6,7 @@ import test from "node:test"
 test("public safety-sensitive UI cannot be enabled by environment flags alone", () => {
   const source = readFileSync(join(process.cwd(), "src", "config", "featureFlags.ts"), "utf8")
   const app = readFileSync(join(process.cwd(), "src", "App.tsx"), "utf8")
+  assert.match(source, /peerSandbox:\s*enabled\(import\.meta\.env\.VITE_PEER_SANDBOX_MODE\)/)
   assert.match(source, /peerNavigation:\s*true/)
   assert.match(source, /peerConnect:\s*false/)
   assert.match(source, /supporterSignup:\s*false/)
@@ -14,12 +15,12 @@ test("public safety-sensitive UI cannot be enabled by environment flags alone", 
   assert.match(source, /enabled\(import\.meta\.env\.VITE_FEATURE_SUPPORTER_SIGNUP\) && localReleaseApprovals\.supporterSignup/)
   assert.match(source, /enabled\(import\.meta\.env\.VITE_FEATURE_PUBLIC_ADMIN\) && localReleaseApprovals\.publicAdmin/)
   assert.match(app, /featureFlags\.peerNavigation/)
-  assert.match(app, /path="\/peer" element=\{featureFlags\.peerConnect \? <PeerPage \/> : <FeatureUnavailablePage feature="Peer Connect" \/>\}/)
+  assert.match(app, /path="\/peer" element=\{featureFlags\.peerSandbox \|\| featureFlags\.peerConnect \? <PeerPage \/> : <FeatureUnavailablePage feature="Peer Connect" \/>\}/)
 })
 
 test("default environment examples keep every public safety-sensitive flag off", () => {
   const env = readFileSync(join(process.cwd(), "..", ".env.example"), "utf8")
-  for (const flag of ["FEATURE_PEER_CONNECT", "FEATURE_SUPPORTER_SIGNUP", "VITE_FEATURE_PEER_CONNECT", "VITE_FEATURE_SUPPORTER_SIGNUP", "VITE_FEATURE_PUBLIC_ADMIN"]) {
+  for (const flag of ["FEATURE_PEER_CONNECT", "FEATURE_SUPPORTER_SIGNUP", "PEER_SANDBOX_MODE", "VITE_FEATURE_PEER_CONNECT", "VITE_FEATURE_SUPPORTER_SIGNUP", "VITE_FEATURE_PUBLIC_ADMIN", "VITE_PEER_SANDBOX_MODE"]) {
     assert.match(env, new RegExp(`^${flag}=false$`, "m"))
   }
 })
