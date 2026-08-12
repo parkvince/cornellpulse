@@ -3,12 +3,13 @@ import { featureFlags } from "../config/featureFlags"
 import { getResource } from "../resources/registry.ts"
 import { requestJson } from "../api/client"
 
-const CORAL = "#D70466"
-const AIRBNB_GRADIENT = "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)"
+const CORAL = "#FF5A5F"
+const CORAL_TEXT = "#8A292D"
+const AIRBNB_GRADIENT = "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)"
 const crisisResource = getResource("988_lifeline")
 const healthResource = getResource("cornell_health_247")
 
-const AVATAR_COLORS = ["#D70466", "#007A70", "#E31C5F", "#5C4BC2", "#007B78", "#FF385C", "#337F7C"]
+const AVATAR_COLORS = ["#FF5A5F", "#00A699", "#FC642D", "#7B68EE", "#20B2AA", "#FF6B6B", "#4ECDC4"]
 
 function isCornellEmail(email: string) {
   return /^[a-zA-Z0-9._%+-]+@cornell\.edu$/i.test(email.trim())
@@ -125,7 +126,7 @@ function SupporterCard({ supporter, onRequest }: { supporter: Supporter, onReque
       {supporter.interests && supporter.interests.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
           {supporter.interests.slice(0, 3).map((i: string) => (
-            <span key={i} style={{ padding: "4px 10px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "8px", fontSize: "12px", fontWeight: 500 }}>{i}</span>
+            <span key={i} style={{ padding: "4px 10px", backgroundColor: "#FFF0F0", color: CORAL_TEXT, borderRadius: "8px", fontSize: "12px", fontWeight: 500 }}>{i}</span>
           ))}
         </div>
       )}
@@ -251,7 +252,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
           <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#222222", marginBottom: "8px" }}>Report a concern</h3>
           <p style={{ fontSize: "13px", color: "#717171", marginBottom: "16px" }}>This goes directly to our team and is kept confidential.</p>
           <textarea value={reportReason} onChange={e => setReportReason(e.target.value)} placeholder="What happened?" rows={4} style={{ width: "100%", padding: "12px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "14px", backgroundColor: "#ffffff", color: "#222222", resize: "none", marginBottom: "16px", fontFamily: "DM Sans, sans-serif" }} />
-          {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+          {error && <p role="alert" style={{ fontSize: "12px", color: CORAL_TEXT, marginBottom: "12px" }}>{error}</p>}
           <button onClick={submitReport} disabled={reportReason.trim().length < 10 || loading} style={{ width: "100%", padding: "14px", backgroundColor: reportReason.trim().length >= 10 ? CORAL : "#ebebeb", color: reportReason.trim().length >= 10 ? "#fff" : "#717171", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: reportReason.trim().length >= 10 ? "pointer" : "default" }}>
             Submit report
           </button>
@@ -290,13 +291,13 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
             <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>No phone number or email address is returned by the public supporter API.</p>
           </div>
 
-          {createdRequesterId && <div role="note" style={{ backgroundColor: "#FFF1F2", borderRadius: "14px", padding: "14px", marginBottom: "16px" }}>
+          {createdRequesterId && <div role="note" style={{ backgroundColor: "#FFF0F0", borderRadius: "14px", padding: "14px", marginBottom: "16px" }}>
             <p style={{ fontSize: "12px", fontWeight: 800, color: "#222222", marginBottom: "4px" }}>Save your private requester ID</p>
             <p style={{ fontSize: "12px", color: "#595959", lineHeight: 1.5, marginBottom: "8px" }}>You’ll need this ID and your password to check the request later.</p>
-            <p style={{ fontSize: "12px", fontWeight: 700, color: CORAL, overflowWrap: "anywhere", userSelect: "all" }}>{createdRequesterId}</p>
+            <p style={{ fontSize: "12px", fontWeight: 700, color: CORAL_TEXT, overflowWrap: "anywhere", userSelect: "all" }}>{createdRequesterId}</p>
           </div>}
 
-          {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+          {error && <p role="alert" style={{ fontSize: "12px", color: CORAL_TEXT, marginBottom: "12px" }}>{error}</p>}
           {connectionState === "pending" && <button onClick={async () => {
             if (!token || !requestId) return
             setLoading(true); setError("")
@@ -307,7 +308,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
               setConnectionState(current.status)
             } catch (cause) { setError(cause instanceof Error ? cause.message : "Status could not be refreshed.") }
             finally { setLoading(false) }
-          }} disabled={loading} style={{ width: "100%", padding: "14px", backgroundColor: "#FFF0F0", color: CORAL, border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, marginBottom: "10px", cursor: "pointer" }}>Refresh status</button>}
+          }} disabled={loading} style={{ width: "100%", padding: "14px", backgroundColor: "#FFF0F0", color: CORAL_TEXT, border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, marginBottom: "10px", cursor: "pointer" }}>Refresh status</button>}
           {(connectionState === "pending" || connectionState === "accepted") && <button onClick={async () => {
             if (!token || !requestId) return
             setLoading(true); setError("")
@@ -345,28 +346,28 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
 
         {accountMode === "new" ? <>
           <div style={{ marginBottom: "14px" }}>
-            <label htmlFor="request-display-name" style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>First name or nickname <span style={{ color: CORAL }}>*</span></label>
+            <label htmlFor="request-display-name" style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>First name or nickname <span style={{ color: CORAL_TEXT }}>*</span></label>
             <input id="request-display-name" value={newAccount.display_name} onChange={event => setNewAccount(current => ({ ...current, display_name: event.target.value }))} placeholder="What should we call you?" autoComplete="name" style={{ width: "100%", padding: "13px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", backgroundColor: "#ffffff", color: "#222222" }} />
           </div>
           <div style={{ marginBottom: "14px" }}>
-            <label htmlFor="request-email" style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Email <span style={{ color: CORAL }}>*</span></label>
+            <label htmlFor="request-email" style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Email <span style={{ color: CORAL_TEXT }}>*</span></label>
             <input id="request-email" value={newAccount.email} onChange={event => setNewAccount(current => ({ ...current, email: event.target.value }))} placeholder="you@example.com" type="email" autoComplete="email" style={{ width: "100%", padding: "13px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", backgroundColor: "#ffffff", color: "#222222" }} />
           </div>
         </> : <div style={{ marginBottom: "14px" }}>
-          <label htmlFor="requester-id" style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Requester ID <span style={{ color: CORAL }}>*</span></label>
+          <label htmlFor="requester-id" style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Requester ID <span style={{ color: CORAL_TEXT }}>*</span></label>
           <input id="requester-id" value={form.requester_id} onChange={event => update("requester_id", event.target.value)} placeholder="Your requester ID" autoComplete="username" style={{ width: "100%", padding: "13px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", backgroundColor: "#ffffff", color: "#222222" }} />
         </div>}
 
         <div style={{ marginBottom: "18px" }}>
-          <label htmlFor="requester-password" style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>{accountMode === "new" ? "Create a password" : "Password"} <span style={{ color: CORAL }}>*</span></label>
+          <label htmlFor="requester-password" style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>{accountMode === "new" ? "Create a password" : "Password"} <span style={{ color: CORAL_TEXT }}>*</span></label>
           <input id="requester-password" value={form.password} onChange={event => update("password", event.target.value)} placeholder={accountMode === "new" ? "At least 12 characters" : "Your requester password"} type="password" autoComplete={accountMode === "new" ? "new-password" : "current-password"} style={{ width: "100%", padding: "13px 14px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", backgroundColor: "#ffffff", color: "#222222" }} />
         </div>
 
         <fieldset style={{ margin: "0 0 14px", padding: 0, border: 0 }}>
-          <legend style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "8px" }}>Public meetup area <span style={{ color: CORAL }}>*</span></legend>
+          <legend style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "8px" }}>Public meetup area <span style={{ color: CORAL_TEXT }}>*</span></legend>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
             {(meetingOptions?.locations || []).map(location => (
-              <button key={location.id} type="button" role="radio" aria-checked={form.location_id === location.id} onClick={() => update("location_id", location.id)} style={{ padding: "12px 8px", border: `2px solid ${form.location_id === location.id ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.location_id === location.id ? "#FFF0F0" : "#ffffff", color: form.location_id === location.id ? CORAL : "#717171", fontSize: "12px", fontWeight: 600, textAlign: "center" }}>
+              <button key={location.id} type="button" role="radio" aria-checked={form.location_id === location.id} onClick={() => update("location_id", location.id)} style={{ padding: "12px 8px", border: `2px solid ${form.location_id === location.id ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.location_id === location.id ? "#FFF0F0" : "#ffffff", color: form.location_id === location.id ? CORAL_TEXT : "#717171", fontSize: "12px", fontWeight: 600, textAlign: "center" }}>
                 {location.name}
               </button>
             ))}
@@ -374,9 +375,9 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
         </fieldset>
 
         <fieldset style={{ margin: "0 0 20px", padding: 0, border: 0 }}>
-          <legend style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "8px" }}>Safe meeting window <span style={{ color: CORAL }}>*</span></legend>
+          <legend style={{ fontSize: "13px", fontWeight: 600, color: "#222222", marginBottom: "8px" }}>Safe meeting window <span style={{ color: CORAL_TEXT }}>*</span></legend>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-            {(meetingOptions?.meeting_windows || []).map(window => <button key={window.id} type="button" role="radio" aria-checked={form.meeting_window_id === window.id} onClick={() => update("meeting_window_id", window.id)} style={{ padding: "12px 8px", border: `2px solid ${form.meeting_window_id === window.id ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.meeting_window_id === window.id ? "#FFF0F0" : "#ffffff", color: form.meeting_window_id === window.id ? CORAL : "#717171", fontSize: "12px", fontWeight: 600, textAlign: "center" }}>{window.name}</button>)}
+            {(meetingOptions?.meeting_windows || []).map(window => <button key={window.id} type="button" role="radio" aria-checked={form.meeting_window_id === window.id} onClick={() => update("meeting_window_id", window.id)} style={{ padding: "12px 8px", border: `2px solid ${form.meeting_window_id === window.id ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.meeting_window_id === window.id ? "#FFF0F0" : "#ffffff", color: form.meeting_window_id === window.id ? CORAL_TEXT : "#717171", fontSize: "12px", fontWeight: 600, textAlign: "center" }}>{window.name}</button>)}
           </div>
         </fieldset>
 
@@ -394,7 +395,7 @@ function RequestModal({ supporter, onClose, onSubmit }: { supporter: Supporter, 
           </label>
         </div>
 
-        {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+        {error && <p role="alert" style={{ fontSize: "12px", color: CORAL_TEXT, marginBottom: "12px" }}>{error}</p>}
 
         <button onClick={handleSubmit} disabled={!canSubmit || loading} style={{ width: "100%", padding: "16px", backgroundColor: canSubmit && !loading ? CORAL : "#ebebeb", color: canSubmit && !loading ? "#ffffff" : "#717171", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: canSubmit && !loading ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
           {loading && <span style={{ width: "14px", height: "14px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#ffffff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />}
@@ -475,16 +476,16 @@ function ConnectionManager() {
     <input value={subjectId} onChange={event => setSubjectId(event.target.value)} autoComplete="username" style={{ width: "100%", padding: "13px", border: "2px solid #ebebeb", borderRadius: "12px", marginBottom: "12px" }} />
     <label style={{ fontSize: "13px", fontWeight: 600, color: "#222222", display: "block", marginBottom: "6px" }}>Password</label>
     <input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" style={{ width: "100%", padding: "13px", border: "2px solid #ebebeb", borderRadius: "12px", marginBottom: "12px" }} />
-    {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+    {error && <p role="alert" style={{ fontSize: "12px", color: CORAL_TEXT, marginBottom: "12px" }}>{error}</p>}
     <button onClick={login} disabled={!subjectId || !password || loading} style={{ width: "100%", padding: "14px", border: 0, borderRadius: "12px", backgroundColor: subjectId && password ? CORAL : "#ebebeb", color: subjectId && password ? "#fff" : "#717171", fontWeight: 700 }}>{loading ? "Signing in..." : "Sign in"}</button>
   </div>
 
   return <div>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: "#717171" }}>{connections.length} request{connections.length === 1 ? "" : "s"}</p><button onClick={() => { setToken(""); setConnections([]); setPassword("") }} style={{ border: 0, background: "transparent", color: CORAL, fontWeight: 600 }}>Sign out</button></div>
-    {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: "#717171" }}>{connections.length} request{connections.length === 1 ? "" : "s"}</p><button onClick={() => { setToken(""); setConnections([]); setPassword("") }} style={{ border: 0, background: "transparent", color: CORAL_TEXT, fontWeight: 600 }}>Sign out</button></div>
+    {error && <p role="alert" style={{ fontSize: "12px", color: CORAL_TEXT, marginBottom: "12px" }}>{error}</p>}
     {connections.length === 0 && <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "24px", textAlign: "center" }}><p style={{ color: "#717171", fontSize: "14px" }}>No connection requests.</p></div>}
     {connections.map(connection => <div key={connection.request_id} style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px", marginBottom: "12px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}><p style={{ fontSize: "14px", fontWeight: 700, color: "#222" }}>Connection request</p><span style={{ fontSize: "12px", color: CORAL, textTransform: "capitalize" }}>{connection.status}</span></div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}><p style={{ fontSize: "14px", fontWeight: 700, color: "#222" }}>Connection request</p><span style={{ fontSize: "12px", color: CORAL_TEXT, textTransform: "capitalize" }}>{connection.status}</span></div>
       {connection.request?.location && <p style={{ fontSize: "13px", color: "#717171", marginBottom: "4px" }}>{connection.request.location.name}</p>}
       {connection.request?.meeting_window && <p style={{ fontSize: "13px", color: "#717171", marginBottom: "10px" }}>{connection.request.meeting_window.name}</p>}
       <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.5, marginBottom: "12px" }}>{connection.status === "pending" ? "The requester opted in. No contact details are shown; the relay opens only after acceptance." : connection.relay_available ? "Both people opted in. Use the in-app relay; contact details remain private." : "This request is no longer awaiting a response."}</p>
@@ -492,7 +493,7 @@ function ConnectionManager() {
         <button onClick={() => supporterAction(connection.request_id, "accept")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: CORAL, color: "#fff", fontWeight: 700 }}>Accept</button>
         <button onClick={() => supporterAction(connection.request_id, "decline")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#595959", fontWeight: 700 }}>Decline</button>
         <button onClick={() => supporterAction(connection.request_id, "expire")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#595959", fontWeight: 700 }}>Expire</button>
-        <button onClick={() => window.confirm("Block this requester? This ends the request and prevents another request while the block is active.") && supporterAction(connection.request_id, "block")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, fontWeight: 700 }}>Block</button>
+        <button onClick={() => window.confirm("Block this requester? This ends the request and prevents another request while the block is active.") && supporterAction(connection.request_id, "block")} disabled={loading} style={{ padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL_TEXT, fontWeight: 700 }}>Block</button>
       </div>}
       {role === "requester" && (connection.status === "pending" || connection.status === "accepted") && <button onClick={() => window.confirm("Cancel this connection request?") && confirmedAction(`peer-requests/${connection.request_id}/cancel`, "canceled")} disabled={loading} style={{ width: "100%", padding: "11px", border: 0, borderRadius: "10px", backgroundColor: "#f5f5f5", color: "#595959", fontWeight: 700 }}>Cancel request</button>}
       {connection.relay_available && <div style={{ marginTop: "12px" }}>
@@ -503,7 +504,7 @@ function ConnectionManager() {
       <details style={{ marginTop: "12px" }}><summary style={{ fontSize: "12px", color: "#717171", cursor: "pointer" }}>Report a safety concern</summary>
         <label htmlFor={`report-${connection.request_id}`} style={{ fontSize: "12px", color: "#717171", display: "block", margin: "8px 0 4px" }}>Describe the concern (at least 10 characters)</label>
         <textarea id={`report-${connection.request_id}`} value={reportDrafts[connection.request_id] || ""} onChange={event => setReportDrafts(current => ({ ...current, [connection.request_id]: event.target.value }))} maxLength={500} rows={2} style={{ width: "100%", padding: "10px", border: "2px solid #ebebeb", borderRadius: "10px", resize: "vertical", marginBottom: "6px" }} />
-        <button onClick={() => confirmedAction(`peer-requests/${connection.request_id}/report`, "submitted", { reason: reportDrafts[connection.request_id] })} disabled={loading || (reportDrafts[connection.request_id]?.trim().length || 0) < 10} style={{ width: "100%", padding: "10px", border: 0, borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL, fontWeight: 700 }}>Submit safety report</button>
+        <button onClick={() => confirmedAction(`peer-requests/${connection.request_id}/report`, "submitted", { reason: reportDrafts[connection.request_id] })} disabled={loading || (reportDrafts[connection.request_id]?.trim().length || 0) < 10} style={{ width: "100%", padding: "10px", border: 0, borderRadius: "10px", backgroundColor: "#FFF0F0", color: CORAL_TEXT, fontWeight: 700 }}>Submit safety report</button>
       </details>
     </div>)}
   </div>
@@ -558,8 +559,8 @@ function RequesterSignupForm() {
         ["phone", "Phone (optional and private)", "Optional phone number", "tel"],
         ["password", "Password", "At least 12 characters", "password"],
       ] as const).map(([field, label, placeholder, type]) => <div key={field} style={{ marginBottom: "13px" }}><label htmlFor={`requester-${field}`} style={{ display: "block", fontSize: "13px", fontWeight: 650, color: "#222222", marginBottom: "6px" }}>{label}</label><input id={`requester-${field}`} value={form[field]} onChange={event => update(field, event.target.value)} placeholder={placeholder} type={type} autoComplete={field === "password" ? "new-password" : undefined} style={inputStyle} /></div>)}
-      {form.email && !isValidEmail(form.email) && <p role="alert" style={{ fontSize: "12px", color: CORAL, margin: "-5px 0 12px" }}>Enter a valid email address.</p>}
-      {error && <p role="alert" style={{ fontSize: "12px", color: CORAL, marginBottom: "12px" }}>{error}</p>}
+      {form.email && !isValidEmail(form.email) && <p role="alert" style={{ fontSize: "12px", color: CORAL_TEXT, margin: "-5px 0 12px" }}>Enter a valid email address.</p>}
+      {error && <p role="alert" style={{ fontSize: "12px", color: CORAL_TEXT, marginBottom: "12px" }}>{error}</p>}
       <button type="button" onClick={register} disabled={!valid || loading} style={{ width: "100%", padding: "15px", border: 0, borderRadius: "13px", backgroundColor: valid && !loading ? CORAL : "#ebebeb", color: valid && !loading ? "#ffffff" : "#717171", fontSize: "14px", fontWeight: 750 }}>{loading ? "Creating account..." : "Create requester account"}</button>
     </section>
   )
@@ -646,7 +647,7 @@ function SignupForm({ onCreated }: { onCreated: () => void }) {
 
   function PillBtn({ label, selected, onClick }: { label: string, selected: boolean, onClick: () => void }) {
     return (
-      <button onClick={onClick} style={{ padding: "10px 12px", border: `2px solid ${selected ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: selected ? "#FFF0F0" : "#ffffff", color: selected ? CORAL : "#717171", fontSize: "13px", fontWeight: 600, cursor: "pointer", width: "100%", textAlign: "center" as const }}>
+      <button onClick={onClick} style={{ padding: "10px 12px", border: `2px solid ${selected ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: selected ? "#FFF0F0" : "#ffffff", color: selected ? CORAL_TEXT : "#717171", fontSize: "13px", fontWeight: 600, cursor: "pointer", width: "100%", textAlign: "center" as const }}>
         {label}
       </button>
     )
@@ -669,16 +670,16 @@ function SignupForm({ onCreated }: { onCreated: () => void }) {
           <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#222222", marginBottom: "6px" }}>Basic info</h3>
           <p style={{ fontSize: "14px", color: "#717171", marginBottom: "20px" }}>Tell us a little about yourself.</p>
 
-          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Full name <span style={{ color: CORAL }}>*</span></label><input value={form.name} onChange={e => update("name", e.target.value)} placeholder="Your name" style={inputStyle} /></div>
+          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Full name <span style={{ color: CORAL_TEXT }}>*</span></label><input value={form.name} onChange={e => update("name", e.target.value)} placeholder="Your name" style={inputStyle} /></div>
           <div style={{ marginBottom: "14px" }}>
-            <label style={labelStyle}>{featureFlags.peerSandbox ? "Email" : "Cornell email"} <span style={{ color: CORAL }}>*</span></label>
+            <label style={labelStyle}>{featureFlags.peerSandbox ? "Email" : "Cornell email"} <span style={{ color: CORAL_TEXT }}>*</span></label>
             <input value={form.email} onChange={e => update("email", e.target.value)} placeholder={featureFlags.peerSandbox ? "you@example.com" : "netid@cornell.edu"} type="email" style={{ ...inputStyle, borderColor: form.email && !emailValid ? CORAL : "#ebebeb" }} />
-            {form.email && !emailValid && <p style={{ fontSize: "12px", color: CORAL, marginTop: "4px" }}>{featureFlags.peerSandbox ? "Enter a valid email address." : "Must be a valid @cornell.edu email."}</p>}
+            {form.email && !emailValid && <p style={{ fontSize: "12px", color: CORAL_TEXT, marginTop: "4px" }}>{featureFlags.peerSandbox ? "Enter a valid email address." : "Must be a valid @cornell.edu email."}</p>}
           </div>
-          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Phone number <span style={{ color: CORAL }}>*</span></label><input value={form.phone} onChange={e => update("phone", e.target.value)} placeholder="Your phone" type="tel" style={inputStyle} /></div>
-          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Password <span style={{ color: CORAL }}>*</span></label><input value={form.password} onChange={e => update("password", e.target.value)} placeholder="At least 12 characters" type="password" autoComplete="new-password" style={inputStyle} /></div>
+          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Phone number <span style={{ color: CORAL_TEXT }}>*</span></label><input value={form.phone} onChange={e => update("phone", e.target.value)} placeholder="Your phone" type="tel" style={inputStyle} /></div>
+          <div style={{ marginBottom: "14px" }}><label style={labelStyle}>Password <span style={{ color: CORAL_TEXT }}>*</span></label><input value={form.password} onChange={e => update("password", e.target.value)} placeholder="At least 12 characters" type="password" autoComplete="new-password" style={inputStyle} /></div>
           <div style={{ marginBottom: "14px" }}>
-            <label style={labelStyle}>Year <span style={{ color: CORAL }}>*</span></label>
+            <label style={labelStyle}>Year <span style={{ color: CORAL_TEXT }}>*</span></label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
               {YEARS.map(y => <PillBtn key={y} label={y} selected={form.year === y} onClick={() => update("year", y)} />)}
             </div>
@@ -688,9 +689,9 @@ function SignupForm({ onCreated }: { onCreated: () => void }) {
             {form.majors.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
                 {form.majors.map(m => (
-                  <span key={m} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "8px", fontSize: "12px", fontWeight: 600 }}>
+                  <span key={m} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px", backgroundColor: "#FFF0F0", color: CORAL_TEXT, borderRadius: "8px", fontSize: "12px", fontWeight: 600 }}>
                     {m}
-                    <button onClick={() => update("majors", form.majors.filter(x => x !== m))} style={{ background: "transparent", border: "none", color: CORAL, fontSize: "14px", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
+                    <button onClick={() => update("majors", form.majors.filter(x => x !== m))} style={{ background: "transparent", border: "none", color: CORAL_TEXT, fontSize: "14px", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
                   </span>
                 ))}
               </div>
@@ -723,7 +724,7 @@ function SignupForm({ onCreated }: { onCreated: () => void }) {
           <p style={{ fontSize: "14px", color: "#717171", marginBottom: "20px" }}>Where and when can you meet up?</p>
 
           <div style={{ marginBottom: "20px" }}>
-            <label style={{ ...labelStyle, marginBottom: "10px" }}>Where you can meet <span style={{ color: CORAL }}>*</span></label>
+            <label style={{ ...labelStyle, marginBottom: "10px" }}>Where you can meet <span style={{ color: CORAL_TEXT }}>*</span></label>
             <input value={locationSearch} onChange={e => setLocationSearch(e.target.value)} placeholder="Search locations..." style={{ ...inputStyle, marginBottom: "10px" }} />
             <div style={{ maxHeight: "240px", overflowY: "auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
               {filteredLocations.map(loc => <PillBtn key={loc} label={loc} selected={form.locations.includes(loc)} onClick={() => toggleArray("locations", loc)} />)}
@@ -735,7 +736,7 @@ function SignupForm({ onCreated }: { onCreated: () => void }) {
             <p style={{ ...labelStyle, marginBottom: "10px" }}>Which days work</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginBottom: "14px" }}>
               {DAYS.map((d, idx) => (
-                <button key={d} onClick={() => toggleArray("availability", d)} style={{ padding: "10px 8px", border: `2px solid ${form.availability.includes(d) ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.availability.includes(d) ? "#FFF0F0" : "#ffffff", color: form.availability.includes(d) ? CORAL : "#717171", fontSize: "12px", fontWeight: 600, cursor: "pointer", gridColumn: idx === DAYS.length - 1 ? "1 / -1" : "auto" }}>{d}</button>
+                <button key={d} onClick={() => toggleArray("availability", d)} style={{ padding: "10px 8px", border: `2px solid ${form.availability.includes(d) ? CORAL : "#ebebeb"}`, borderRadius: "10px", backgroundColor: form.availability.includes(d) ? "#FFF0F0" : "#ffffff", color: form.availability.includes(d) ? CORAL_TEXT : "#717171", fontSize: "12px", fontWeight: 600, cursor: "pointer", gridColumn: idx === DAYS.length - 1 ? "1 / -1" : "auto" }}>{d}</button>
               ))}
             </div>
             <p style={{ ...labelStyle, marginBottom: "10px" }}>What times work</p>
@@ -769,7 +770,7 @@ function SignupForm({ onCreated }: { onCreated: () => void }) {
             <button onClick={() => setStep(2)} style={{ flex: 1, padding: "16px", backgroundColor: "#f5f5f5", color: "#717171", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Back</button>
             <button onClick={handleSubmit} disabled={!step3Valid} style={{ flex: 2, padding: "16px", backgroundColor: step3Valid ? CORAL : "#ebebeb", color: step3Valid ? "#ffffff" : "#717171", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: step3Valid ? "pointer" : "default" }}>Submit application</button>
           </div>
-          {submitError && <p role="alert" style={{ color: CORAL, fontSize: "13px", marginTop: "12px" }}>{submitError}</p>}
+          {submitError && <p role="alert" style={{ color: CORAL_TEXT, fontSize: "13px", marginTop: "12px" }}>{submitError}</p>}
         </div>
       )}
     </div>
@@ -817,10 +818,10 @@ export default function PeerPage() {
       </div>
 
       <div style={{ padding: "20px 20px 0" }}>
-        {featureFlags.peerSandbox && <details role="note" style={{ backgroundColor: "#FFF5F6", border: "1px solid #FFD1D8", borderRadius: "14px", padding: "12px 14px", marginBottom: "16px", color: "#595959" }}><summary style={{ fontSize: "13px", fontWeight: 800, color: "#B32505", cursor: "pointer" }}>Cornell identity verification coming soon</summary><p style={{ fontSize: "12px", lineHeight: 1.55, marginTop: "7px" }}>This is an open non-production sandbox. Profiles are not currently verified as Cornell students.</p></details>}
-        {listError && <p role="alert" style={{ backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "12px", padding: "12px", marginBottom: "12px", fontSize: "13px" }}>{listError}</p>}
+        {featureFlags.peerSandbox && <details role="note" style={{ backgroundColor: "#FFF5E8", border: "1px solid #F1D4A8", borderRadius: "14px", padding: "12px 14px", marginBottom: "16px", color: "#704214" }}><summary style={{ fontSize: "13px", fontWeight: 800, color: "#704214", cursor: "pointer" }}>Cornell identity verification coming soon</summary><p style={{ fontSize: "12px", lineHeight: 1.55, marginTop: "7px" }}>This is an open non-production sandbox. Profiles are not currently verified as Cornell students.</p></details>}
+        {listError && <p role="alert" style={{ backgroundColor: "#FFF0F0", color: CORAL_TEXT, borderRadius: "12px", padding: "12px", marginBottom: "12px", fontSize: "13px" }}>{listError}</p>}
         {tab !== "signup" && <div role="tablist" aria-label="Peer Connect sections" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", padding: "4px", backgroundColor: "#F2F2F2", borderRadius: "16px", marginBottom: "18px" }}>
-          <button role="tab" aria-selected={tab === "find"} onClick={() => setTab("find")} style={{ padding: "11px", borderRadius: "12px", background: tab === "find" ? AIRBNB_GRADIENT : "transparent", color: tab === "find" ? "#ffffff" : "#595959", fontSize: "14px", fontWeight: 700, boxShadow: tab === "find" ? "0 3px 10px rgba(215,4,102,0.2)" : "none" }}>Find someone</button>
+          <button role="tab" aria-selected={tab === "find"} onClick={() => setTab("find")} style={{ padding: "11px", borderRadius: "12px", background: tab === "find" ? AIRBNB_GRADIENT : "transparent", color: tab === "find" ? "#ffffff" : "#595959", fontSize: "14px", fontWeight: 700, boxShadow: tab === "find" ? "0 3px 10px rgba(255,90,95,0.25)" : "none" }}>Find someone</button>
           <button role="tab" aria-selected={tab === "manage"} onClick={() => setTab("manage")} style={{ padding: "11px", borderRadius: "12px", backgroundColor: tab === "manage" ? "#ffffff" : "transparent", color: tab === "manage" ? "#222222" : "#595959", fontSize: "14px", fontWeight: 700, boxShadow: tab === "manage" ? "0 1px 5px rgba(0,0,0,0.08)" : "none" }}>My requests</button>
         </div>}
 
@@ -832,7 +833,7 @@ export default function PeerPage() {
                 {allInterests.length > 0 && (
                   <div style={{ display: "flex", gap: "6px", overflowX: "auto" }}>
                     {allInterests.slice(0, 4).map(i => (
-                      <button key={i} onClick={() => setInterestFilter(i === interestFilter ? "" : i)} style={{ padding: "5px 10px", border: `1.5px solid ${interestFilter === i ? CORAL : "#ebebeb"}`, borderRadius: "20px", backgroundColor: interestFilter === i ? "#FFF0F0" : "#ffffff", color: interestFilter === i ? CORAL : "#717171", fontSize: "11px", fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer" }}>{i}</button>
+                      <button key={i} onClick={() => setInterestFilter(i === interestFilter ? "" : i)} style={{ padding: "5px 10px", border: `1.5px solid ${interestFilter === i ? CORAL : "#ebebeb"}`, borderRadius: "20px", backgroundColor: interestFilter === i ? "#FFF0F0" : "#ffffff", color: interestFilter === i ? CORAL_TEXT : "#717171", fontSize: "11px", fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer" }}>{i}</button>
                     ))}
                   </div>
                 )}
@@ -843,7 +844,7 @@ export default function PeerPage() {
 
             {!loading && filtered.length === 0 && (
               <div style={{ backgroundColor: "#ffffff", borderRadius: "22px", padding: "30px 22px", textAlign: "center", boxShadow: "0 4px 22px rgba(40,0,20,0.06)", marginBottom: "14px" }}>
-                <div aria-hidden="true" style={{ width: "52px", height: "52px", borderRadius: "17px", backgroundColor: "#FFF1F2", color: CORAL, display: "grid", placeItems: "center", margin: "0 auto 14px", fontSize: "24px" }}>♡</div>
+                <div aria-hidden="true" style={{ width: "52px", height: "52px", borderRadius: "17px", backgroundColor: "#FFE8E8", color: CORAL_TEXT, display: "grid", placeItems: "center", margin: "0 auto 14px", fontSize: "24px" }}>♡</div>
                 <p style={{ fontSize: "18px", fontWeight: 800, color: "#222222", marginBottom: "7px" }}>No one is available yet</p>
                 <p style={{ fontSize: "14px", color: "#717171", lineHeight: 1.55, marginBottom: "20px" }}>You can still use the verified resources tab, or help this community by becoming the first listener.</p>
                 {(featureFlags.supporterSignup || featureFlags.peerSandbox) && <button onClick={() => setTab("signup")} style={{ padding: "13px 22px", background: AIRBNB_GRADIENT, color: "#ffffff", border: "none", borderRadius: "13px", fontSize: "14px", fontWeight: 700 }}>Become a listener</button>}
@@ -852,7 +853,7 @@ export default function PeerPage() {
 
             {!loading && filtered.map(s => <SupporterCard key={s.supporter_id} supporter={s} onRequest={setSelectedSupporter} />)}
 
-            {!loading && filtered.length > 0 && (featureFlags.supporterSignup || featureFlags.peerSandbox) && <button type="button" onClick={() => setTab("signup")} style={{ width: "100%", padding: "15px", border: "1px solid #FFD1D8", borderRadius: "15px", backgroundColor: "#ffffff", color: CORAL, fontSize: "14px", fontWeight: 700, marginBottom: "14px" }}>Want to listen? Become a supporter</button>}
+            {!loading && filtered.length > 0 && (featureFlags.supporterSignup || featureFlags.peerSandbox) && <button type="button" onClick={() => setTab("signup")} style={{ width: "100%", padding: "15px", border: "1px solid #FFD0D0", borderRadius: "15px", backgroundColor: "#ffffff", color: CORAL_TEXT, fontSize: "14px", fontWeight: 700, marginBottom: "14px" }}>Want to listen? Become a supporter</button>}
 
             <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "14px 16px", marginBottom: "24px", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
               <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.6 }}>If you need crisis support, call or text {crisisResource.phone}. For 24/7 consultation, call {healthResource.officialName} at {healthResource.phone}.</p>
@@ -860,7 +861,7 @@ export default function PeerPage() {
           </div>
         )}
 
-        {(featureFlags.supporterSignup || featureFlags.peerSandbox) && tab === "signup" && <div><button type="button" onClick={() => setTab("find")} style={{ color: CORAL, fontSize: "13px", fontWeight: 700, marginBottom: "16px" }}>← Back to finding someone</button><SignupForm onCreated={() => setDirectoryVersion(version => version + 1)} /></div>}
+        {(featureFlags.supporterSignup || featureFlags.peerSandbox) && tab === "signup" && <div><button type="button" onClick={() => setTab("find")} style={{ color: CORAL_TEXT, fontSize: "13px", fontWeight: 700, marginBottom: "16px" }}>← Back to finding someone</button><SignupForm onCreated={() => setDirectoryVersion(version => version + 1)} /></div>}
         {tab === "manage" && <div><ConnectionManager />{featureFlags.peerSandbox && <details style={{ marginTop: "18px", backgroundColor: "#ffffff", borderRadius: "14px", padding: "13px 15px" }}><summary style={{ color: "#595959", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Create an account without sending a request</summary><div style={{ marginTop: "18px" }}><RequesterSignupForm /></div></details>}</div>}
       </div>
     </div>

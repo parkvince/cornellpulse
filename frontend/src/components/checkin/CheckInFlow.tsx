@@ -121,7 +121,7 @@ export default function CheckInFlow() {
       <div style={{ marginBottom: "28px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", marginBottom: "10px" }}>Part {step} of {TOTAL_STEPS} · {STEP_LABELS[step - 1]}</p>
         <div role="progressbar" aria-label="Check-in progress" aria-valuemin={1} aria-valuemax={TOTAL_STEPS} aria-valuenow={step} aria-valuetext={`Part ${step} of ${TOTAL_STEPS}: ${STEP_LABELS[step - 1]}`} style={{ height: "6px", backgroundColor: "#f0f0f0", borderRadius: "6px" }}>
-          <div style={{ height: "6px", background: "linear-gradient(90deg, #FF385C 0%, #D70466 100%)", borderRadius: "6px", width: `${(step / TOTAL_STEPS) * 100}%`, transition: "width 0.25s ease" }} />
+          <div style={{ height: "6px", backgroundColor: "#FF5A5F", borderRadius: "6px", width: `${(step / TOTAL_STEPS) * 100}%`, transition: "width 0.25s ease" }} />
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginTop: "8px" }}>
           <p style={{ fontSize: "11px", color: "#717171", lineHeight: 1.5 }}>Your choices and a random duplicate-prevention ID are kept temporarily in this tab so Back and refresh work. Optional written context is never included.</p>

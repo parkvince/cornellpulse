@@ -2,7 +2,7 @@ import { useMemo, useState } from "react"
 import { useLocation } from "react-router-dom"
 import { requestJson } from "../api/client"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
 
 export default function ReferenceInvitationPage() {
   const location = useLocation()

@@ -1,6 +1,7 @@
 import { useState } from "react"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
+const CORAL_TEXT = "#8A292D"
 
 interface Props {
   values: string[]
@@ -61,7 +62,7 @@ export default function StepTrigger({ values, onChange, wantsToTalk, onWantsToTa
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "10px" }}>
           {triggers.map(option => {
             const selected = values.includes(option.value)
-            return <label key={option.value} className="checkin-choice" style={{ padding: "13px 10px", border: `2px solid ${selected ? CORAL : "#ebebeb"}`, borderRadius: "12px", backgroundColor: selected ? "#FFF0F0" : "#ffffff", textAlign: "center" }}><input className="checkin-choice-input" type="checkbox" value={option.value} checked={selected} onChange={() => toggle(option.value)} onKeyDown={event => activateWithKeyboard(event, () => toggle(option.value))} /><span style={{ fontSize: "13px", fontWeight: 600, color: selected ? CORAL : "#222222", display: "block", overflowWrap: "anywhere" }}>{option.label}</span></label>
+            return <label key={option.value} className="checkin-choice" style={{ padding: "13px 10px", border: `2px solid ${selected ? CORAL : "#ebebeb"}`, borderRadius: "12px", backgroundColor: selected ? "#FFF0F0" : "#ffffff", textAlign: "center" }}><input className="checkin-choice-input" type="checkbox" value={option.value} checked={selected} onChange={() => toggle(option.value)} onKeyDown={event => activateWithKeyboard(event, () => toggle(option.value))} /><span style={{ fontSize: "13px", fontWeight: 600, color: selected ? CORAL_TEXT : "#222222", display: "block", overflowWrap: "anywhere" }}>{option.label}</span></label>
           })}
         </div>
       </fieldset>
@@ -71,8 +72,8 @@ export default function StepTrigger({ values, onChange, wantsToTalk, onWantsToTa
         <legend style={{ fontSize: "14px", fontWeight: 700, color: "#222222", marginBottom: "6px" }}>Would talking to another Cornell student feel useful?</legend>
         <p id="talk-help" style={{ fontSize: "13px", color: "#717171", marginBottom: "14px" }}>This preference only affects the options shown in this check-in.</p>
         <div role="radiogroup" aria-describedby="talk-help" style={{ display: "flex", gap: "8px" }}>
-          <label className="checkin-choice" style={{ flex: 1, padding: "14px", border: `2px solid ${wantsToTalk === true ? CORAL : "#ebebeb"}`, borderRadius: "12px", backgroundColor: wantsToTalk === true ? "#FFF0F0" : "#ffffff", fontSize: "14px", fontWeight: 600, color: wantsToTalk === true ? CORAL : "#222222", textAlign: "center" }}><input className="checkin-choice-input" type="radio" name="wants-to-talk" checked={wantsToTalk === true} onChange={() => onWantsToTalkChange(true)} onKeyDown={event => activateWithKeyboard(event, () => onWantsToTalkChange(true))} /><span>Yes</span></label>
-          <label className="checkin-choice" style={{ flex: 1, padding: "14px", border: `2px solid ${wantsToTalk === false ? CORAL : "#ebebeb"}`, borderRadius: "12px", backgroundColor: wantsToTalk === false ? "#FFF0F0" : "#ffffff", fontSize: "14px", fontWeight: 600, color: wantsToTalk === false ? CORAL : "#222222", textAlign: "center" }}><input className="checkin-choice-input" type="radio" name="wants-to-talk" checked={wantsToTalk === false} onChange={() => onWantsToTalkChange(false)} onKeyDown={event => activateWithKeyboard(event, () => onWantsToTalkChange(false))} /><span>Not right now</span></label>
+          <label className="checkin-choice" style={{ flex: 1, padding: "14px", border: `2px solid ${wantsToTalk === true ? CORAL : "#ebebeb"}`, borderRadius: "12px", backgroundColor: wantsToTalk === true ? "#FFF0F0" : "#ffffff", fontSize: "14px", fontWeight: 600, color: wantsToTalk === true ? CORAL_TEXT : "#222222", textAlign: "center" }}><input className="checkin-choice-input" type="radio" name="wants-to-talk" checked={wantsToTalk === true} onChange={() => onWantsToTalkChange(true)} onKeyDown={event => activateWithKeyboard(event, () => onWantsToTalkChange(true))} /><span>Yes</span></label>
+          <label className="checkin-choice" style={{ flex: 1, padding: "14px", border: `2px solid ${wantsToTalk === false ? CORAL : "#ebebeb"}`, borderRadius: "12px", backgroundColor: wantsToTalk === false ? "#FFF0F0" : "#ffffff", fontSize: "14px", fontWeight: 600, color: wantsToTalk === false ? CORAL_TEXT : "#222222", textAlign: "center" }}><input className="checkin-choice-input" type="radio" name="wants-to-talk" checked={wantsToTalk === false} onChange={() => onWantsToTalkChange(false)} onKeyDown={event => activateWithKeyboard(event, () => onWantsToTalkChange(false))} /><span>Not right now</span></label>
         </div>
       </fieldset>
 

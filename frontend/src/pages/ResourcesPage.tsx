@@ -7,7 +7,8 @@ import { useOnlineStatus } from "../resources/useOnlineStatus.ts"
 import { recordLocalMeasurement, type ResourceAction } from "../privacy/measurement.ts"
 import { requestJson } from "../api/client"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
+const CORAL_TEXT = "#8A292D"
 const CATS = ["All", ...RESOURCE_CATEGORIES] as const
 const crisisResource = getResource("988_lifeline")
 
@@ -70,7 +71,7 @@ export default function ResourcesPage() {
 
   return (
     <div style={{ paddingBottom: "24px" }}>
-      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 20px 24px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 24px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Resources</p>
         <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", marginBottom: "4px" }}>Resources for different needs.</h1>
         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", marginBottom: "16px" }}>Review {ACTIVE_RESOURCES.length} source-checked resources and choose based on cost, access, and what happens next. Independent second review is pending.</p>
@@ -86,11 +87,11 @@ export default function ResourcesPage() {
         {staleCount > 0 && <div role="status" style={{ backgroundColor: "#fff4d6", color: "#765500", borderRadius: "14px", padding: "12px 14px", fontSize: "13px", lineHeight: 1.5, marginBottom: "12px" }}>{staleCount} {staleCount === 1 ? "listing has" : "listings have"} passed the required review deadline. Confirm details on the official source.</div>}
 
         <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "4px", marginBottom: "10px" }} aria-label="Resource categories">
-          {CATS.map(value => <button key={value} onClick={() => updateFilter("category", value === "All" ? "" : value)} aria-pressed={category === value} style={{ padding: "7px 14px", border: "none", borderRadius: "20px", backgroundColor: category === value ? CORAL : "#ffffff", color: category === value ? "#ffffff" : "#717171", fontSize: "13px", fontWeight: category === value ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, boxShadow: category === value ? "none" : "0 1px 4px rgba(0,0,0,0.08)" }}>{value}</button>)}
+          {CATS.map(value => <button key={value} onClick={() => updateFilter("category", value === "All" ? "" : value)} aria-pressed={category === value} style={{ padding: "7px 14px", border: "none", borderRadius: "20px", backgroundColor: category === value ? CORAL : "#ffffff", color: category === value ? "#222222" : "#717171", fontSize: "13px", fontWeight: category === value ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, boxShadow: category === value ? "none" : "0 1px 4px rgba(0,0,0,0.08)" }}>{value}</button>)}
         </div>
 
         <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-          <button onClick={() => setFilters(current => ({ ...current, openNow: !current.openNow || undefined }))} aria-pressed={!!filters.openNow} style={{ padding: "8px 13px", border: `1.5px solid ${filters.openNow ? CORAL : "#ebebeb"}`, borderRadius: "20px", backgroundColor: filters.openNow ? "#FFF0F0" : "#ffffff", color: filters.openNow ? CORAL : "#717171", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Open now</button>
+          <button onClick={() => setFilters(current => ({ ...current, openNow: !current.openNow || undefined }))} aria-pressed={!!filters.openNow} style={{ padding: "8px 13px", border: `1.5px solid ${filters.openNow ? CORAL : "#ebebeb"}`, borderRadius: "20px", backgroundColor: filters.openNow ? "#FFF0F0" : "#ffffff", color: filters.openNow ? CORAL_TEXT : "#717171", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Open now</button>
           <details style={{ flex: 1 }}>
             <summary style={{ listStyle: "none", padding: "8px 13px", border: "1.5px solid #ebebeb", borderRadius: "20px", backgroundColor: "#ffffff", color: "#717171", fontSize: "12px", fontWeight: 600, cursor: "pointer", textAlign: "center" }}>More filters{activeFilterCount > (filters.openNow ? 1 : 0) + (filters.category ? 1 : 0) ? ` · ${activeFilterCount}` : ""}</summary>
             <div style={{ marginTop: "8px", backgroundColor: "#ffffff", borderRadius: "16px", padding: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
@@ -105,22 +106,22 @@ export default function ResourcesPage() {
               ))}
             </div>
           </details>
-          {(activeFilterCount > 0 || search) && <button onClick={clearFilters} style={{ border: "none", background: "transparent", color: CORAL, fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Clear</button>}
+          {(activeFilterCount > 0 || search) && <button onClick={clearFilters} style={{ border: "none", background: "transparent", color: CORAL_TEXT, fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Clear</button>}
         </div>
 
         {category === "All" && !search && !filters.openNow && (
           <div style={{ backgroundColor: CORAL, borderRadius: "16px", padding: "16px 20px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
-            <div><p style={{ fontSize: "13px", fontWeight: 700, color: "#ffffff", marginBottom: "2px" }}>Need crisis support?</p><p style={{ fontSize: "12px", color: "#ffffff" }}>Call or text 988 · 24/7</p></div>
+            <div><p style={{ fontSize: "13px", fontWeight: 700, color: "#222222", marginBottom: "2px" }}>Need crisis support?</p><p style={{ fontSize: "12px", color: "#222222" }}>Call or text 988 · 24/7</p></div>
             <div style={{ display: "flex", gap: "6px" }}>
-              <a href={callHref(crisisResource)} onClick={() => trackAction(crisisResource.id, "call")} style={{ backgroundColor: "#ffffff", color: CORAL, padding: "8px 11px", borderRadius: "10px", fontSize: "12px", fontWeight: 700 }}>Call</a>
-              <a href={textHref(crisisResource)} onClick={() => trackAction(crisisResource.id, "text")} style={{ backgroundColor: "#ffffff", color: CORAL, padding: "8px 11px", borderRadius: "10px", fontSize: "12px", fontWeight: 700 }}>Text</a>
+              <a href={callHref(crisisResource)} onClick={() => trackAction(crisisResource.id, "call")} style={{ backgroundColor: "#ffffff", color: CORAL_TEXT, padding: "8px 11px", borderRadius: "10px", fontSize: "12px", fontWeight: 700 }}>Call</a>
+              <a href={textHref(crisisResource)} onClick={() => trackAction(crisisResource.id, "text")} style={{ backgroundColor: "#ffffff", color: CORAL_TEXT, padding: "8px 11px", borderRadius: "10px", fontSize: "12px", fontWeight: 700 }}>Text</a>
             </div>
           </div>
         )}
 
         {loading && <div role="status" style={{ fontSize: "14px", color: "#717171", textAlign: "center", padding: "36px 0" }}>Loading source-checked resources…</div>}
         {!loading && ACTIVE_RESOURCES.length === 0 && <div role="status" style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "24px", textAlign: "center", color: "#717171" }}>No verified resources are available. Use the emergency actions above if you need immediate help.</div>}
-        {!loading && ACTIVE_RESOURCES.length > 0 && filtered.length === 0 && <div role="status" style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "24px", textAlign: "center", marginTop: "8px" }}><p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "6px" }}>No resources match those choices</p><p style={{ fontSize: "13px", color: "#717171", marginBottom: "14px" }}>Try removing a filter or searching for a broader need.</p><button onClick={clearFilters} style={{ border: "none", backgroundColor: "#FFF0F0", color: CORAL, padding: "9px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Clear filters</button></div>}
+        {!loading && ACTIVE_RESOURCES.length > 0 && filtered.length === 0 && <div role="status" style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "24px", textAlign: "center", marginTop: "8px" }}><p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "6px" }}>No resources match those choices</p><p style={{ fontSize: "13px", color: "#717171", marginBottom: "14px" }}>Try removing a filter or searching for a broader need.</p><button onClick={clearFilters} style={{ border: "none", backgroundColor: "#FFF0F0", color: CORAL_TEXT, padding: "9px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Clear filters</button></div>}
 
         {!loading && filtered.map(resource => {
           const availability = getAvailability(resource, now)
@@ -134,7 +135,7 @@ export default function ResourcesPage() {
               <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.5, marginBottom: "4px" }}><strong style={{ color: "#222222" }}>Cost:</strong> {resource.cost}</p>
               <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.5, marginBottom: "9px" }}><strong style={{ color: "#222222" }}>Access:</strong> {resource.modalities.map(value => value.replace("_", " ")).join(", ")}</p>
               <p style={{ fontSize: "11px", color: isResourceStale(resource, now) ? "#b07000" : "#008577", marginBottom: "12px" }}>{verifiedLabel(resource.verificationDate)}</p>
-              <Link to={resourcePath(resource)} onClick={() => trackAction(resource.id, "details")} style={{ display: "block", padding: "10px 14px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "10px", fontSize: "13px", fontWeight: 700, textAlign: "center" }}>View details and actions</Link>
+              <Link to={resourcePath(resource)} onClick={() => trackAction(resource.id, "details")} style={{ display: "block", padding: "10px 14px", backgroundColor: "#FFF0F0", color: CORAL_TEXT, borderRadius: "10px", fontSize: "13px", fontWeight: 700, textAlign: "center" }}>View details and actions</Link>
             </article>
           )
         })}

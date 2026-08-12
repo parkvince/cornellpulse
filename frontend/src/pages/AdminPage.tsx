@@ -1,10 +1,11 @@
 import { type FormEvent, type KeyboardEvent, useCallback, useState, useEffect } from "react"
 import { AdminApiError, adminRequest, parseAdminJson } from "../api/admin"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
+const CORAL_TEXT = "#8A292D"
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
 
-const AVATAR_COLORS = ["#D70466", "#007A70", "#E31C5F", "#5C4BC2", "#007B78", "#FF385C", "#337F7C"]
+const AVATAR_COLORS = ["#FF5A5F", "#00A699", "#FC642D", "#7B68EE", "#20B2AA", "#FF6B6B", "#4ECDC4"]
 function avatarColor(name: string) {
   return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]
 }
@@ -22,7 +23,7 @@ function StatCard({ label, value, sub, color }: { label: string; value: string |
     <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "18px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", flex: 1 }}>
       <p style={{ fontSize: "11px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px" }}>{label}</p>
       <p style={{ fontSize: "28px", fontWeight: 800, color: color || "#222222", lineHeight: 1, marginBottom: "4px" }}>{value}</p>
-      {sub && <p style={{ fontSize: "12px", color: CORAL, fontWeight: 600 }}>{sub}</p>}
+      {sub && <p style={{ fontSize: "12px", color: CORAL_TEXT, fontWeight: 600 }}>{sub}</p>}
     </div>
   )
 }
@@ -298,8 +299,8 @@ export default function AdminPage() {
           <label htmlFor="admin-password" style={{ position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 }}>Administrator password</label>
           <input id="admin-password" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" disabled={loginLoading} aria-describedby={loginError ? "admin-login-error" : undefined} style={{ width: "100%", padding: "14px 16px", border: "2px solid #ebebeb", borderRadius: "12px", fontSize: "15px", marginBottom: "12px", backgroundColor: "#ffffff", color: "#222222", fontFamily: "DM Sans, sans-serif" }} />
           {loginError && (
-            <div id="admin-login-error" role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #D70466", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}>
-              <p style={{ fontSize: "13px", color: CORAL }}>{loginError}</p>
+            <div id="admin-login-error" role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #FF5A5F", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}>
+              <p style={{ fontSize: "13px", color: CORAL_TEXT }}>{loginError}</p>
             </div>
           )}
           <button type="submit" disabled={!password || loginLoading} style={{ width: "100%", padding: "16px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer" }}>{loginLoading ? "Signing in..." : "Sign in"}</button>
@@ -311,7 +312,7 @@ export default function AdminPage() {
   if (selectedSignup) {
     return (
       <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
-        <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
+        <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
           <button onClick={() => setSelectedSignup(null)} style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(255,255,255,0.2)", border: "none", borderRadius: "10px", padding: "8px 14px", color: "#ffffff", fontSize: "13px", fontWeight: 600, marginBottom: "20px", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
             Applications
@@ -328,9 +329,9 @@ export default function AdminPage() {
         </div>
 
         <div style={{ padding: "24px 20px" }}>
-          {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #D70466", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p></div>}
+          {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #FF5A5F", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: CORAL_TEXT }}>{pageError}</p></div>}
           <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-            <span style={{ padding: "6px 14px", borderRadius: "20px", backgroundColor: selectedSignup.approved ? "#E8F8F5" : "#FFF0F0", color: selectedSignup.approved ? "#007A70" : CORAL, fontSize: "12px", fontWeight: 700 }}>
+            <span style={{ padding: "6px 14px", borderRadius: "20px", backgroundColor: selectedSignup.approved ? "#E8F8F5" : "#FFF0F0", color: selectedSignup.approved ? "#007A70" : CORAL_TEXT, fontSize: "12px", fontWeight: 700 }}>
               {selectedSignup.approved ? "Approved" : "Pending review"}
             </span>
             {selectedSignup.submitted_at && (
@@ -383,7 +384,7 @@ export default function AdminPage() {
             <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", marginBottom: "12px" }}>
               <p style={{ fontSize: "11px", fontWeight: 700, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "12px" }}>Interests</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {selectedSignup.interests.map((i: string) => <span key={i} style={{ padding: "6px 12px", backgroundColor: "#FFF0F0", color: CORAL, borderRadius: "8px", fontSize: "12px", fontWeight: 500 }}>{i}</span>)}
+                {selectedSignup.interests.map((i: string) => <span key={i} style={{ padding: "6px 12px", backgroundColor: "#FFF0F0", color: CORAL_TEXT, borderRadius: "8px", fontSize: "12px", fontWeight: 500 }}>{i}</span>)}
               </div>
             </div>
           )}
@@ -440,7 +441,7 @@ export default function AdminPage() {
   if (selectedRequest) {
     return (
       <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
-        <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
+        <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 32px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
           <button onClick={() => setSelectedRequest(null)} style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(255,255,255,0.2)", border: "none", borderRadius: "10px", padding: "8px 14px", color: "#ffffff", fontSize: "13px", fontWeight: 600, marginBottom: "20px", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
             Requests
@@ -451,9 +452,9 @@ export default function AdminPage() {
         </div>
 
         <div style={{ padding: "24px 20px" }}>
-          {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #D70466", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p></div>}
+          {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #FF5A5F", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px" }}><p style={{ fontSize: "13px", color: CORAL_TEXT }}>{pageError}</p></div>}
           <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-            <span style={{ padding: "6px 14px", borderRadius: "20px", backgroundColor: selectedRequest.status === "resolved" ? "#E8F8F5" : "#FFF0F0", color: selectedRequest.status === "resolved" ? "#007A70" : CORAL, fontSize: "12px", fontWeight: 700, textTransform: "capitalize" }}>
+            <span style={{ padding: "6px 14px", borderRadius: "20px", backgroundColor: selectedRequest.status === "resolved" ? "#E8F8F5" : "#FFF0F0", color: selectedRequest.status === "resolved" ? "#007A70" : CORAL_TEXT, fontSize: "12px", fontWeight: 700, textTransform: "capitalize" }}>
               {selectedRequest.status}
             </span>
             {selectedRequest.requested_at && (
@@ -532,7 +533,7 @@ export default function AdminPage() {
 
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
-      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 20px 28px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 20px 28px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
           <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em" }}>CornellPulse</p>
           <button onClick={logout} style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", backgroundColor: "rgba(255,255,255,0.15)", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontFamily: "DM Sans, sans-serif" }}>Sign out</button>
@@ -549,9 +550,9 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #D70466", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
-          <p style={{ fontSize: "13px", color: CORAL }}>{pageError}</p>
-          <button onClick={() => void loadData()} style={{ color: CORAL, backgroundColor: "transparent", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Retry</button>
+        {pageError && <div role="alert" style={{ backgroundColor: "#FFF0F0", border: "1px solid #FF5A5F", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+          <p style={{ fontSize: "13px", color: CORAL_TEXT }}>{pageError}</p>
+          <button onClick={() => void loadData()} style={{ color: CORAL_TEXT, backgroundColor: "transparent", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Retry</button>
         </div>}
         {loadingData && <div role="status" aria-live="polite" style={{ textAlign: "center", padding: "24px 0" }}><p style={{ fontSize: "14px", color: "#717171" }}>Loading administrator data...</p></div>}
 
@@ -569,8 +570,8 @@ export default function AdminPage() {
             {pendingCount > 0 && (
               <div style={{ backgroundColor: "#FFF0F0", border: "1px solid #FFD0D0", borderRadius: "16px", padding: "16px 18px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <p style={{ fontSize: "14px", fontWeight: 700, color: CORAL, marginBottom: "2px" }}>{pendingCount} application{pendingCount !== 1 ? "s" : ""} need review</p>
-                  <p style={{ fontSize: "12px", color: "#D70466" }}>Approve to make them live on the app</p>
+                  <p style={{ fontSize: "14px", fontWeight: 700, color: CORAL_TEXT, marginBottom: "2px" }}>{pendingCount} application{pendingCount !== 1 ? "s" : ""} need review</p>
+                  <p style={{ fontSize: "12px", color: "#FF5A5F" }}>Approve to make them live on the app</p>
                 </div>
                 <button onClick={() => setTab("signups")} style={{ padding: "8px 16px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Review</button>
               </div>
@@ -589,7 +590,7 @@ export default function AdminPage() {
             <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", marginBottom: "16px" }}>
               <div style={{ padding: "16px 20px", borderBottom: "1px solid #f5f5f5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <p style={{ fontSize: "14px", fontWeight: 700, color: "#222222" }}>Recent applications</p>
-                <button onClick={() => setTab("signups")} style={{ fontSize: "13px", color: CORAL, fontWeight: 600, backgroundColor: "transparent", border: "none", cursor: "pointer" }}>See all</button>
+                <button onClick={() => setTab("signups")} style={{ fontSize: "13px", color: CORAL_TEXT, fontWeight: 600, backgroundColor: "transparent", border: "none", cursor: "pointer" }}>See all</button>
               </div>
               {signups.length === 0 && (
                 <div style={{ padding: "32px 20px", textAlign: "center" }}>
@@ -607,7 +608,7 @@ export default function AdminPage() {
                       <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "2px" }}>{s.name}</p>
                       <p style={{ fontSize: "12px", color: "#717171" }}>{s.year}{s.major ? ` · ${s.major}` : ""}</p>
                     </div>
-                    <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: s.approved ? "#E8F8F5" : "#FFF0F0", color: s.approved ? "#007A70" : CORAL, flexShrink: 0 }}>
+                    <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: s.approved ? "#E8F8F5" : "#FFF0F0", color: s.approved ? "#007A70" : CORAL_TEXT, flexShrink: 0 }}>
                       {s.approved ? "Live" : "Pending"}
                     </span>
                   </button>
@@ -653,7 +654,7 @@ export default function AdminPage() {
                           <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "2px" }}>{s.name}</p>
                           <p style={{ fontSize: "12px", color: "#717171" }}>{s.year}{s.major ? ` · ${s.major}` : ""}</p>
                         </div>
-                        <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: s.approved ? "#E8F8F5" : "#FFF0F0", color: s.approved ? "#007A70" : CORAL, flexShrink: 0 }}>
+                        <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: s.approved ? "#E8F8F5" : "#FFF0F0", color: s.approved ? "#007A70" : CORAL_TEXT, flexShrink: 0 }}>
                           {s.approved ? "Live" : "Pending"}
                         </span>
                       </div>
@@ -692,9 +693,9 @@ export default function AdminPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
                   <div>
                     <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "2px" }}>{r.requester_name}</p>
-                    <p style={{ fontSize: "12px", color: "#717171" }}>Wants to meet <strong style={{ color: CORAL }}>{r.supporter_name}</strong></p>
+                    <p style={{ fontSize: "12px", color: "#717171" }}>Wants to meet <strong style={{ color: CORAL_TEXT }}>{r.supporter_name}</strong></p>
                   </div>
-                  <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: r.status === "resolved" ? "#E8F8F5" : "#FFF0F0", color: r.status === "resolved" ? "#007A70" : CORAL, flexShrink: 0, textTransform: "capitalize" }}>{r.status}</span>
+                  <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: r.status === "resolved" ? "#E8F8F5" : "#FFF0F0", color: r.status === "resolved" ? "#007A70" : CORAL_TEXT, flexShrink: 0, textTransform: "capitalize" }}>{r.status}</span>
                 </div>
 
                 <div style={{ display: "flex", gap: "14px", marginBottom: "10px" }}>
@@ -746,7 +747,7 @@ export default function AdminPage() {
                     <p style={{ fontSize: "15px", fontWeight: 700, color: "#222222", marginBottom: "2px" }}>{report.supporter_name}</p>
                     <p style={{ fontSize: "12px", color: "#717171" }}>{report.reporter_email || "Reporter contact not provided"}</p>
                   </div>
-                  <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: report.resolved ? "#E8F8F5" : "#FFF0F0", color: report.resolved ? "#007A70" : CORAL, flexShrink: 0 }}>{report.resolved ? "Resolved" : "Needs review"}</span>
+                  <span style={{ fontSize: "11px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px", backgroundColor: report.resolved ? "#E8F8F5" : "#FFF0F0", color: report.resolved ? "#007A70" : CORAL_TEXT, flexShrink: 0 }}>{report.resolved ? "Resolved" : "Needs review"}</span>
                 </div>
                 <div style={{ backgroundColor: "#fff8f7", borderRadius: "10px", padding: "10px 12px", marginBottom: "12px" }}>
                   <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.5 }}>{report.reason}</p>

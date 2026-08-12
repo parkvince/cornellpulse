@@ -1,13 +1,13 @@
 import { useState } from "react"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
 
 interface Props { value: number | null; onChange: (v: number) => void; onNext: () => void }
 
 function moodColor(m: number) {
   if (m >= 7) return "#007A70"
   if (m >= 5) return "#A9461E"
-  if (m >= 3) return "#D70466"
+  if (m >= 3) return "#FF5A5F"
   return "#c0392b"
 }
 

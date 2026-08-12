@@ -5,7 +5,8 @@ import { getResource } from "../resources/registry.ts"
 import { resourcePath } from "../resources/directory.ts"
 import { loadLocalHistory, reminderIsDue, updatePlanEntry, type LocalPlanEntry } from "../history/localHistory.ts"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
+const CORAL_TEXT = "#8A292D"
 
 const featuredResources = ["caps_access", "lets_talk", "ears", "cornell_health_247"].map(getResource)
 const crisisResource = getResource("988_lifeline")
@@ -13,7 +14,7 @@ const crisisResource = getResource("988_lifeline")
 function moodColor(m: number) {
   if (m >= 7) return "#007A70"
   if (m >= 5) return "#A9461E"
-  if (m >= 3) return "#D70466"
+  if (m >= 3) return "#FF5A5F"
   return "#c0392b"
 }
 
@@ -62,7 +63,7 @@ export default function HomePage() {
 
   return (
     <div style={{ backgroundColor: "#fff8f7" }}>
-      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px", minHeight: "280px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Cornell University</p>
         <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "24px" }}>
           Find the right support, right now.
@@ -86,10 +87,10 @@ export default function HomePage() {
         {shareNotice && <p role="status" aria-live="polite" style={{ backgroundColor: "#ffffff", color: "#595959", borderRadius: "12px", padding: "12px", marginBottom: "14px", fontSize: "13px" }}>{shareNotice}</p>}
         {activePlan && (
           <section aria-labelledby="next-step-home" style={{ marginBottom: "24px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}><p id="next-step-home" style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em" }}>Your next step</p><Link to="/profile" style={{ fontSize: "12px", fontWeight: 700, color: CORAL }}>History &amp; Privacy</Link></div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}><p id="next-step-home" style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em" }}>Your next step</p><Link to="/profile" style={{ fontSize: "12px", fontWeight: 700, color: CORAL_TEXT }}>History &amp; Privacy</Link></div>
             <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: reminderIsDue(activePlan) ? `1.5px solid ${CORAL}` : "1px solid transparent" }}>
               <p style={{ fontSize: "16px", fontWeight: 800, color: "#222222", lineHeight: 1.35, marginBottom: "5px" }}>{activePlan.resource}</p>
-              {activePlan.reminderAt && <p role={reminderIsDue(activePlan) ? "status" : undefined} style={{ fontSize: "12px", color: reminderIsDue(activePlan) ? CORAL : "#717171", marginBottom: "10px" }}>{reminderIsDue(activePlan) ? "Your local reminder is due." : `Local reminder: ${new Date(activePlan.reminderAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}</p>}
+              {activePlan.reminderAt && <p role={reminderIsDue(activePlan) ? "status" : undefined} style={{ fontSize: "12px", color: reminderIsDue(activePlan) ? CORAL_TEXT : "#717171", marginBottom: "10px" }}>{reminderIsDue(activePlan) ? "Your local reminder is due." : `Local reminder: ${new Date(activePlan.reminderAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}</p>}
               <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}><button type="button" onClick={() => updatePlan(activePlan.id, "completed")} style={{ flex: 1, padding: "10px", border: "none", borderRadius: "10px", backgroundColor: CORAL, color: "#ffffff", fontSize: "12px", fontWeight: 700 }}>Complete</button><button type="button" onClick={() => updatePlan(activePlan.id, "dismissed")} style={{ flex: 1, padding: "10px", border: "1.5px solid #ebebeb", borderRadius: "10px", backgroundColor: "#ffffff", color: "#717171", fontSize: "12px", fontWeight: 700 }}>Dismiss</button></div>
             </div>
           </section>
@@ -118,7 +119,7 @@ export default function HomePage() {
         <div style={{ marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <p style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em" }}>Resources</p>
-            <Link to="/resources" style={{ fontSize: "13px", fontWeight: 600, color: CORAL }}>See all →</Link>
+            <Link to="/resources" style={{ fontSize: "13px", fontWeight: 600, color: CORAL_TEXT }}>See all →</Link>
           </div>
           <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
             {featuredResources.map((resource, idx) => (
@@ -158,7 +159,7 @@ export default function HomePage() {
             </Link>
           </div>}
 
-          <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", borderRadius: "20px", padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", borderRadius: "20px", padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
@@ -168,14 +169,14 @@ export default function HomePage() {
                 <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)" }}>Available 24/7</p>
               </div>
             </div>
-            <a href={`tel:${crisisResource.phone}`} style={{ backgroundColor: "#ffffff", color: CORAL, padding: "10px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700 }}>Call {crisisResource.phone}</a>
+            <a href={`tel:${crisisResource.phone}`} style={{ backgroundColor: "#ffffff", color: CORAL_TEXT, padding: "10px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700 }}>Call {crisisResource.phone}</a>
           </div>
 
           <button onClick={handleShare} style={{ width: "100%", padding: "14px 20px", backgroundColor: "#ffffff", borderRadius: "16px", border: "1px solid #f0f0f0", boxShadow: "0 2px 12px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
             <p style={{ fontSize: "14px", fontWeight: 600, color: "#222222" }}>Know someone who needs this?</p>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", backgroundColor: "#FFF0F0", padding: "8px 14px", borderRadius: "10px", flexShrink: 0 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={CORAL} strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-              <span style={{ fontSize: "13px", fontWeight: 700, color: CORAL }}>Share</span>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: CORAL_TEXT }}>Share</span>
             </div>
           </button>
         </div>

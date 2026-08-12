@@ -1,6 +1,7 @@
 import { useState } from "react"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
+const CORAL_TEXT = "#8A292D"
 
 interface Props {
   sleep: string; onSleepChange: (v: string) => void
@@ -46,14 +47,14 @@ export default function StepSleepWorkload({ sleep, onSleepChange, workload, onWo
       <fieldset style={{ border: 0, minWidth: 0, marginBottom: "24px" }}>
         <legend style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Sleep last night</legend>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-          {sleepOpts.map(option => <label key={option.value} className="checkin-choice" style={{ padding: "14px 10px", border: `2px solid ${sleep === option.value ? CORAL : "#ebebeb"}`, borderRadius: "12px", backgroundColor: sleep === option.value ? "#FFF0F0" : "#ffffff", fontSize: "13px", fontWeight: 600, color: sleep === option.value ? CORAL : "#222222", textAlign: "center" }}><input className="checkin-choice-input" type="radio" name="sleep" value={option.value} checked={sleep === option.value} onChange={() => { onSleepChange(option.value); setError("") }} onKeyDown={event => selectWithKeyboard(event, () => { onSleepChange(option.value); setError("") })} /><span>{option.label}</span></label>)}
+          {sleepOpts.map(option => <label key={option.value} className="checkin-choice" style={{ padding: "14px 10px", border: `2px solid ${sleep === option.value ? CORAL : "#ebebeb"}`, borderRadius: "12px", backgroundColor: sleep === option.value ? "#FFF0F0" : "#ffffff", fontSize: "13px", fontWeight: 600, color: sleep === option.value ? CORAL_TEXT : "#222222", textAlign: "center" }}><input className="checkin-choice-input" type="radio" name="sleep" value={option.value} checked={sleep === option.value} onChange={() => { onSleepChange(option.value); setError("") }} onKeyDown={event => selectWithKeyboard(event, () => { onSleepChange(option.value); setError("") })} /><span>{option.label}</span></label>)}
         </div>
       </fieldset>
 
       <fieldset style={{ border: 0, minWidth: 0, marginBottom: "28px" }}>
         <legend style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Academic workload</legend>
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {workloadOpts.map(option => <label key={option.value} className="checkin-choice" style={{ padding: "14px 16px", border: `2px solid ${workload === option.value ? CORAL : "#ebebeb"}`, borderRadius: "12px", backgroundColor: workload === option.value ? "#FFF0F0" : "#ffffff", textAlign: "left" }}><input className="checkin-choice-input" type="radio" name="workload" value={option.value} checked={workload === option.value} onChange={() => { onWorkloadChange(option.value); setError("") }} onKeyDown={event => selectWithKeyboard(event, () => { onWorkloadChange(option.value); setError("") })} /><span><span style={{ display: "block", fontSize: "14px", fontWeight: 700, color: workload === option.value ? CORAL : "#222222", marginBottom: "2px" }}>{option.label}</span><span style={{ display: "block", fontSize: "12px", color: workload === option.value ? "#A9461E" : "#717171" }}>{option.desc}</span></span></label>)}
+          {workloadOpts.map(option => <label key={option.value} className="checkin-choice" style={{ padding: "14px 16px", border: `2px solid ${workload === option.value ? CORAL : "#ebebeb"}`, borderRadius: "12px", backgroundColor: workload === option.value ? "#FFF0F0" : "#ffffff", textAlign: "left" }}><input className="checkin-choice-input" type="radio" name="workload" value={option.value} checked={workload === option.value} onChange={() => { onWorkloadChange(option.value); setError("") }} onKeyDown={event => selectWithKeyboard(event, () => { onWorkloadChange(option.value); setError("") })} /><span><span style={{ display: "block", fontSize: "14px", fontWeight: 700, color: workload === option.value ? CORAL_TEXT : "#222222", marginBottom: "2px" }}>{option.label}</span><span style={{ display: "block", fontSize: "12px", color: workload === option.value ? "#A9461E" : "#717171" }}>{option.desc}</span></span></label>)}
         </div>
       </fieldset>
 

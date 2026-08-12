@@ -2,7 +2,8 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { clearCornellPulseDeviceData, getPrivacyPreferences, savePrivacyPreferences, type PrivacyPreferences } from "../privacy/preferences"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
+const CORAL_TEXT = "#8A292D"
 const CONTACT_EMAIL = (import.meta.env.VITE_PRIVACY_CONTACT_EMAIL || "").trim()
 
 const sections = [
@@ -39,7 +40,7 @@ export default function PrivacyPage() {
 
   return (
     <div style={{ backgroundColor: "#fff8f7", minHeight: "100vh" }}>
-      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
+      <div style={{ background: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)", padding: "52px 24px 40px", borderBottomLeftRadius: "32px", borderBottomRightRadius: "32px" }}>
         <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Privacy & Data</p>
         <h1 style={{ fontSize: "30px", fontWeight: 800, color: "#ffffff", lineHeight: 1.15, marginBottom: "8px" }}>Your choices and data</h1>
         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>A factual summary of what CornellPulse stores, transmits, and cannot delete automatically. Policy version 2026-08-09.1; privacy/legal approval is pending.</p>
@@ -73,7 +74,7 @@ export default function PrivacyPage() {
           <p id="privacy-controls" style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Withdrawal and deletion</p>
           <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
             <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "14px" }}>Clear local history, onboarding status, privacy preferences, the temporary structured check-in draft, and legacy draft keys from this device. The temporary draft does not contain optional written context. This does not delete server, email, backup, or provider records.</p>
-            {confirmClear ? <div style={{ display: "flex", gap: "8px" }}><button onClick={clearDeviceData} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "10px", backgroundColor: CORAL, color: "#ffffff", fontSize: "13px", fontWeight: 700 }}>Clear device data</button><button onClick={() => setConfirmClear(false)} style={{ flex: 1, padding: "12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: "#717171", fontSize: "13px", fontWeight: 600 }}>Cancel</button></div> : <button onClick={() => setConfirmClear(true)} style={{ width: "100%", padding: "12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: CORAL, fontSize: "13px", fontWeight: 700 }}>Clear data on this device</button>}
+            {confirmClear ? <div style={{ display: "flex", gap: "8px" }}><button onClick={clearDeviceData} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "10px", backgroundColor: CORAL, color: "#ffffff", fontSize: "13px", fontWeight: 700 }}>Clear device data</button><button onClick={() => setConfirmClear(false)} style={{ flex: 1, padding: "12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: "#717171", fontSize: "13px", fontWeight: 600 }}>Cancel</button></div> : <button onClick={() => setConfirmClear(true)} style={{ width: "100%", padding: "12px", border: "2px solid #ebebeb", borderRadius: "10px", backgroundColor: "transparent", color: CORAL_TEXT, fontSize: "13px", fontWeight: 700 }}>Clear data on this device</button>}
             {cleared && <p role="status" style={{ fontSize: "12px", color: "#007A70", marginTop: "8px" }}>CornellPulse device data cleared.</p>}
           </div>
         </section>
@@ -82,7 +83,7 @@ export default function PrivacyPage() {
           <p id="privacy-contact" style={{ fontSize: "12px", fontWeight: 600, color: "#717171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Contact and server-data requests</p>
           <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", padding: "18px 20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
             <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.6, marginBottom: "14px" }}>For access, correction, withdrawal, or deletion requests involving supporter, requester, reference, connection, relay, or report records, use authenticated withdrawal controls where available or contact the deployment operator. The operator must verify that a request belongs to you. A completion contribution cannot be retrieved or deleted individually because the server stores no link to a person; turning consent off stops future contributions and the daily count expires after 30 days. Email, backups, provider logs, and external services require separate operator or provider action.</p>
-            {CONTACT_EMAIL ? <a href={`mailto:${CONTACT_EMAIL}?subject=CornellPulse privacy request`} style={{ display: "block", padding: "12px", borderRadius: "10px", backgroundColor: CORAL, color: "#ffffff", textAlign: "center", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>Email {CONTACT_EMAIL}</a> : <p role="alert" style={{ fontSize: "13px", color: CORAL, lineHeight: 1.5 }}>The operator contact is not configured. Identifiable-data features must remain disabled until a monitored contact address is provided.</p>}
+            {CONTACT_EMAIL ? <a href={`mailto:${CONTACT_EMAIL}?subject=CornellPulse privacy request`} style={{ display: "block", padding: "12px", borderRadius: "10px", backgroundColor: CORAL, color: "#ffffff", textAlign: "center", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>Email {CONTACT_EMAIL}</a> : <p role="alert" style={{ fontSize: "13px", color: CORAL_TEXT, lineHeight: 1.5 }}>The operator contact is not configured. Identifiable-data features must remain disabled until a monitored contact address is provided.</p>}
           </div>
         </section>
 

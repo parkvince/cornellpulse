@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { getResource } from "../resources/registry.ts"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
+const CORAL_TEXT = "#8A292D"
 const emergency = getResource("emergency_911")
 const publicSafety = getResource("cornell_public_safety")
 
@@ -10,25 +11,25 @@ const slides = [
     tag: "Welcome",
     title: "Find the right support, right now.",
     body: "CornellPulse helps you explore support resources based on the choices you enter.",
-    bg: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)",
+    bg: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)",
   },
   {
     tag: "Resources",
     title: "A curated Cornell and Ithaca resource registry.",
     body: "Browse Cornell and Ithaca options, then decide which resources may fit what you need.",
-    bg: "linear-gradient(135deg, #007A70 0%, #007A73 100%)",
+    bg: "linear-gradient(135deg, #00A699 0%, #007A73 100%)",
   },
   {
     tag: "Connect",
     title: "Talk to a peer who gets it.",
     body: "Peer Connect is an open non-production sandbox. Anyone can create an account; Cornell identity verification is coming soon, so profiles are not verified.",
-    bg: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)",
+    bg: "linear-gradient(135deg, #FC642D 0%, #FF5A5F 100%)",
   },
   {
     tag: "Privacy",
     title: "Clear choices about your data.",
     body: "Recommendations are generated on your device. Optional aggregate contribution and resource-click analytics are off until you choose to enable them.",
-    bg: "linear-gradient(135deg, #FF5A5F 0%, #FF385C 52%, #E31C5F 100%)",
+    bg: "linear-gradient(135deg, #FF5A5F 0%, #FC642D 100%)",
   },
   {
     tag: "Before you start",
@@ -53,7 +54,7 @@ export default function OnboardingPage() {
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: slide.isDisclosure ? "#ffffff" : slide.bg }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "60px 28px 28px" }}>
-        <span style={{ fontSize: "11px", fontWeight: 700, color: isLight ? CORAL : "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "20px", display: "block" }}>
+        <span style={{ fontSize: "11px", fontWeight: 700, color: isLight ? CORAL_TEXT : "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: "20px", display: "block" }}>
           {slide.tag}
         </span>
         <h1 style={{ fontSize: "34px", fontWeight: 800, color: isLight ? "#222222" : "#ffffff", lineHeight: 1.1, marginBottom: "16px", letterSpacing: "-0.02em" }}>
@@ -73,7 +74,7 @@ export default function OnboardingPage() {
                 <p style={{ fontSize: "13px", color: "#717171", lineHeight: 1.55 }}>{item.body}</p>
               </div>
             ))}
-            <a href="/privacy" style={{ color: CORAL, fontSize: "13px", fontWeight: 700, textAlign: "center", padding: "8px", textDecoration: "none" }}>Review Privacy &amp; Data choices</a>
+            <a href="/privacy" style={{ color: CORAL_TEXT, fontSize: "13px", fontWeight: 700, textAlign: "center", padding: "8px", textDecoration: "none" }}>Review Privacy &amp; Data choices</a>
           </div>
         ) : (
           <p style={{ fontSize: "17px", color: "rgba(255,255,255,0.9)", lineHeight: 1.65 }}>{slide.body}</p>
@@ -92,7 +93,7 @@ export default function OnboardingPage() {
             {i < slides.length - 2 && (
               <button onClick={finish} style={{ flex: 1, padding: "16px", backgroundColor: isLight ? "#f5f5f5" : "rgba(255,255,255,0.2)", color: isLight ? "#717171" : "rgba(255,255,255,0.8)", border: "none", borderRadius: "14px", fontSize: "14px", fontWeight: 600 }}>Skip</button>
             )}
-            <button onClick={() => setI(i + 1)} style={{ flex: 2, padding: "16px", backgroundColor: isLight ? CORAL : "#ffffff", color: isLight ? "#ffffff" : CORAL, border: "none", borderRadius: "14px", fontSize: "15px", fontWeight: 700 }}>Next</button>
+            <button onClick={() => setI(i + 1)} style={{ flex: 2, padding: "16px", backgroundColor: isLight ? CORAL : "#ffffff", color: isLight ? "#ffffff" : CORAL_TEXT, border: "none", borderRadius: "14px", fontSize: "15px", fontWeight: 700 }}>Next</button>
           </div>
         ) : (
           <button onClick={finish} style={{ width: "100%", padding: "18px", backgroundColor: CORAL, color: "#ffffff", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700 }}>I understand, get started</button>

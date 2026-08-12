@@ -17,7 +17,8 @@ import { featureFlags } from "./config/featureFlags"
 import EmergencyHelp from "./components/shared/EmergencyHelp"
 import ConnectivityBanner from "./components/shared/ConnectivityBanner"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
+const CORAL_TEXT = "#8A292D"
 
 function BottomNav() {
   const location = useLocation()
@@ -29,7 +30,7 @@ function BottomNav() {
   return (
     <nav aria-label="Primary" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "430px", backgroundColor: "#ffffff", borderTop: "1px solid #ebebeb", display: "flex", alignItems: "center", zIndex: 100, paddingBottom: "max(12px, env(safe-area-inset-bottom))", paddingTop: "8px" }}>
 
-      <Link to="/" aria-current={active("/") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/") ? CORAL : "#595959", fontSize: "10px", fontWeight: active("/") ? 600 : 400, textDecoration: "none" }}>
+      <Link to="/" aria-current={active("/") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/") ? CORAL_TEXT : "#595959", fontSize: "10px", fontWeight: active("/") ? 600 : 400, textDecoration: "none" }}>
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/") ? CORAL : "#595959"} strokeWidth="1.8">
           <path d="M3 12L12 4l9 8"/>
           <path d="M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/>
@@ -37,7 +38,7 @@ function BottomNav() {
         <span>Home</span>
       </Link>
 
-      <Link to="/resources" aria-current={active("/resources") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/resources") ? CORAL : "#595959", fontSize: "10px", fontWeight: active("/resources") ? 600 : 400, textDecoration: "none" }}>
+      <Link to="/resources" aria-current={active("/resources") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/resources") ? CORAL_TEXT : "#595959", fontSize: "10px", fontWeight: active("/resources") ? 600 : 400, textDecoration: "none" }}>
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/resources") ? CORAL : "#595959"} strokeWidth="1.8">
           <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
@@ -51,10 +52,10 @@ function BottomNav() {
             <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
           </svg>
         </div>
-        <span aria-hidden="true" style={{ fontSize: "10px", fontWeight: 600, color: active("/checkin") ? CORAL : "#595959" }}>Check In</span>
+        <span aria-hidden="true" style={{ fontSize: "10px", fontWeight: 600, color: active("/checkin") ? CORAL_TEXT : "#595959" }}>Check In</span>
       </Link>
 
-      {featureFlags.peerNavigation && <Link to="/peer" aria-label="Peer Connect" aria-current={active("/peer") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/peer") ? CORAL : "#595959", fontSize: "10px", fontWeight: active("/peer") ? 600 : 400, textDecoration: "none" }}>
+      {featureFlags.peerNavigation && <Link to="/peer" aria-label="Peer Connect" aria-current={active("/peer") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/peer") ? CORAL_TEXT : "#595959", fontSize: "10px", fontWeight: active("/peer") ? 600 : 400, textDecoration: "none" }}>
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/peer") ? CORAL : "#595959"} strokeWidth="1.8">
           <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
@@ -63,7 +64,7 @@ function BottomNav() {
         <span>Connect</span>
       </Link>}
 
-      <Link to="/profile" aria-current={active("/profile") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/profile") ? CORAL : "#595959", fontSize: "10px", fontWeight: active("/profile") ? 600 : 400, textDecoration: "none" }}>
+      <Link to="/profile" aria-current={active("/profile") ? "page" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "48px", gap: "3px", color: active("/profile") ? CORAL_TEXT : "#595959", fontSize: "10px", fontWeight: active("/profile") ? 600 : 400, textDecoration: "none" }}>
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active("/profile") ? CORAL : "#595959"} strokeWidth="1.8">
           <circle cx="12" cy="8" r="4"/>
           <path d="M6 20v-2a6 6 0 0112 0v2"/>

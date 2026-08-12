@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { getResource } from "../../resources/registry.ts"
 
-const CORAL = "#D70466"
+const CORAL = "#FF5A5F"
+const CORAL_TEXT = "#8A292D"
 
 const emergency = getResource("emergency_911")
 const publicSafety = getResource("cornell_public_safety")
@@ -23,7 +24,7 @@ export function EmergencyActions() {
       <a href={callHref(emergency)} style={{ display: "block", backgroundColor: CORAL, color: "#ffffff", padding: "12px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "14px", textDecoration: "none" }}>Call {emergency.phone}</a>
       <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.45 }}>{emergency.description}</p>
 
-      <a href={callHref(publicSafety)} style={{ display: "block", border: `2px solid ${CORAL}`, color: CORAL, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call {publicSafety.officialName} · {publicSafety.phone}</a>
+      <a href={callHref(publicSafety)} style={{ display: "block", border: `2px solid ${CORAL}`, color: CORAL_TEXT, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call {publicSafety.officialName} · {publicSafety.phone}</a>
       <p style={{ fontSize: "12px", color: "#717171", lineHeight: 1.45 }}>{publicSafety.description}</p>
 
       <CrisisContactActions />
@@ -38,8 +39,8 @@ export function EmergencyActions() {
 export function CrisisContactActions() {
   return (
     <div style={{ display: "flex", gap: "8px" }}>
-      <a href={callHref(crisis)} style={{ flex: 1, display: "block", backgroundColor: "#FFF0F0", color: CORAL, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call {crisis.phone}</a>
-      <a href={textHref(crisis)} style={{ flex: 1, display: "block", backgroundColor: "#FFF0F0", color: CORAL, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Text {crisis.textAction?.number}</a>
+      <a href={callHref(crisis)} style={{ flex: 1, display: "block", backgroundColor: "#FFF0F0", color: CORAL_TEXT, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Call {crisis.phone}</a>
+      <a href={textHref(crisis)} style={{ flex: 1, display: "block", backgroundColor: "#FFF0F0", color: CORAL_TEXT, padding: "10px", borderRadius: "12px", textAlign: "center", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>Text {crisis.textAction?.number}</a>
     </div>
   )
 }
@@ -83,7 +84,7 @@ export default function EmergencyHelp() {
 
   return (
     <>
-      <button ref={openerRef} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open} style={{ position: "absolute", top: "max(12px, env(safe-area-inset-top))", right: "14px", zIndex: 450, border: "1px solid rgba(255,255,255,0.6)", borderRadius: "999px", minHeight: "44px", padding: "7px 11px", backgroundColor: "rgba(255,255,255,0.94)", color: CORAL, fontSize: "11px", fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.08)" }}>Immediate help</button>
+      <button ref={openerRef} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open} style={{ position: "absolute", top: "max(12px, env(safe-area-inset-top))", right: "14px", zIndex: 450, border: "1px solid rgba(255,255,255,0.6)", borderRadius: "999px", minHeight: "44px", padding: "7px 11px", backgroundColor: "rgba(255,255,255,0.94)", color: CORAL_TEXT, fontSize: "11px", fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.08)" }}>Immediate help</button>
       {open && (
         <div role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false) }} style={{ position: "absolute", inset: 0, zIndex: 500, backgroundColor: "rgba(0,0,0,0.42)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
           <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="immediate-help-title" aria-describedby="immediate-help-description" style={{ width: "100%", maxHeight: "90%", overflowY: "auto", backgroundColor: "#ffffff", borderRadius: "20px", padding: "20px", boxShadow: "0 16px 48px rgba(0,0,0,0.24)" }}>
